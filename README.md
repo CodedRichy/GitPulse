@@ -47,4 +47,4 @@ Leave it running while you work. Stop with `Ctrl+C`.
 
 ## License
 
-MIT
+Copyright (c) 2025 Rishi Praseeth Krishnan. All rights reserved. See [LICENSE](LICENSE) for full terms.
