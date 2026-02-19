@@ -68,6 +68,7 @@ ERROR_FIXES = {
     "auth": "Run: git config --global credential.helper store, then git push once and sign in.",
     "network": "Check internet/VPN; push manually if needed.",
     "merge": "Run git pull in repo, fix conflicts, then push.",
+    "rules": "GitHub repo rules block push to main. Settings → Rules → allow direct push or use another branch.",
     "no_remote": "Run: git remote add origin <url>",
     "config": "Set: git config user.name and user.email",
     "add": "Check permissions/lock files; close editors.",
@@ -85,6 +86,8 @@ def classify_error(err_text: str) -> tuple[str, str]:
         return "auth", ERROR_FIXES["auth"]
     if "timeout" in t or "timed out" in t or "connection" in t or "unreachable" in t or "could not resolve" in t:
         return "network", ERROR_FIXES["network"]
+    if "gh013" in t or "repository rule" in t or "rule violations" in t:
+        return "rules", ERROR_FIXES["rules"]
     if "rejected" in t or "non-fast-forward" in t or "pull" in t or "diverged" in t or "merge" in t:
         return "merge", ERROR_FIXES["merge"]
     if "no such remote" in t or "origin" in t and "does not appear" in t:
