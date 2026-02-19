@@ -279,6 +279,11 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
     message = f"Auto-sync: {ts} - {summary}"
     try:
         env = os.environ.copy()
+        home = os.path.expanduser("~")
+        if home:
+            env.setdefault("HOME", home)
+            if os.name == "nt":
+                env.setdefault("USERPROFILE", home)
         add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30, env=env)
         if add.returncode != 0:
             err = add.stderr or add.stdout or "git add failed"
