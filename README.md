@@ -1,51 +1,47 @@
 # GitPulse
 
-A Python file watcher that keeps multiple Git repositories in sync by auto-committing and pushing after a period of inactivity.
+Auto-commit and push multiple Git repos after a short period of inactivity. One window, zero manual commits.
 
-## Overview
+## What it does
 
-GitPulse discovers **all Git repos** under a root folder (by default, the parent of the folder containing the script — e.g. your `GitHub` directory). It then:
+- **Discovers repos** — Scans a root folder (default: parent of the script, e.g. your `GitHub` folder) for direct subfolders that contain `.git`.
+- **Startup sync** — For each repo with uncommitted changes, runs add/commit/push once before watching.
+- **Watches all** — Single watcher; file events are attributed to the right repo.
+- **Per-repo debounce** — After **60 seconds** with no changes in a repo, runs only for that repo:
+  - `git add .`
+  - `git commit -m "Auto-sync: [timestamp] - [summary]"`
+  - `git push origin [branch]`
 
-1. **Quick check at startup** — For each repo, runs `git status --short`. If there are changes, it runs add/commit/push for that repo immediately.
-2. **Watches all repos** — A single watcher monitors the root; file events are attributed to the repo they belong to.
-3. **Per-repo debounce** — After **60 seconds** of no changes in a given repo, it runs only for that repo:
-   - `git add .`
-   - `git commit -m "Auto-sync: [timestamp] - [summary]"`
-   - `git push origin [current-branch]`
-
-Only the repo that had changes is pushed; others are left untouched.
+Only the repo that had changes is pushed.
 
 ## Requirements
 
 - Python 3.10+
-- Git installed and configured (remote `origin` and branch set) for each repo
+- Git installed (remote `origin` and branch set per repo)
 
-## Installation
+## Install
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Usage
-
-Run from anywhere (default watch root is the **parent** of the directory containing `git-pulse.py`):
+## Run
 
 ```bash
 python git-pulse.py
 ```
 
-Example: if the script lives in `~/GitHub/GitPulse/`, the watch root is `~/GitHub/`. All direct subfolders of `~/GitHub/` that contain a `.git` directory (e.g. `GitPulse`, `my-app`, `other-repo`) are watched. Leave it running; stop with `Ctrl+C`.
+A **window** opens with a table of repos (branch, status, last pushed, fix hint). **Close the window to stop.**
 
-A **small window** opens with repo status; **close the window to stop.** Terminal: `python git-pulse.py --cli`.
+- **Terminal UI:** `python git-pulse.py --cli` (stop with Ctrl+C)
+- **Double-click** a row to open that repo’s folder.
+- **Refresh repos** — Rescan so new clones appear.
+- **Retry selected** — Retry push for the selected repo (selection is remembered when you click the button).
+- **Desktop notifications** — Optional: `pip install plyer` for a notification on successful push.
 
-- **Double-click** a repo row to open its folder in Explorer (or your file manager).
-- **Refresh repos** — Button rescans the watch root so new clones appear without restarting.
-- **Last pushed** — Column shows when each repo was last successfully pushed (e.g. “Just now”, “2 min ago”).
-- **Desktop notifications** — If you `pip install plyer`, a system notification is shown when a repo pushes successfully.
+## Config
 
-### Config (optional)
-
-Create `.gitpulse.json` in the same folder as `git-pulse.py` to override defaults:
+Optional `.gitpulse.json` next to `git-pulse.py`:
 
 ```json
 {
@@ -54,58 +50,28 @@ Create `.gitpulse.json` in the same folder as `git-pulse.py` to override default
 }
 ```
 
-`watch_root` is the folder whose direct subfolders are scanned for Git repos. `debounce_seconds` must be at least 10.
+`debounce_seconds` must be between 10 and 86400.
 
 ## Behavior
 
-| Aspect | Behavior |
-|--------|----------|
-| **Repos** | All direct subdirectories of the watch root that contain `.git` are included. |
-| **Startup** | Each repo is checked for uncommitted changes; if any, that repo is synced (add/commit/push) once before watching. |
-| **Debounce** | Per repo: 60 seconds with no file events in that repo before running the Git sequence for it only. |
-| **Ignored** | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, and each repo’s `.gitignore` patterns. |
-| **Push failure** | On push error for a repo, that repo is marked failed; the **Fix** column and log show what to do. Use **Retry selected** after fixing. Other repos keep syncing. |
-| **Logging** | Messages are appended to `.git-pulse.log` next to the script (e.g. `GitPulse/.git-pulse.log`). |
+| Item | Detail |
+|------|--------|
+| Repos | Direct subdirs of watch root that contain `.git`. |
+| Ignored | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, and each repo’s `.gitignore`. |
+| Auth failure | Classified as **auth**; short fix shown. GitPulse **auto-retries once after 5 seconds**. If credentials are stored (see below), it usually recovers without you doing anything. |
+| Other failures | **Fix** column and `.git-pulse.log` show a short hint. Fix the issue, then use **Retry selected** or wait for the next change. |
+| Log | `.git-pulse.log` next to the script. |
 
-### Error handling
+## Credentials (one-time)
 
-Failures are classified and a short **Fix** is shown in the GUI and log:
+If you see **Failed (auth)** (e.g. SEC_E_NO_CREDENTIALS), Git has no credentials in that run. Do this once:
 
-| Error type | What to do |
-|------------|------------|
-| **Auth** | Sign in: run `git push` in that repo and enter credentials, or set up Git Credential Manager. |
-| **Network** | Check internet/VPN; retry later or push manually. |
-| **Merge** | Pull first in that repo (`git pull`), fix conflicts, push; then **Retry selected** in Git Pulse. |
-| **No remote** | Run `git remote add origin <url>` in that repo. |
-| **Config** | Set `git config user.name` and `git config user.email` in that repo. |
-| **Add/commit** | Check permissions and lock files; close editors that lock files. |
+1. `git config --global credential.helper store`
+2. In any repo: `git push origin main` (or your branch) and sign in when prompted.
 
-Invalid `.gitpulse.json` or missing watch root is ignored (defaults used). If the watcher cannot start (e.g. permission), an error dialog is shown.
+Git saves credentials to a file. After that, GitPulse works from Cursor or anywhere. Auth failures also trigger one automatic retry after 5 seconds.
 
-### Root cause: "Push failed" / SEC_E_NO_CREDENTIALS
-
-**What’s going on:** Git push over HTTPS needs credentials. Windows uses SChannel and the credential store. If you see `SEC_E_NO_CREDENTIALS` or "Push failed (auth)", it means **no credentials were available to the process** that ran `git push`.
-
-**Why it happens:**
-
-1. **Credentials never stored** — You haven’t run `git push` from a normal terminal and signed in, so nothing is saved in Windows Credential Manager.
-2. **GitPulse started in a restricted context** — When GitPulse is run from Cursor’s “run in background” or an automated task, the process often can’t use the same credential store as an interactive terminal, so Git gets “no credentials”.
-
-**Fix (pick one; Option A is best so GitPulse works from anywhere):**
-
-- **Option A — One-time: save credentials to a file (then GitPulse works from Cursor too):**  
-  1. In **any** terminal (Cursor’s is fine), run:  
-     `git config --global credential.helper store`  
-  2. In any repo run `git push origin main` once and sign in when prompted.  
-  3. Git saves your login to a file. After that, GitPulse will work from Cursor or anywhere without asking again.
-
-- **Option B — Use a normal terminal each time:**  
-  Always run GitPulse from PowerShell/CMD (not Cursor), after doing one `git push` there to sign in.
-
-- **Option C — Use SSH instead of HTTPS:**  
-  In each repo: `git remote set-url origin git@github.com:USER/REPO.git`. Push then uses SSH keys (no password popup) if your key is on GitHub.
-
-The app shows **Failed (auth)** and a **Fix** column with this guidance.
+**Alternative:** Use SSH: `git remote set-url origin git@github.com:USER/REPO.git` so push uses your SSH key.
 
 ## License
 
