@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import tkinter as tk
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from tkinter import ttk
@@ -43,6 +44,25 @@ LIVE_REFRESH_RATE = 2
 
 
 CONFIG_FILENAME = ".gitpulse.json"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+MAX_DIFF_FOR_SUMMARY = 4000
+
+
+def load_dotenv(script_dir: Path) -> None:
+    env_file = script_dir / ".env"
+    if not env_file.exists():
+        return
+    try:
+        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                key = k.strip()
+                if key:
+                    os.environ.setdefault(key, v.strip())
+    except OSError:
+        pass
 
 ERROR_FIXES = {
     "auth": "Run: git config --global credential.helper store, then git push once and sign in.",
@@ -289,6 +309,54 @@ def get_diff_shortstat(root: Path) -> str:
         return ""
 
 
+def get_diff_cached(root: Path) -> str:
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--cached"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if r.returncode == 0 and r.stdout:
+            out = r.stdout.strip()
+            return out[:MAX_DIFF_FOR_SUMMARY] + ("…" if len(out) > MAX_DIFF_FOR_SUMMARY else "")
+        return ""
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ""
+
+
+def groq_summarize_diff(diff: str) -> str | None:
+    key = os.environ.get("GROQ_API_KEY")
+    if not key or not diff.strip():
+        return None
+    prompt = "Summarize this git diff in one short sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
+    body = json.dumps({
+        "model": GROQ_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 80,
+        "temperature": 0.2,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        GROQ_API_URL,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+        if content and isinstance(content, str):
+            return content.strip()[:200]
+        return None
+    except Exception:
+        return None
+
+
 def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
     summary = get_changed_files_summary(root)
     try:
@@ -303,11 +371,17 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             err = add.stderr or add.stdout or "git add failed"
             kind, _ = classify_error(err)
             return False, err, kind
-        shortstat = get_diff_shortstat(root)
-        if shortstat:
-            message = f"Auto-sync: {summary}\n\n{shortstat}"
+        subprocess.run(["git", "reset", "HEAD", "--", ".env"], cwd=root, capture_output=True, timeout=5, env=env)
+        diff = get_diff_cached(root)
+        groq_desc = groq_summarize_diff(diff) if diff and os.environ.get("GROQ_API_KEY") else None
+        if groq_desc:
+            message = f"Auto-sync: {summary}\n\n{groq_desc}"
         else:
-            message = f"Auto-sync: {summary}"
+            shortstat = get_diff_shortstat(root)
+            if shortstat:
+                message = f"Auto-sync: {summary}\n\n{shortstat}"
+            else:
+                message = f"Auto-sync: {summary}"
         commit = subprocess.run(
             ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30, env=env
         )
@@ -742,6 +816,7 @@ class GitPulse:
 
 
 def main():
+    load_dotenv(get_script_dir())
     app = GitPulse()
     if len(sys.argv) > 1 and sys.argv[1] in ("--cli", "--terminal"):
         app.run()

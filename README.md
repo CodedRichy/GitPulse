@@ -39,6 +39,10 @@ A **window** opens with a table of repos (branch, status, last pushed, fix hint)
 - **Retry selected** — Retry push for the selected repo (selection is remembered when you click the button).
 - **Desktop notifications** — Optional: `pip install plyer` for a notification on successful push.
 
+## Optional: AI commit summary
+
+If you set `GROQ_API_KEY` (e.g. in a `.env` file next to `git-pulse.py`), GitPulse will call Groq’s API to summarize the staged diff and use that as the commit message body. Otherwise it uses the shortstat (e.g. “1 file changed, 3 insertions(+), 3 deletions(-)”). `.env` is in `.gitignore` so your key is not committed.
+
 ## Config
 
 Optional `.gitpulse.json` next to `git-pulse.py`:
