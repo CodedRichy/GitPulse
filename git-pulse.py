@@ -615,6 +615,15 @@ class GitPulse:
 
         tree.bind("<Double-1>", on_double_click)
 
+        last_selected_iid: list[str | None] = [None]
+
+        def _on_select(_):
+            sel = tree.selection()
+            if sel:
+                last_selected_iid[0] = sel[0]
+
+        tree.bind("<<TreeviewSelect>>", _on_select)
+
         def do_refresh():
             self._repos.clear()
             self._repos.extend(find_git_repos(self._watch_root))
@@ -627,6 +636,8 @@ class GitPulse:
 
         def do_retry():
             sel = tree.selection()
+            if not sel and last_selected_iid[0]:
+                sel = [last_selected_iid[0]]
             if not sel:
                 return
             try:
