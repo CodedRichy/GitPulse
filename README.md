@@ -36,8 +36,25 @@ python git-pulse.py
 
 Example: if the script lives in `~/GitHub/GitPulse/`, the watch root is `~/GitHub/`. All direct subfolders of `~/GitHub/` that contain a `.git` directory (e.g. `GitPulse`, `my-app`, `other-repo`) are watched. Leave it running; stop with `Ctrl+C`.
 
-- **With Rich:** A live table lists each repo, its branch, and status (countdown to next commit or “Watching” / “Push failed”).
-- **Without Rich:** The script still runs and syncs; output is plain text.
+A **small window** opens with repo status; **close the window to stop.** Terminal: `python git-pulse.py --cli`.
+
+- **Double-click** a repo row to open its folder in Explorer (or your file manager).
+- **Refresh repos** — Button rescans the watch root so new clones appear without restarting.
+- **Last pushed** — Column shows when each repo was last successfully pushed (e.g. “Just now”, “2 min ago”).
+- **Desktop notifications** — If you `pip install plyer`, a system notification is shown when a repo pushes successfully.
+
+### Config (optional)
+
+Create `.gitpulse.json` in the same folder as `git-pulse.py` to override defaults:
+
+```json
+{
+  "watch_root": "C:\\Users\\you\\Documents\\GitHub",
+  "debounce_seconds": 60
+}
+```
+
+`watch_root` is the folder whose direct subfolders are scanned for Git repos. `debounce_seconds` must be at least 10.
 
 ## Behavior
 

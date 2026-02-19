@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import fnmatch
+import json
+import os
 import subprocess
 import sys
 import threading
@@ -12,6 +14,12 @@ import tkinter as tk
 from datetime import datetime
 from pathlib import Path
 from tkinter import ttk
+
+try:
+    from plyer import notification as plyer_notification
+    NOTIFY_AVAILABLE = True
+except ImportError:
+    NOTIFY_AVAILABLE = False
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
@@ -34,8 +42,21 @@ ALWAYS_IGNORE_FILES = (LOG_FILENAME, SCRIPT_NAME)
 LIVE_REFRESH_RATE = 2
 
 
+CONFIG_FILENAME = ".gitpulse.json"
+
+
 def get_script_dir() -> Path:
     return Path(__file__).resolve().parent
+
+
+def load_config() -> dict:
+    path = get_script_dir() / CONFIG_FILENAME
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
 
 
 def get_repos_root() -> Path:
@@ -53,6 +74,35 @@ def find_git_repos(root: Path) -> list[Path]:
         p for p in root.iterdir()
         if p.is_dir() and (p / ".git").exists()
     )
+
+
+def open_folder(path: Path):
+    try:
+        path = path.resolve()
+        if not path.is_dir():
+            return
+        if os.name == "nt":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", path], check=False, capture_output=True)
+        else:
+            subprocess.run(["xdg-open", path], check=False, capture_output=True)
+    except OSError:
+        pass
+
+
+def format_last_pushed(dt: datetime | None) -> str:
+    if dt is None:
+        return "—"
+    delta = datetime.utcnow() - dt
+    secs = delta.total_seconds()
+    if secs < 60:
+        return "Just now"
+    if secs < 3600:
+        return f"{int(secs / 60)} min ago"
+    if secs < 86400:
+        return f"{int(secs / 3600)} hr ago"
+    return f"{int(secs / 86400)} d ago"
 
 
 def find_repo_for_path(path: Path, repo_roots: list[Path]) -> Path | None:
@@ -227,7 +277,9 @@ class MultiRepoHandler(FileSystemEventHandler):
 
 class GitPulse:
     def __init__(self, watch_root: Path | None = None):
-        self._watch_root = watch_root or get_repos_root()
+        config = load_config()
+        self._watch_root = Path(config["watch_root"]) if config.get("watch_root") else (watch_root or get_repos_root())
+        self._debounce_seconds = max(10, int(config.get("debounce_seconds", DEBOUNCE_SECONDS)))
         self._repos = find_git_repos(self._watch_root)
         self._lock = threading.Lock()
         self._timers: dict[Path, threading.Timer] = {}
@@ -235,6 +287,7 @@ class GitPulse:
         self._push_failed: dict[Path, bool] = {}
         self._branch: dict[Path, str | None] = {}
         self._gitignore: dict[Path, list[str]] = {}
+        self._last_pushed: dict[Path, datetime] = {}
         for repo in self._repos:
             self._push_failed[repo] = False
             self._branch[repo] = get_current_branch(repo)
@@ -246,8 +299,8 @@ class GitPulse:
         with self._lock:
             if repo in self._timers and self._timers[repo]:
                 self._timers[repo].cancel()
-            self._next_commit_time[repo] = time.monotonic() + DEBOUNCE_SECONDS
-            t = threading.Timer(DEBOUNCE_SECONDS, self._on_debounce_elapsed, args=(repo,))
+            self._next_commit_time[repo] = time.monotonic() + self._debounce_seconds
+            t = threading.Timer(self._debounce_seconds, self._on_debounce_elapsed, args=(repo,))
             t.daemon = True
             self._timers[repo] = t
             t.start()
@@ -270,7 +323,13 @@ class GitPulse:
         success, err = run_git_sequence(repo, branch)
         if success:
             self._push_failed[repo] = False
+            self._last_pushed[repo] = datetime.utcnow()
             self._log(f"{repo.name}: Pushed.", repo)
+            if NOTIFY_AVAILABLE:
+                try:
+                    plyer_notification.notify(title="Git Pulse", message=f"{repo.name} pushed", app_name="Git Pulse")
+                except Exception:
+                    pass
         else:
             self._push_failed[repo] = True
             self._log(f"{repo.name}: Push failed — {err}", repo)
@@ -298,6 +357,7 @@ class GitPulse:
                 continue
             success, err = run_git_sequence(repo, branch)
             if success:
+                self._last_pushed[repo] = datetime.utcnow()
                 self._log(f"{repo.name}: Startup sync pushed.")
             else:
                 self._push_failed[repo] = True
@@ -309,7 +369,7 @@ class GitPulse:
                 return None
             return max(0.0, self._next_commit_time[repo] - time.monotonic())
 
-    def get_status_rows(self) -> list[tuple[str, str, str]]:
+    def get_status_rows(self) -> list[tuple[str, str, str, str]]:
         out = []
         for repo in self._repos:
             name = repo.name
@@ -323,7 +383,8 @@ class GitPulse:
                     status = f"Commit in {m}:{s:02d}"
                 else:
                     status = "Watching"
-            out.append((name, branch, status))
+            last = format_last_pushed(self._last_pushed.get(repo))
+            out.append((name, branch, status, last))
         return out
 
     def _build_panel(self):
@@ -392,9 +453,105 @@ class GitPulse:
         observer.join()
         console.print("[yellow]Stopped.[/yellow]")
 
+    def run_with_gui(self):
+        if not self._repos:
+            root = tk.Tk()
+            root.title("Git Pulse")
+            root.geometry("380x120")
+            root.resizable(True, False)
+            tk.Label(root, text=f"No Git repos under\n{self._watch_root}", font=("Segoe UI", 10)).pack(pady=20, padx=20)
+            root.mainloop()
+            return
+        self._quick_check_repos()
+        handler = MultiRepoHandler(self._repos, self._on_activity)
+        self._observer = Observer()
+        self._observer.schedule(handler, str(self._watch_root), recursive=True)
+        self._observer.start()
+
+        root = tk.Tk()
+        root.title("Git Pulse")
+        root.geometry("420x280")
+        root.resizable(True, True)
+        root.minsize(360, 200)
+
+        header = tk.Frame(root)
+        header.pack(fill=tk.X, padx=8, pady=6)
+        tk.Label(header, text=f"Watching {len(self._repos)} repo(s)", font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
+        tk.Label(header, text="Close window to stop", font=("Segoe UI", 8), fg="gray").pack(side=tk.RIGHT)
+
+        tree_frame = tk.Frame(root)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        tree = ttk.Treeview(tree_frame, columns=("branch", "status", "last"), show=("tree", "headings"), height=10)
+        tree.heading("#0", text="Repo")
+        tree.column("#0", width=120, minwidth=80)
+        tree.heading("branch", text="Branch")
+        tree.column("branch", width=100, minwidth=60)
+        tree.heading("status", text="Status")
+        tree.column("status", width=120, minwidth=80)
+        tree.heading("last", text="Last pushed")
+        tree.column("last", width=90, minwidth=70)
+        scroll = ttk.Scrollbar(tree_frame)
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.config(yscrollcommand=scroll.set)
+        scroll.config(command=tree.yview)
+
+        def refresh():
+            for i in tree.get_children():
+                tree.delete(i)
+            for repo, (name, branch, status, last) in zip(self._repos, self.get_status_rows()):
+                tree.insert("", tk.END, iid=str(repo.resolve()), text=name, values=(branch, status, last))
+
+        def on_double_click(_):
+            sel = tree.selection()
+            if not sel:
+                return
+            try:
+                open_folder(Path(sel[0]))
+            except Exception:
+                pass
+
+        tree.bind("<Double-1>", on_double_click)
+
+        def do_refresh():
+            self._repos.clear()
+            self._repos.extend(find_git_repos(self._watch_root))
+            for repo in self._repos:
+                if repo not in self._branch:
+                    self._branch[repo] = get_current_branch(repo)
+                    self._push_failed[repo] = False
+                    self._gitignore[repo] = load_gitignore(repo)
+            refresh()
+
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(fill=tk.X, padx=8, pady=(0, 6))
+        ttk.Button(btn_frame, text="Refresh repos", command=do_refresh).pack(side=tk.LEFT)
+
+        def on_closing():
+            self._observer.stop()
+            self._observer.join()
+            root.destroy()
+            sys.exit(0)
+
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        refresh()
+        root.after(1500, lambda: _tick(root))
+
+        def _tick(w):
+            if not w.winfo_exists():
+                return
+            refresh()
+            w.after(1500, lambda: _tick(w))
+
+        root.mainloop()
+
 
 def main():
-    GitPulse().run()
+    app = GitPulse()
+    if len(sys.argv) > 1 and sys.argv[1] in ("--cli", "--terminal"):
+        app.run()
+    else:
+        app.run_with_gui()
 
 
 if __name__ == "__main__":

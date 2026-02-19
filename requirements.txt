@@ -1,2 +1,4 @@
 watchdog>=4.0.0,<7
 rich>=13.0.0,<15
+# optional: desktop notifications on successful push
+# plyer>=2.0.0
