@@ -46,7 +46,13 @@ LIVE_REFRESH_RATE = 2
 CONFIG_FILENAME = ".gitpulse.json"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.3-70b-versatile"
-MAX_DIFF_FOR_SUMMARY = 4000
+MIN_DIFF_FOR_SUMMARY = 200  # Minimum diff size (chars) to trigger GROQ summary
+MAX_DIFF_FOR_SUMMARY = 4000  # Maximum diff size to send to GROQ
+
+# Rate limiting for GROQ API
+GROQ_RATE_LIMIT = 10  # Max 10 requests per minute
+GROQ_RATE_WINDOW = 60  # Time window in seconds
+_groq_request_times: list[float] = []
 
 
 def load_dotenv(script_dir: Path) -> None:
@@ -60,7 +66,7 @@ def load_dotenv(script_dir: Path) -> None:
                 k, _, v = line.partition("=")
                 key = k.strip()
                 if key:
-                    os.environ.setdefault(key, v.strip())
+                    os.environ[key] = v.strip()
     except OSError:
         pass
 
@@ -330,9 +336,21 @@ def get_diff_cached(root: Path) -> str:
 
 
 def groq_summarize_diff(diff: str) -> str | None:
+    global _groq_request_times
     key = os.environ.get("GROQ_API_KEY")
     if not key or not diff.strip():
         return None
+    
+    # Only summarize substantial changes to avoid unnecessary API calls
+    if len(diff) < MIN_DIFF_FOR_SUMMARY:
+        return None
+    
+    # Rate limiting check
+    now = time.time()
+    _groq_request_times = [t for t in _groq_request_times if now - t < GROQ_RATE_WINDOW]
+    if len(_groq_request_times) >= GROQ_RATE_LIMIT:
+        return None  # Rate limit exceeded, skip this request
+    
     prompt = "Summarize this git diff in one sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
     body = json.dumps({
         "model": GROQ_MODEL,
@@ -352,6 +370,7 @@ def groq_summarize_diff(diff: str) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode())
+        _groq_request_times.append(time.time())  # Record successful request
         content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
         if content and isinstance(content, str):
             return content.strip()[:200]
