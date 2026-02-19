@@ -6,6 +6,8 @@ from __future__ import annotations
 import fnmatch
 import subprocess
 import threading
+import time
+from datetime import datetime
 from pathlib import Path
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -25,6 +27,7 @@ LOG_FILENAME = ".git-pulse.log"
 SCRIPT_NAME = "git-pulse.py"
 ALWAYS_IGNORE_DIRS = (".git", "__pycache__")
 ALWAYS_IGNORE_FILES = (LOG_FILENAME, SCRIPT_NAME)
+LIVE_REFRESH_RATE = 2
 
 
 def get_repo_root() -> Path:
@@ -46,21 +49,18 @@ def load_gitignore(root: Path) -> list[str]:
     gitignore = root / ".gitignore"
     if not gitignore.exists():
         return []
-    patterns = []
-    for line in gitignore.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            patterns.append(line)
-    return patterns
+    return [
+        line.strip()
+        for line in gitignore.read_text(encoding="utf-8", errors="replace").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
 
 
 def path_matches_gitignore(rel_path: str, gitignore_patterns: list[str]) -> bool:
-    parts = rel_path.replace("\\", "/").split("/")
     path_str = rel_path.replace("\\", "/")
+    parts = path_str.split("/")
     for pattern in gitignore_patterns:
-        if fnmatch.fnmatch(path_str, pattern):
-            return True
-        if fnmatch.fnmatch(path_str, f"**/{pattern}"):
+        if fnmatch.fnmatch(path_str, pattern) or fnmatch.fnmatch(path_str, f"**/{pattern}"):
             return True
         for part in parts:
             if fnmatch.fnmatch(part, pattern):
@@ -69,21 +69,20 @@ def path_matches_gitignore(rel_path: str, gitignore_patterns: list[str]) -> bool
 
 
 def should_ignore(path: Path, gitignore_patterns: list[str]) -> bool:
+    path_str = str(path).replace("\\", "/")
+    if "/.git/" in path_str or "/__pycache__/" in path_str or path_str.endswith("/.git") or path_str.endswith("/__pycache__"):
+        return True
+    if path.name in ALWAYS_IGNORE_FILES:
+        return True
     try:
         rel = path.resolve().relative_to(REPO_ROOT)
-    except ValueError:
+    except (ValueError, OSError):
         return True
     rel_str = str(rel).replace("\\", "/")
     for part in rel.parts:
         if part in ALWAYS_IGNORE_DIRS:
             return True
-    if rel.name in ALWAYS_IGNORE_FILES:
-        return True
-    if "__pycache__" in rel.parts or ".git" in rel.parts:
-        return True
-    if path_matches_gitignore(rel_str, gitignore_patterns):
-        return True
-    return False
+    return path_matches_gitignore(rel_str, gitignore_patterns)
 
 
 def get_current_branch(root: Path) -> str | None:
@@ -113,12 +112,12 @@ def get_changed_files_summary(root: Path) -> str:
         )
         if r.returncode != 0 or not r.stdout.strip():
             return "changes"
-        lines = [l.strip() for l in r.stdout.strip().splitlines()[:10]]
+        lines = r.stdout.strip().splitlines()[:10]
         names = []
         for line in lines:
+            line = line.strip()
             if len(line) > 2:
-                name = line[3:].strip().split(" -> ")[-1]
-                names.append(Path(name).name)
+                names.append(Path(line[3:].strip().split(" -> ")[-1]).name)
         summary = ", ".join(names[:5])
         if len(lines) > 5:
             summary += f" (+{len(lines) - 5} more)"
@@ -128,40 +127,23 @@ def get_changed_files_summary(root: Path) -> str:
 
 
 def run_git_sequence(root: Path, branch: str) -> tuple[bool, str]:
-    from datetime import datetime
     ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     summary = get_changed_files_summary(root)
     message = f"Auto-sync: {ts} - {summary}"
-
     try:
-        add = subprocess.run(
-            ["git", "add", "."],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30)
         if add.returncode != 0:
             return False, add.stderr or add.stdout or "git add failed"
-
         commit = subprocess.run(
-            ["git", "commit", "-m", message],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=30,
+            ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30
         )
         if commit.returncode != 0:
-            if "nothing to commit" in (commit.stdout or "") + (commit.stderr or ""):
+            out = (commit.stdout or "") + (commit.stderr or "")
+            if "nothing to commit" in out:
                 return True, ""
             return False, commit.stderr or commit.stdout or "git commit failed"
-
         push = subprocess.run(
-            ["git", "push", "origin", branch],
-            cwd=root,
-            capture_output=True,
-            text=True,
-            timeout=120,
+            ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120
         )
         if push.returncode != 0:
             return False, push.stderr or push.stdout or "git push failed"
@@ -181,25 +163,27 @@ class GitPulseHandler(FileSystemEventHandler):
     def _should_handle(self, src_path: str) -> bool:
         return not should_ignore(Path(src_path), self._gitignore)
 
-    def on_modified(self, event: FileSystemEvent):
+    def _dispatch(self, event: FileSystemEvent):
         if event.is_directory:
             return
         if self._should_handle(event.src_path):
             self._on_activity()
 
+    def on_modified(self, event: FileSystemEvent):
+        self._dispatch(event)
+
     def on_created(self, event: FileSystemEvent):
-        if self._should_handle(event.src_path):
-            self._on_activity()
+        self._dispatch(event)
 
     def on_deleted(self, event: FileSystemEvent):
-        if self._should_handle(event.src_path):
-            self._on_activity()
+        self._dispatch(event)
 
 
-class DebouncedGitPulse:
+class GitPulse:
     def __init__(self):
         self._lock = threading.Lock()
         self._timer: threading.Timer | None = None
+        self._next_commit_time: float | None = None
         self._gitignore = load_gitignore(REPO_ROOT)
         self._branch = get_current_branch(REPO_ROOT)
         self._push_failed = False
@@ -209,18 +193,19 @@ class DebouncedGitPulse:
         with self._lock:
             if self._timer:
                 self._timer.cancel()
+            self._next_commit_time = time.monotonic() + DEBOUNCE_SECONDS
             self._timer = threading.Timer(DEBOUNCE_SECONDS, self._on_debounce_elapsed)
             self._timer.daemon = True
             self._timer.start()
 
     def _on_activity(self):
-        if self._push_failed:
-            return
-        self._schedule()
+        if not self._push_failed:
+            self._schedule()
 
     def _on_debounce_elapsed(self):
         with self._lock:
             self._timer = None
+            self._next_commit_time = None
         if self._push_failed:
             return
         if not self._branch:
@@ -236,57 +221,57 @@ class DebouncedGitPulse:
             self._log("Resolve conflicts or network, then run git push manually.")
 
     def _log(self, msg: str):
-        log_path = REPO_ROOT / LOG_FILENAME
         try:
-            with open(log_path, "a", encoding="utf-8") as f:
-                from datetime import datetime
+            with (REPO_ROOT / LOG_FILENAME).open("a", encoding="utf-8") as f:
                 f.write(f"{datetime.utcnow().isoformat()}Z {msg}\n")
         except OSError:
             pass
         if self._console and RICH_AVAILABLE:
-            if "failed" in msg.lower() or "error" in msg.lower():
-                self._console.print(f"[red]{msg}[/red]")
-            else:
-                self._console.print(f"[green]{msg}[/green]")
+            style = "red" if "failed" in msg.lower() or "error" in msg.lower() else "green"
+            self._console.print(f"[{style}]{msg}[/{style}]")
         else:
             print(msg)
 
-
-class DebouncedGitPulseWithCountdown(DebouncedGitPulse):
-    def __init__(self):
-        super().__init__()
-        self._next_commit_time: float | None = None
-
-    def _schedule(self):
-        import time
-        with self._lock:
-            if self._timer:
-                self._timer.cancel()
-            self._next_commit_time = time.monotonic() + DEBOUNCE_SECONDS
-            self._timer = threading.Timer(DEBOUNCE_SECONDS, self._on_debounce_elapsed)
-            self._timer.daemon = True
-            self._timer.start()
-
-    def _on_debounce_elapsed(self):
-        with self._lock:
-            self._timer = None
-            self._next_commit_time = None
-        super()._on_debounce_elapsed()
-
     def get_seconds_until_commit(self) -> float | None:
-        import time
         with self._lock:
             if self._next_commit_time is None or self._push_failed:
                 return None
             return max(0.0, self._next_commit_time - time.monotonic())
 
-    def run_with_rich_countdown(self):
-        import time
+    def _build_panel(self):
+        secs = self.get_seconds_until_commit()
+        if self._push_failed:
+            return Panel(
+                "[red]Push failed. Resolve manually (e.g. git push).[/red]\n"
+                "Watching for changes; no auto-commit until push succeeds.",
+                title="Git Pulse",
+                border_style="red",
+            )
+        if secs is not None and secs > 0:
+            m, s = divmod(int(secs), 60)
+            return Panel(
+                f"Repo: [cyan]{REPO_ROOT}[/cyan]\n"
+                f"Branch: [cyan]{self._branch or '(none)'}[/cyan]\n"
+                f"Next auto-commit in: [bold yellow]{m}:{s:02d}[/bold yellow] (60s silence)\n"
+                "[dim]Modify a file to reset the timer.[/dim]",
+                title="[bold]Git Pulse[/bold]",
+                border_style="blue",
+                box=box.ROUNDED,
+            )
+        return Panel(
+            f"Repo: [cyan]{REPO_ROOT}[/cyan]\n"
+            f"Branch: [cyan]{self._branch or '(none)'}[/cyan]\n"
+            "[green]Watching — waiting for changes (60s silence to commit)[/green]",
+            title="[bold]Git Pulse[/bold]",
+            border_style="blue",
+            box=box.ROUNDED,
+        )
+
+    def run(self):
         handler = GitPulseHandler(self._on_activity, self._gitignore)
         observer = Observer()
         observer.schedule(handler, str(REPO_ROOT), recursive=True)
         observer.start()
-
         if not RICH_AVAILABLE:
             print("Install 'rich' for color countdown. Running without Rich.")
             try:
@@ -297,48 +282,12 @@ class DebouncedGitPulseWithCountdown(DebouncedGitPulse):
             observer.stop()
             observer.join()
             return
-
         console = Console()
         try:
-            with Live(console=console, refresh_per_second=4) as live:
+            with Live(console=console, refresh_per_second=LIVE_REFRESH_RATE) as live:
                 while True:
-                    time.sleep(0.25)
-                    secs = self.get_seconds_until_commit()
-                    if self._push_failed:
-                        live.update(
-                            Panel(
-                                "[red]Push failed. Resolve manually (e.g. git push).[/red]\n"
-                                "Watching for changes; no auto-commit until push succeeds.",
-                                title="Git Pulse",
-                                border_style="red",
-                            )
-                        )
-                        continue
-                    if secs is not None and secs > 0:
-                        m, s = divmod(int(secs), 60)
-                        countdown = f"{m}:{s:02d}"
-                        live.update(
-                            Panel(
-                                f"Repo: [cyan]{REPO_ROOT}[/cyan]\n"
-                                f"Branch: [cyan]{self._branch or '(none)'}[/cyan]\n"
-                                f"Next auto-commit in: [bold yellow]{countdown}[/bold yellow] (60s silence)"
-                                + "\n[dim]Modify a file to reset the timer.[/dim]",
-                                title="[bold]Git Pulse[/bold]",
-                                border_style="blue",
-                                box=box.ROUNDED,
-                            )
-                        )
-                    else:
-                        live.update(
-                            Panel(
-                                f"Repo: [cyan]{REPO_ROOT}[/cyan]\n"
-                                f"Branch: [cyan]{self._branch or '(none)'}[/cyan]\n"
-                                "[green]Watching — waiting for changes (60s silence to commit)[/green]",
-                                title="[bold]Git Pulse[/bold]",
-                                border_style="blue",
-                                box=box.ROUNDED,
-                            )
-                        )
+                    time.sleep(1 / LIVE_REFRESH_RATE)
+                    live.update(self._build_panel())
         except KeyboardInterrupt:
             pass
         observer.stop()
@@ -347,8 +296,7 @@ class DebouncedGitPulseWithCountdown(DebouncedGitPulse):
 
 
 def main():
-    app = DebouncedGitPulseWithCountdown()
-    app.run_with_rich_countdown()
+    GitPulse().run()
 
 
 if __name__ == "__main__":
