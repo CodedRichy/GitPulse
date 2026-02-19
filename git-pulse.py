@@ -45,15 +45,15 @@ LIVE_REFRESH_RATE = 2
 CONFIG_FILENAME = ".gitpulse.json"
 
 ERROR_FIXES = {
-    "auth": "One-time fix: In any terminal run 'git config --global credential.helper store'. Then run 'git push' once in a repo and sign in; Git saves to a file. After that GitPulse works from anywhere (including Cursor).",
-    "network": "Check internet and VPN; retry later or run 'git push' manually.",
-    "merge": "Pull first: open repo, run 'git pull', fix conflicts, then push. Retry here after.",
-    "no_remote": "Add remote: run 'git remote add origin <url>' in that repo.",
-    "config": "Set identity: run 'git config user.name \"Your Name\"' and 'git config user.email \"you@example.com\"'.",
-    "add": "Check file permissions and lock files in that repo; close editors that may lock files.",
-    "commit": "Check commit hooks and repo state; run 'git status' in that repo.",
-    "timeout": "Network slow or repo large; increase timeout or push manually.",
-    "unknown": "See .git-pulse.log for details; fix then use Retry.",
+    "auth": "Run: git config --global credential.helper store, then git push once and sign in.",
+    "network": "Check internet/VPN; push manually if needed.",
+    "merge": "Run git pull in repo, fix conflicts, then push.",
+    "no_remote": "Run: git remote add origin <url>",
+    "config": "Set: git config user.name and user.email",
+    "add": "Check permissions/lock files; close editors.",
+    "commit": "Check hooks/repo state; run git status.",
+    "timeout": "Push manually or retry later.",
+    "unknown": "See .git-pulse.log; fix and Retry.",
 }
 
 
@@ -390,7 +390,8 @@ class GitPulse:
             else:
                 self._push_failed[repo] = True
                 fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                self._last_error[repo] = (err[:200] + "…" if len(err) > 200 else err, fix, kind)
+                err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+                self._last_error[repo] = (err_display, fix, kind)
         t = threading.Timer(5, run)
         t.daemon = True
         t.start()
@@ -434,10 +435,9 @@ class GitPulse:
         else:
             self._push_failed[repo] = True
             fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-            err_short = err[:200] + "…" if len(err) > 200 else err
-            self._last_error[repo] = (err_short, fix, kind)
-            self._log(f"{repo.name}: Push failed ({kind}) — {err}", repo)
-            self._log(f"  Fix: {fix}", repo)
+            err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+            self._last_error[repo] = (err_display, fix, kind)
+            self._log(f"{repo.name}: {kind} — {err_display}", repo)
             if kind == "auth":
                 self._schedule_auth_retry(repo)
 
@@ -469,10 +469,9 @@ class GitPulse:
             else:
                 self._push_failed[repo] = True
                 fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                err_short = err[:200] + "…" if len(err) > 200 else err
-                self._last_error[repo] = (err_short, fix, kind)
-                self._log(f"{repo.name}: Startup sync failed ({kind}) — {err}")
-                self._log(f"  Fix: {fix}", repo)
+                err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+                self._last_error[repo] = (err_display, fix, kind)
+                self._log(f"{repo.name}: {kind} — {err_display}", repo)
                 if kind == "auth":
                     self._schedule_auth_retry(repo)
 
@@ -491,7 +490,7 @@ class GitPulse:
                 entry = self._last_error.get(repo, ("", ERROR_FIXES["unknown"], "unknown"))
                 err_snippet, fix, kind = entry[0], entry[1], entry[2] if len(entry) > 2 else "unknown"
                 status = f"Failed ({kind})"
-                fix_short = (fix[:70] + "…") if len(fix) > 70 else fix
+                fix_short = (fix[:50] + "…") if len(fix) > 50 else fix
             else:
                 secs = self.get_seconds_until_commit(repo)
                 if secs is not None and secs > 0:
@@ -584,7 +583,7 @@ class GitPulse:
         if not self._repos:
             root = tk.Tk()
             root.title("Git Pulse")
-            root.geometry("380x120")
+            root.geometry("400x150")
             root.resizable(True, False)
             tk.Label(root, text=f"No Git repos under\n{self._watch_root}", font=("Segoe UI", 10)).pack(pady=20, padx=20)
             root.mainloop()
@@ -692,9 +691,9 @@ class GitPulse:
                 else:
                     self._push_failed[repo] = True
                     fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                    err_short = err[:200] + "…" if len(err) > 200 else err
-                    self._last_error[repo] = (err_short, fix, kind)
-                    self._log(f"{repo.name}: Retry failed ({kind}) — {err}")
+                    err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+                    self._last_error[repo] = (err_display, fix, kind)
+                    self._log(f"{repo.name}: Retry {kind} — {err_display}", repo)
                 refresh()
             except Exception:
                 refresh()
