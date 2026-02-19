@@ -64,8 +64,48 @@ Create `.gitpulse.json` in the same folder as `git-pulse.py` to override default
 | **Startup** | Each repo is checked for uncommitted changes; if any, that repo is synced (add/commit/push) once before watching. |
 | **Debounce** | Per repo: 60 seconds with no file events in that repo before running the Git sequence for it only. |
 | **Ignored** | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, and each repo’s `.gitignore` patterns. |
-| **Push failure** | On push error for a repo, that repo is marked failed and won’t auto-push until you fix and run `git push` manually; other repos keep syncing. |
+| **Push failure** | On push error for a repo, that repo is marked failed; the **Fix** column and log show what to do. Use **Retry selected** after fixing. Other repos keep syncing. |
 | **Logging** | Messages are appended to `.git-pulse.log` next to the script (e.g. `GitPulse/.git-pulse.log`). |
+
+### Error handling
+
+Failures are classified and a short **Fix** is shown in the GUI and log:
+
+| Error type | What to do |
+|------------|------------|
+| **Auth** | Sign in: run `git push` in that repo and enter credentials, or set up Git Credential Manager. |
+| **Network** | Check internet/VPN; retry later or push manually. |
+| **Merge** | Pull first in that repo (`git pull`), fix conflicts, push; then **Retry selected** in Git Pulse. |
+| **No remote** | Run `git remote add origin <url>` in that repo. |
+| **Config** | Set `git config user.name` and `git config user.email` in that repo. |
+| **Add/commit** | Check permissions and lock files; close editors that lock files. |
+
+Invalid `.gitpulse.json` or missing watch root is ignored (defaults used). If the watcher cannot start (e.g. permission), an error dialog is shown.
+
+### Root cause: "Push failed" / SEC_E_NO_CREDENTIALS
+
+**What’s going on:** Git push over HTTPS needs credentials. Windows uses SChannel and the credential store. If you see `SEC_E_NO_CREDENTIALS` or "Push failed (auth)", it means **no credentials were available to the process** that ran `git push`.
+
+**Why it happens:**
+
+1. **Credentials never stored** — You haven’t run `git push` from a normal terminal and signed in, so nothing is saved in Windows Credential Manager.
+2. **GitPulse started in a restricted context** — When GitPulse is run from Cursor’s “run in background” or an automated task, the process often can’t use the same credential store as an interactive terminal, so Git gets “no credentials”.
+
+**Fix (pick one; Option A is best so GitPulse works from anywhere):**
+
+- **Option A — One-time: save credentials to a file (then GitPulse works from Cursor too):**  
+  1. In **any** terminal (Cursor’s is fine), run:  
+     `git config --global credential.helper store`  
+  2. In any repo run `git push origin main` once and sign in when prompted.  
+  3. Git saves your login to a file. After that, GitPulse will work from Cursor or anywhere without asking again.
+
+- **Option B — Use a normal terminal each time:**  
+  Always run GitPulse from PowerShell/CMD (not Cursor), after doing one `git push` there to sign in.
+
+- **Option C — Use SSH instead of HTTPS:**  
+  In each repo: `git remote set-url origin git@github.com:USER/REPO.git`. Push then uses SSH keys (no password popup) if your key is on GitHub.
+
+The app shows **Failed (auth)** and a **Fix** column with this guidance.
 
 ## License
 

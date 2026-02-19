@@ -44,6 +44,41 @@ LIVE_REFRESH_RATE = 2
 
 CONFIG_FILENAME = ".gitpulse.json"
 
+ERROR_FIXES = {
+    "auth": "One-time fix: In any terminal run 'git config --global credential.helper store'. Then run 'git push' once in a repo and sign in; Git saves to a file. After that GitPulse works from anywhere (including Cursor).",
+    "network": "Check internet and VPN; retry later or run 'git push' manually.",
+    "merge": "Pull first: open repo, run 'git pull', fix conflicts, then push. Retry here after.",
+    "no_remote": "Add remote: run 'git remote add origin <url>' in that repo.",
+    "config": "Set identity: run 'git config user.name \"Your Name\"' and 'git config user.email \"you@example.com\"'.",
+    "add": "Check file permissions and lock files in that repo; close editors that may lock files.",
+    "commit": "Check commit hooks and repo state; run 'git status' in that repo.",
+    "timeout": "Network slow or repo large; increase timeout or push manually.",
+    "unknown": "See .git-pulse.log for details; fix then use Retry.",
+}
+
+
+def classify_error(err_text: str) -> tuple[str, str]:
+    if not err_text:
+        return "unknown", ERROR_FIXES["unknown"]
+    t = err_text.lower()
+    if "credential" in t or "authentication" in t or "permission denied" in t or "sec_e_no_credentials" in t or "403" in t or "could not read username" in t:
+        return "auth", ERROR_FIXES["auth"]
+    if "timeout" in t or "timed out" in t or "connection" in t or "unreachable" in t or "could not resolve" in t:
+        return "network", ERROR_FIXES["network"]
+    if "rejected" in t or "non-fast-forward" in t or "pull" in t or "diverged" in t or "merge" in t:
+        return "merge", ERROR_FIXES["merge"]
+    if "no such remote" in t or "origin" in t and "does not appear" in t:
+        return "no_remote", ERROR_FIXES["no_remote"]
+    if "user.name" in t or "user.email" in t or "identity" in t:
+        return "config", ERROR_FIXES["config"]
+    if "add" in t and ("failed" in t or "error" in t or "permission" in t):
+        return "add", ERROR_FIXES["add"]
+    if "commit" in t and ("failed" in t or "error" in t or "hook" in t):
+        return "commit", ERROR_FIXES["commit"]
+    if "timeout" in t or "timed out" in t:
+        return "timeout", ERROR_FIXES["timeout"]
+    return "unknown", ERROR_FIXES["unknown"]
+
 
 def get_script_dir() -> Path:
     return Path(__file__).resolve().parent
@@ -54,7 +89,31 @@ def load_config() -> dict:
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {}
+        out = {}
+        if data.get("watch_root"):
+            p = Path(str(data["watch_root"]).strip())
+            if p.is_dir():
+                out["watch_root"] = str(p.resolve())
+            elif p.exists():
+                pass
+            else:
+                try:
+                    resolved = p.resolve()
+                    if resolved.is_dir():
+                        out["watch_root"] = str(resolved)
+                except (OSError, RuntimeError):
+                    pass
+        if "debounce_seconds" in data:
+            try:
+                sec = int(data["debounce_seconds"])
+                if 10 <= sec <= 86400:
+                    out["debounce_seconds"] = sec
+            except (TypeError, ValueError):
+                pass
+        return out
     except (json.JSONDecodeError, OSError):
         return {}
 
@@ -214,32 +273,39 @@ def get_changed_files_summary(root: Path) -> str:
         return "changes"
 
 
-def run_git_sequence(root: Path, branch: str) -> tuple[bool, str]:
+def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
     ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     summary = get_changed_files_summary(root)
     message = f"Auto-sync: {ts} - {summary}"
     try:
-        add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30)
+        env = os.environ.copy()
+        add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30, env=env)
         if add.returncode != 0:
-            return False, add.stderr or add.stdout or "git add failed"
+            err = add.stderr or add.stdout or "git add failed"
+            kind, _ = classify_error(err)
+            return False, err, kind
         commit = subprocess.run(
-            ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30
+            ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30, env=env
         )
         if commit.returncode != 0:
             out = (commit.stdout or "") + (commit.stderr or "")
             if "nothing to commit" in out:
-                return True, ""
-            return False, commit.stderr or commit.stdout or "git commit failed"
+                return True, "", ""
+            err = commit.stderr or commit.stdout or "git commit failed"
+            kind, _ = classify_error(err)
+            return False, err, kind
         push = subprocess.run(
-            ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120
+            ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120, env=env
         )
         if push.returncode != 0:
-            return False, push.stderr or push.stdout or "git push failed"
-        return True, ""
+            err = push.stderr or push.stdout or "git push failed"
+            kind, _ = classify_error(err)
+            return False, err, kind
+        return True, "", ""
     except subprocess.TimeoutExpired as e:
-        return False, f"Timeout: {e}"
+        return False, f"Timeout: {e}", "timeout"
     except Exception as e:
-        return False, str(e)
+        return False, str(e), "unknown"
 
 
 class MultiRepoHandler(FileSystemEventHandler):
@@ -278,13 +344,17 @@ class MultiRepoHandler(FileSystemEventHandler):
 class GitPulse:
     def __init__(self, watch_root: Path | None = None):
         config = load_config()
-        self._watch_root = Path(config["watch_root"]) if config.get("watch_root") else (watch_root or get_repos_root())
+        raw_root = config.get("watch_root") or (str(watch_root) if watch_root else None) or str(get_repos_root())
+        self._watch_root = Path(raw_root).resolve()
+        if not self._watch_root.is_dir():
+            self._watch_root = get_repos_root().resolve()
         self._debounce_seconds = max(10, int(config.get("debounce_seconds", DEBOUNCE_SECONDS)))
         self._repos = find_git_repos(self._watch_root)
         self._lock = threading.Lock()
         self._timers: dict[Path, threading.Timer] = {}
         self._next_commit_time: dict[Path, float] = {}
         self._push_failed: dict[Path, bool] = {}
+        self._last_error: dict[Path, tuple[str, str, str]] = {}
         self._branch: dict[Path, str | None] = {}
         self._gitignore: dict[Path, list[str]] = {}
         self._last_pushed: dict[Path, datetime] = {}
@@ -320,9 +390,10 @@ class GitPulse:
         if not branch:
             self._log(f"{repo.name}: No branch. Skipping.", repo)
             return
-        success, err = run_git_sequence(repo, branch)
+        success, err, kind = run_git_sequence(repo, branch)
         if success:
             self._push_failed[repo] = False
+            self._last_error.pop(repo, None)
             self._last_pushed[repo] = datetime.utcnow()
             self._log(f"{repo.name}: Pushed.", repo)
             if NOTIFY_AVAILABLE:
@@ -332,7 +403,11 @@ class GitPulse:
                     pass
         else:
             self._push_failed[repo] = True
-            self._log(f"{repo.name}: Push failed — {err}", repo)
+            fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
+            err_short = err[:200] + "…" if len(err) > 200 else err
+            self._last_error[repo] = (err_short, fix, kind)
+            self._log(f"{repo.name}: Push failed ({kind}) — {err}", repo)
+            self._log(f"  Fix: {fix}", repo)
 
     def _log(self, msg: str, repo: Path | None = None):
         try:
@@ -355,13 +430,17 @@ class GitPulse:
             branch = self._branch.get(repo)
             if not branch:
                 continue
-            success, err = run_git_sequence(repo, branch)
+            success, err, kind = run_git_sequence(repo, branch)
             if success:
                 self._last_pushed[repo] = datetime.utcnow()
                 self._log(f"{repo.name}: Startup sync pushed.")
             else:
                 self._push_failed[repo] = True
-                self._log(f"{repo.name}: Startup sync failed — {err}")
+                fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
+                err_short = err[:200] + "…" if len(err) > 200 else err
+                self._last_error[repo] = (err_short, fix, kind)
+                self._log(f"{repo.name}: Startup sync failed ({kind}) — {err}")
+                self._log(f"  Fix: {fix}", repo)
 
     def get_seconds_until_commit(self, repo: Path) -> float | None:
         with self._lock:
@@ -369,22 +448,27 @@ class GitPulse:
                 return None
             return max(0.0, self._next_commit_time[repo] - time.monotonic())
 
-    def get_status_rows(self) -> list[tuple[str, str, str, str]]:
+    def get_status_rows(self) -> list[tuple[str, str, str, str, str]]:
         out = []
         for repo in self._repos:
             name = repo.name
             branch = self._branch.get(repo) or "(none)"
             if self._push_failed.get(repo, False):
-                status = "Push failed — fix manually"
+                entry = self._last_error.get(repo, ("", ERROR_FIXES["unknown"], "unknown"))
+                err_snippet, fix, kind = entry[0], entry[1], entry[2] if len(entry) > 2 else "unknown"
+                status = f"Failed ({kind})"
+                fix_short = (fix[:70] + "…") if len(fix) > 70 else fix
             else:
                 secs = self.get_seconds_until_commit(repo)
                 if secs is not None and secs > 0:
                     m, s = divmod(int(secs), 60)
                     status = f"Commit in {m}:{s:02d}"
+                    fix_short = "—"
                 else:
                     status = "Watching"
+                    fix_short = "—"
             last = format_last_pushed(self._last_pushed.get(repo))
-            out.append((name, branch, status, last))
+            out.append((name, branch, status, last, fix_short))
         return out
 
     def _build_panel(self):
@@ -403,7 +487,9 @@ class GitPulse:
             name = repo.name
             branch = self._branch.get(repo) or "(none)"
             if self._push_failed.get(repo, False):
-                status = "[red]Push failed — fix manually[/red]"
+                entry = self._last_error.get(repo, ("", "", "unknown"))
+                kind = entry[2] if len(entry) > 2 else "unknown"
+                status = f"[red]Failed ({kind}) — see Fix[/red]"
             else:
                 secs = self.get_seconds_until_commit(repo)
                 if secs is not None and secs > 0:
@@ -454,6 +540,13 @@ class GitPulse:
         console.print("[yellow]Stopped.[/yellow]")
 
     def run_with_gui(self):
+        if not self._watch_root.is_dir():
+            root = tk.Tk()
+            root.title("Git Pulse")
+            root.withdraw()
+            tk.messagebox.showerror("Git Pulse", f"Watch root is not a directory:\n{self._watch_root}\nFix .gitpulse.json or run from a valid path.")
+            root.destroy()
+            return
         if not self._repos:
             root = tk.Tk()
             root.title("Git Pulse")
@@ -465,8 +558,15 @@ class GitPulse:
         self._quick_check_repos()
         handler = MultiRepoHandler(self._repos, self._on_activity)
         self._observer = Observer()
-        self._observer.schedule(handler, str(self._watch_root), recursive=True)
-        self._observer.start()
+        try:
+            self._observer.schedule(handler, str(self._watch_root), recursive=True)
+            self._observer.start()
+        except (OSError, PermissionError) as e:
+            root = tk.Tk()
+            root.withdraw()
+            tk.messagebox.showerror("Git Pulse", f"Cannot watch folder:\n{self._watch_root}\n{e}\nCheck path and permissions.")
+            root.destroy()
+            return
 
         root = tk.Tk()
         root.title("Git Pulse")
@@ -481,15 +581,17 @@ class GitPulse:
 
         tree_frame = tk.Frame(root)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
-        tree = ttk.Treeview(tree_frame, columns=("branch", "status", "last"), show=("tree", "headings"), height=10)
+        tree = ttk.Treeview(tree_frame, columns=("branch", "status", "last", "fix"), show=("tree", "headings"), height=10)
         tree.heading("#0", text="Repo")
-        tree.column("#0", width=120, minwidth=80)
+        tree.column("#0", width=100, minwidth=70)
         tree.heading("branch", text="Branch")
-        tree.column("branch", width=100, minwidth=60)
+        tree.column("branch", width=90, minwidth=50)
         tree.heading("status", text="Status")
-        tree.column("status", width=120, minwidth=80)
+        tree.column("status", width=90, minwidth=60)
         tree.heading("last", text="Last pushed")
-        tree.column("last", width=90, minwidth=70)
+        tree.column("last", width=80, minwidth=60)
+        tree.heading("fix", text="Fix")
+        tree.column("fix", width=200, minwidth=120)
         scroll = ttk.Scrollbar(tree_frame)
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
@@ -499,8 +601,8 @@ class GitPulse:
         def refresh():
             for i in tree.get_children():
                 tree.delete(i)
-            for repo, (name, branch, status, last) in zip(self._repos, self.get_status_rows()):
-                tree.insert("", tk.END, iid=str(repo.resolve()), text=name, values=(branch, status, last))
+            for repo, (name, branch, status, last, fix) in zip(self._repos, self.get_status_rows()):
+                tree.insert("", tk.END, iid=str(repo.resolve()), text=name, values=(branch, status, last, fix))
 
         def on_double_click(_):
             sel = tree.selection()
@@ -523,9 +625,39 @@ class GitPulse:
                     self._gitignore[repo] = load_gitignore(repo)
             refresh()
 
+        def do_retry():
+            sel = tree.selection()
+            if not sel:
+                return
+            try:
+                target = Path(sel[0]).resolve()
+                repo = next((r for r in self._repos if r.resolve() == target), None)
+                if repo is None:
+                    return
+                self._push_failed[repo] = False
+                self._last_error.pop(repo, None)
+                branch = self._branch.get(repo)
+                if not branch:
+                    refresh()
+                    return
+                success, err, kind = run_git_sequence(repo, branch)
+                if success:
+                    self._last_pushed[repo] = datetime.utcnow()
+                    self._log(f"{repo.name}: Retry pushed.")
+                else:
+                    self._push_failed[repo] = True
+                    fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
+                    err_short = err[:200] + "…" if len(err) > 200 else err
+                    self._last_error[repo] = (err_short, fix, kind)
+                    self._log(f"{repo.name}: Retry failed ({kind}) — {err}")
+                refresh()
+            except Exception:
+                refresh()
+
         btn_frame = tk.Frame(root)
         btn_frame.pack(fill=tk.X, padx=8, pady=(0, 6))
         ttk.Button(btn_frame, text="Refresh repos", command=do_refresh).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="Retry selected", command=do_retry).pack(side=tk.LEFT, padx=(8, 0))
 
         def on_closing():
             self._observer.stop()
