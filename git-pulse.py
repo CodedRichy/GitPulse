@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import fnmatch
 import subprocess
+import sys
 import threading
 import time
+import tkinter as tk
 from datetime import datetime
 from pathlib import Path
+from tkinter import ttk
 
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
@@ -305,6 +308,23 @@ class GitPulse:
             if self._next_commit_time.get(repo) is None or self._push_failed.get(repo, False):
                 return None
             return max(0.0, self._next_commit_time[repo] - time.monotonic())
+
+    def get_status_rows(self) -> list[tuple[str, str, str]]:
+        out = []
+        for repo in self._repos:
+            name = repo.name
+            branch = self._branch.get(repo) or "(none)"
+            if self._push_failed.get(repo, False):
+                status = "Push failed — fix manually"
+            else:
+                secs = self.get_seconds_until_commit(repo)
+                if secs is not None and secs > 0:
+                    m, s = divmod(int(secs), 60)
+                    status = f"Commit in {m}:{s:02d}"
+                else:
+                    status = "Watching"
+            out.append((name, branch, status))
+        return out
 
     def _build_panel(self):
         if not self._repos:
