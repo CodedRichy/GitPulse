@@ -273,10 +273,24 @@ def get_changed_files_summary(root: Path) -> str:
         return "changes"
 
 
+def get_diff_shortstat(root: Path) -> str:
+    try:
+        r = subprocess.run(
+            ["git", "diff", "--cached", "--shortstat"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if r.returncode == 0 and r.stdout and r.stdout.strip():
+            return r.stdout.strip()
+        return ""
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ""
+
+
 def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
-    ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
     summary = get_changed_files_summary(root)
-    message = f"Auto-sync: {ts} - {summary}"
     try:
         env = os.environ.copy()
         home = os.path.expanduser("~")
@@ -289,6 +303,11 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             err = add.stderr or add.stdout or "git add failed"
             kind, _ = classify_error(err)
             return False, err, kind
+        shortstat = get_diff_shortstat(root)
+        if shortstat:
+            message = f"Auto-sync: {summary}\n\n{shortstat}"
+        else:
+            message = f"Auto-sync: {summary}"
         commit = subprocess.run(
             ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30, env=env
         )
