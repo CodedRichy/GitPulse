@@ -8,8 +8,8 @@ Auto-commit and push multiple Git repos after a short period of inactivity. One 
 - **Startup sync** — For each repo with uncommitted changes, runs add/commit/push once before watching.
 - **Watches all** — Single watcher; file events are attributed to the right repo.
 - **Per-repo debounce** — After **60 seconds** with no changes in a repo, runs only for that repo:
-  - `git add .`
-  - `git commit -m "Auto-sync: [timestamp] - [summary]"`
+  - `git add .` (then unstages `.env` so it is never committed)
+  - `git commit -m "Auto-sync: [files]"` with body from Groq summary or diff shortstat
   - `git push origin [branch]`
 
 Only the repo that had changes is pushed.
@@ -41,7 +41,7 @@ A **window** opens with a table of repos (branch, status, last pushed, fix hint)
 
 ## Optional: AI commit summary
 
-If you set `GROQ_API_KEY` (e.g. in a `.env` file next to `git-pulse.py`), GitPulse will call Groq’s API to summarize the staged diff and use that as the commit message body. Otherwise it uses the shortstat (e.g. “1 file changed, 3 insertions(+), 3 deletions(-)”). `.env` is in `.gitignore` so your key is not committed.
+Set `GROQ_API_KEY` in a `.env` file next to `git-pulse.py`. GitPulse loads it at startup and uses Groq to summarize the staged diff as the commit message body. Without the key, it uses the diff shortstat. **`.env` is in `.gitignore`** and the script unstages `.env` before every commit, so your key is never committed or pushed.
 
 ## Config
 
@@ -61,9 +61,10 @@ Optional `.gitpulse.json` next to `git-pulse.py`:
 | Item | Detail |
 |------|--------|
 | Repos | Direct subdirs of watch root that contain `.git`. |
-| Ignored | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, and each repo’s `.gitignore`. |
-| Auth failure | Classified as **auth**; short fix shown. GitPulse **auto-retries once after 5 seconds**. If credentials are stored (see below), it usually recovers without you doing anything. |
-| Other failures | **Fix** column and `.git-pulse.log` show a short hint. Fix the issue, then use **Retry selected** or wait for the next change. |
+| Ignored | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, `.env`, and each repo’s `.gitignore`. `.env` is always unstaged before commit. |
+| Auth failure | **auth**; auto-retry once after 5s. Store credentials once (see below) and it recovers. |
+| Rules (GH013) | **rules** — GitHub repo rules block push to main. In repo Settings → Rules, allow direct push or use another branch. |
+| Other failures | **Fix** column and `.git-pulse.log` show a short hint. Use **Retry selected** after fixing. |
 | Log | `.git-pulse.log` next to the script. |
 
 ## Credentials (one-time)
