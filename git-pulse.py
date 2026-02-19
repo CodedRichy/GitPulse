@@ -369,6 +369,31 @@ class GitPulse:
             self._gitignore[repo] = load_gitignore(repo)
         self._log_path = get_script_dir() / LOG_FILENAME
         self._console = Console() if RICH_AVAILABLE else None
+        self._auth_retry_scheduled: set[Path] = set()
+
+    def _schedule_auth_retry(self, repo: Path):
+        if repo in self._auth_retry_scheduled:
+            return
+        self._auth_retry_scheduled.add(repo)
+        def run():
+            branch = self._branch.get(repo)
+            if not branch:
+                self._auth_retry_scheduled.discard(repo)
+                return
+            success, err, kind = run_git_sequence(repo, branch)
+            self._auth_retry_scheduled.discard(repo)
+            if success:
+                self._push_failed[repo] = False
+                self._last_error.pop(repo, None)
+                self._last_pushed[repo] = datetime.utcnow()
+                self._log(f"{repo.name}: Auto-retry pushed.")
+            else:
+                self._push_failed[repo] = True
+                fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
+                self._last_error[repo] = (err[:200] + "…" if len(err) > 200 else err, fix, kind)
+        t = threading.Timer(5, run)
+        t.daemon = True
+        t.start()
 
     def _schedule(self, repo: Path):
         with self._lock:
@@ -413,6 +438,8 @@ class GitPulse:
             self._last_error[repo] = (err_short, fix, kind)
             self._log(f"{repo.name}: Push failed ({kind}) — {err}", repo)
             self._log(f"  Fix: {fix}", repo)
+            if kind == "auth":
+                self._schedule_auth_retry(repo)
 
     def _log(self, msg: str, repo: Path | None = None):
         try:
@@ -446,6 +473,8 @@ class GitPulse:
                 self._last_error[repo] = (err_short, fix, kind)
                 self._log(f"{repo.name}: Startup sync failed ({kind}) — {err}")
                 self._log(f"  Fix: {fix}", repo)
+                if kind == "auth":
+                    self._schedule_auth_retry(repo)
 
     def get_seconds_until_commit(self, repo: Path) -> float | None:
         with self._lock:
