@@ -17,7 +17,7 @@ from pathlib import Path
 from tkinter import ttk
 
 try:
-    from plyer import notification as plyer_notification
+    from plyer import notification as plyer_notification  # pyright: ignore[reportMissingImports]
     NOTIFY_AVAILABLE = True
 except ImportError:
     NOTIFY_AVAILABLE = False
@@ -333,7 +333,7 @@ def groq_summarize_diff(diff: str) -> str | None:
     key = os.environ.get("GROQ_API_KEY")
     if not key or not diff.strip():
         return None
-    prompt = "Summarize this git diff in one short sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
+    prompt = "Summarize this git diff in one sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
     body = json.dumps({
         "model": GROQ_MODEL,
         "messages": [{"role": "user", "content": prompt}],
