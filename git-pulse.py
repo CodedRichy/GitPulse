@@ -41,7 +41,8 @@ SCRIPT_NAME = "git-pulse.py"
 ALWAYS_IGNORE_DIRS = (".git", "__pycache__")
 ALWAYS_IGNORE_FILES = (LOG_FILENAME, SCRIPT_NAME)
 LIVE_REFRESH_RATE = 2
-
+GUI_REFRESH_MS = 1500
+CATCH_UP_EVERY_N_TICKS = 4  # Run catch-up every N GUI ticks (~6s when GUI_REFRESH_MS=1500)
 
 CONFIG_FILENAME = ".gitpulse.json"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -107,6 +108,14 @@ def classify_error(err_text: str) -> tuple[str, str]:
     if "commit" in t and ("failed" in t or "error" in t or "hook" in t):
         return "commit", ERROR_FIXES["commit"]
     return "unknown", ERROR_FIXES["unknown"]
+
+
+def _format_error_display(err: str, max_len: int = 80) -> str:
+    """First line of error, truncated, for UI/log."""
+    if not err:
+        return ""
+    first = err.split("\n")[0].strip()
+    return first[:max_len] + ("…" if len(first) > max_len else "")
 
 
 def get_script_dir() -> Path:
@@ -509,8 +518,7 @@ class GitPulse:
             else:
                 self._push_failed[repo] = True
                 fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
-                self._last_error[repo] = (err_display, fix, kind)
+                self._last_error[repo] = (_format_error_display(err), fix, kind)
         t = threading.Timer(5, run)
         t.daemon = True
         t.start()
@@ -556,7 +564,7 @@ class GitPulse:
         else:
             self._push_failed[repo] = True
             fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-            err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+            err_display = _format_error_display(err)
             self._last_error[repo] = (err_display, fix, kind)
             self._log(f"{repo.name}: {kind} — {err_display}", repo)
             if kind == "auth":
@@ -590,9 +598,8 @@ class GitPulse:
             else:
                 self._push_failed[repo] = True
                 fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
-                self._last_error[repo] = (err_display, fix, kind)
-                self._log(f"{repo.name}: {kind} — {err_display}", repo)
+                self._last_error[repo] = (_format_error_display(err), fix, kind)
+                self._log(f"{repo.name}: {kind} — {_format_error_display(err)}", repo)
                 if kind == "auth":
                     self._schedule_auth_retry(repo)
 
@@ -602,28 +609,39 @@ class GitPulse:
                 return None
             return max(0.0, self._next_commit_time[repo] - time.monotonic())
 
+    def _get_all_seconds_until_commit(self) -> dict[Path, float | None]:
+        """One lock for all repos; returns repo -> seconds left or None."""
+        now = time.monotonic()
+        with self._lock:
+            return {
+                repo: (max(0.0, self._next_commit_time[repo] - now) if self._next_commit_time.get(repo) and not self._push_failed.get(repo, False) else None)
+                for repo in self._repos
+            }
+
     def _catch_up_pending_changes(self) -> None:
         """If the file watcher missed an event, start countdown when repo has changes."""
-        for repo in self._repos:
-            if self._push_failed.get(repo, False):
-                continue
-            if self.get_seconds_until_commit(repo) is not None:
-                continue
+        with self._lock:
+            need_check = [
+                r for r in self._repos
+                if not self._push_failed.get(r, False) and self._next_commit_time.get(r) is None
+            ]
+        for repo in need_check:
             if has_changes(repo):
                 self._schedule(repo)
 
     def get_status_rows(self) -> list[tuple[str, str, str, str, str]]:
+        secs_map = self._get_all_seconds_until_commit()
         out = []
         for repo in self._repos:
             name = repo.name
             branch = self._branch.get(repo) or "(none)"
             if self._push_failed.get(repo, False):
                 entry = self._last_error.get(repo, ("", ERROR_FIXES["unknown"], "unknown"))
-                err_snippet, fix, kind = entry[0], entry[1], entry[2] if len(entry) > 2 else "unknown"
+                _, fix, kind = entry[0], entry[1], entry[2] if len(entry) > 2 else "unknown"
                 status = f"Failed ({kind})"
                 fix_short = (fix[:50] + "…") if len(fix) > 50 else fix
             else:
-                secs = self.get_seconds_until_commit(repo)
+                secs = secs_map.get(repo)
                 if secs is not None and secs > 0:
                     m, s = divmod(int(secs), 60)
                     status = f"Commit in {m}:{s:02d}"
@@ -643,6 +661,7 @@ class GitPulse:
                 title="Git Pulse",
                 border_style="yellow",
             )
+        secs_map = self._get_all_seconds_until_commit()
         table = Table(box=box.SIMPLE, show_header=True, header_style="bold")
         table.add_column("Repo", style="cyan")
         table.add_column("Branch", style="dim")
@@ -655,7 +674,7 @@ class GitPulse:
                 kind = entry[2] if len(entry) > 2 else "unknown"
                 status = f"[red]Failed ({kind}) — see Fix[/red]"
             else:
-                secs = self.get_seconds_until_commit(repo)
+                secs = secs_map.get(repo)
                 if secs is not None and secs > 0:
                     m, s = divmod(int(secs), 60)
                     status = f"[yellow]Commit in {m}:{s:02d}[/yellow]"
@@ -824,7 +843,7 @@ class GitPulse:
                 else:
                     self._push_failed[repo] = True
                     fix = ERROR_FIXES.get(kind, ERROR_FIXES["unknown"])
-                    err_display = err.split("\n")[0].strip()[:80] + ("…" if len(err.split("\n")[0]) > 80 else "")
+                    err_display = _format_error_display(err)
                     self._last_error[repo] = (err_display, fix, kind)
                     self._log(f"{repo.name}: Retry {kind} — {err_display}", repo)
                 refresh()
@@ -845,16 +864,16 @@ class GitPulse:
         root.protocol("WM_DELETE_WINDOW", on_closing)
         refresh()
         tick_count: list[int] = [0]
-        root.after(1500, lambda: _tick(root))
+        root.after(GUI_REFRESH_MS, lambda: _tick(root))
 
         def _tick(w):
             if not w.winfo_exists():
                 return
             tick_count[0] += 1
-            if tick_count[0] % 4 == 0:
+            if tick_count[0] % CATCH_UP_EVERY_N_TICKS == 0:
                 self._catch_up_pending_changes()
             refresh()
-            w.after(1500, lambda: _tick(w))
+            w.after(GUI_REFRESH_MS, lambda: _tick(w))
 
         root.mainloop()
 
