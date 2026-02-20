@@ -90,7 +90,9 @@ def classify_error(err_text: str) -> tuple[str, str]:
     t = err_text.lower()
     if "credential" in t or "authentication" in t or "permission denied" in t or "sec_e_no_credentials" in t or "403" in t or "could not read username" in t:
         return "auth", ERROR_FIXES["auth"]
-    if "timeout" in t or "timed out" in t or "connection" in t or "unreachable" in t or "could not resolve" in t:
+    if "timeout" in t or "timed out" in t:
+        return "timeout", ERROR_FIXES["timeout"]
+    if "connection" in t or "unreachable" in t or "could not resolve" in t:
         return "network", ERROR_FIXES["network"]
     if "gh013" in t or "repository rule" in t or "rule violations" in t:
         return "rules", ERROR_FIXES["rules"]
@@ -104,8 +106,6 @@ def classify_error(err_text: str) -> tuple[str, str]:
         return "add", ERROR_FIXES["add"]
     if "commit" in t and ("failed" in t or "error" in t or "hook" in t):
         return "commit", ERROR_FIXES["commit"]
-    if "timeout" in t or "timed out" in t:
-        return "timeout", ERROR_FIXES["timeout"]
     return "unknown", ERROR_FIXES["unknown"]
 
 
@@ -200,9 +200,10 @@ def find_repo_for_path(path: Path, repo_roots: list[Path]) -> Path | None:
         return None
     for repo in repo_roots:
         try:
-            resolved.relative_to(repo)
+            repo_resolved = repo.resolve()
+            resolved.relative_to(repo_resolved)
             return repo
-        except ValueError:
+        except (ValueError, OSError):
             continue
     return None
 
@@ -491,6 +492,9 @@ class GitPulse:
             return
         self._auth_retry_scheduled.add(repo)
         def run():
+            if repo not in self._repos:
+                self._auth_retry_scheduled.discard(repo)
+                return
             branch = self._branch.get(repo)
             if not branch:
                 self._auth_retry_scheduled.discard(repo)
@@ -530,6 +534,8 @@ class GitPulse:
         with self._lock:
             self._timers.pop(repo, None)
             self._next_commit_time.pop(repo, None)
+        if repo not in self._repos:
+            return
         if self._push_failed.get(repo, False):
             return
         branch = self._branch.get(repo)
@@ -595,6 +601,16 @@ class GitPulse:
             if self._next_commit_time.get(repo) is None or self._push_failed.get(repo, False):
                 return None
             return max(0.0, self._next_commit_time[repo] - time.monotonic())
+
+    def _catch_up_pending_changes(self) -> None:
+        """If the file watcher missed an event, start countdown when repo has changes."""
+        for repo in self._repos:
+            if self._push_failed.get(repo, False):
+                continue
+            if self.get_seconds_until_commit(repo) is not None:
+                continue
+            if has_changes(repo):
+                self._schedule(repo)
 
     def get_status_rows(self) -> list[tuple[str, str, str, str, str]]:
         out = []
@@ -724,7 +740,8 @@ class GitPulse:
 
         header = tk.Frame(root)
         header.pack(fill=tk.X, padx=8, pady=6)
-        tk.Label(header, text=f"Watching {len(self._repos)} repo(s)", font=("Segoe UI", 10, "bold")).pack(side=tk.LEFT)
+        count_label = tk.Label(header, text=f"Watching {len(self._repos)} repo(s)", font=("Segoe UI", 10, "bold"))
+        count_label.pack(side=tk.LEFT)
         tk.Label(header, text="Close window to stop", font=("Segoe UI", 8), fg="gray").pack(side=tk.RIGHT)
 
         tree_frame = tk.Frame(root)
@@ -747,6 +764,7 @@ class GitPulse:
         scroll.config(command=tree.yview)
 
         def refresh():
+            count_label.config(text=f"Watching {len(self._repos)} repo(s)")
             for i in tree.get_children():
                 tree.delete(i)
             for repo, (name, branch, status, last, fix) in zip(self._repos, self.get_status_rows()):
@@ -826,11 +844,15 @@ class GitPulse:
 
         root.protocol("WM_DELETE_WINDOW", on_closing)
         refresh()
+        tick_count: list[int] = [0]
         root.after(1500, lambda: _tick(root))
 
         def _tick(w):
             if not w.winfo_exists():
                 return
+            tick_count[0] += 1
+            if tick_count[0] % 4 == 0:
+                self._catch_up_pending_changes()
             refresh()
             w.after(1500, lambda: _tick(w))
 
