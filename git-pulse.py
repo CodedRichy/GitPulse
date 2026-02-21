@@ -878,8 +878,39 @@ class GitPulse:
         root.mainloop()
 
 
+def _launch_detached() -> None:
+    """Re-launch this script as a detached background process (survives IDE close)."""
+    script = Path(__file__).resolve()
+    if os.name == "nt":
+        # Windows: use pythonw if available (no console), otherwise python
+        pythonw = Path(sys.executable).parent / "pythonw.exe"
+        exe = str(pythonw) if pythonw.exists() else sys.executable
+        # DETACHED_PROCESS (0x8) + CREATE_NO_WINDOW (0x08000000)
+        creationflags = 0x00000008 | 0x08000000
+        subprocess.Popen(
+            [exe, str(script)],
+            creationflags=creationflags,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        # Unix: start_new_session detaches from terminal
+        subprocess.Popen(
+            [sys.executable, str(script)],
+            start_new_session=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    print("GitPulse launched in background. You can close this terminal.")
+
+
 def main():
     load_dotenv(get_script_dir())
+    if len(sys.argv) > 1 and sys.argv[1] in ("--detach", "--background", "-d"):
+        _launch_detached()
+        return
     app = GitPulse()
     if len(sys.argv) > 1 and sys.argv[1] in ("--cli", "--terminal"):
         app.run()
