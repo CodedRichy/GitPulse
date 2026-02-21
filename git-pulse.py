@@ -56,6 +56,9 @@ GROQ_RATE_LIMIT = 10  # Max 10 requests per minute
 GROQ_RATE_WINDOW = 60  # Time window in seconds
 _groq_request_times: list[float] = []
 
+# Hide console window for subprocess on Windows (prevents black window flash)
+_SUBPROCESS_FLAGS: dict = {"creationflags": 0x08000000} if os.name == "nt" else {}
+
 # Single-instance lock
 _lock_file_handle = None
 
@@ -291,6 +294,7 @@ def get_current_branch(root: Path) -> str | None:
             capture_output=True,
             text=True,
             timeout=10,
+            **_SUBPROCESS_FLAGS,
         )
         if r.returncode == 0 and r.stdout:
             return r.stdout.strip()
@@ -307,6 +311,7 @@ def has_changes(root: Path) -> bool:
             capture_output=True,
             text=True,
             timeout=5,
+            **_SUBPROCESS_FLAGS,
         )
         return r.returncode == 0 and bool(r.stdout and r.stdout.strip())
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -321,6 +326,7 @@ def get_changed_files_summary(root: Path) -> str:
             capture_output=True,
             text=True,
             timeout=10,
+            **_SUBPROCESS_FLAGS,
         )
         if r.returncode != 0 or not r.stdout.strip():
             return "changes"
@@ -346,6 +352,7 @@ def get_diff_shortstat(root: Path) -> str:
             capture_output=True,
             text=True,
             timeout=5,
+            **_SUBPROCESS_FLAGS,
         )
         if r.returncode == 0 and r.stdout and r.stdout.strip():
             return r.stdout.strip()
@@ -362,6 +369,7 @@ def get_diff_cached(root: Path) -> str:
             capture_output=True,
             text=True,
             timeout=10,
+            **_SUBPROCESS_FLAGS,
         )
         if r.returncode == 0 and r.stdout:
             out = r.stdout.strip()
@@ -424,12 +432,12 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             env.setdefault("HOME", home)
             if os.name == "nt":
                 env.setdefault("USERPROFILE", home)
-        add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30, env=env)
+        add = subprocess.run(["git", "add", "."], cwd=root, capture_output=True, text=True, timeout=30, env=env, **_SUBPROCESS_FLAGS)
         if add.returncode != 0:
             err = add.stderr or add.stdout or "git add failed"
             kind, _ = classify_error(err)
             return False, err, kind
-        subprocess.run(["git", "reset", "HEAD", "--", ".env"], cwd=root, capture_output=True, timeout=5, env=env)
+        subprocess.run(["git", "reset", "HEAD", "--", ".env"], cwd=root, capture_output=True, timeout=5, env=env, **_SUBPROCESS_FLAGS)
         diff = get_diff_cached(root)
         groq_desc = groq_summarize_diff(diff) if diff and os.environ.get("GROQ_API_KEY") else None
         if groq_desc:
@@ -441,7 +449,7 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             else:
                 message = f"Auto-sync: {summary}"
         commit = subprocess.run(
-            ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30, env=env
+            ["git", "commit", "-m", message], cwd=root, capture_output=True, text=True, timeout=30, env=env, **_SUBPROCESS_FLAGS
         )
         if commit.returncode != 0:
             out = (commit.stdout or "") + (commit.stderr or "")
@@ -451,7 +459,7 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             kind, _ = classify_error(err)
             return False, err, kind
         push = subprocess.run(
-            ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120, env=env
+            ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120, env=env, **_SUBPROCESS_FLAGS
         )
         if push.returncode != 0:
             err = push.stderr or push.stdout or "git push failed"
