@@ -1,5 +1,7 @@
 # Git Pulse
 .git-pulse.log
+.git-pulse.lock
+.env
 
 # Python
 __pycache__/
