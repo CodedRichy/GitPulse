@@ -33,6 +33,7 @@ python git-pulse.py
 
 A **window** opens with a table of repos (branch, status, last pushed, fix hint). **Close the window to stop.**
 
+- **Background mode:** `python git-pulse.py --detach` launches GitPulse as an independent process that keeps running after you close VS Code or your terminal.
 - **Terminal UI:** `python git-pulse.py --cli` (stop with Ctrl+C)
 - **Double-click** a row to open that repo’s folder.
 - **Refresh repos** — Rescan so new clones appear.
