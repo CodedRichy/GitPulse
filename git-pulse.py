@@ -37,9 +37,10 @@ except ImportError:
 
 DEBOUNCE_SECONDS = 60
 LOG_FILENAME = ".git-pulse.log"
+LOCK_FILENAME = ".git-pulse.lock"
 SCRIPT_NAME = "git-pulse.py"
 ALWAYS_IGNORE_DIRS = (".git", "__pycache__")
-ALWAYS_IGNORE_FILES = (LOG_FILENAME, SCRIPT_NAME)
+ALWAYS_IGNORE_FILES = (LOG_FILENAME, SCRIPT_NAME, LOCK_FILENAME)
 LIVE_REFRESH_RATE = 2
 GUI_REFRESH_MS = 1500
 CATCH_UP_EVERY_N_TICKS = 4  # Run catch-up every N GUI ticks (~6s when GUI_REFRESH_MS=1500)
@@ -54,6 +55,31 @@ MAX_DIFF_FOR_SUMMARY = 4000  # Maximum diff size to send to GROQ
 GROQ_RATE_LIMIT = 10  # Max 10 requests per minute
 GROQ_RATE_WINDOW = 60  # Time window in seconds
 _groq_request_times: list[float] = []
+
+# Single-instance lock
+_lock_file_handle = None
+
+
+def _acquire_instance_lock() -> bool:
+    """Try to acquire single-instance lock. Returns True if acquired, False if another instance is running."""
+    global _lock_file_handle
+    lock_path = Path(__file__).resolve().parent / LOCK_FILENAME
+    try:
+        _lock_file_handle = open(lock_path, "w", encoding="utf-8")
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(_lock_file_handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(_lock_file_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _lock_file_handle.write(str(os.getpid()))
+        _lock_file_handle.flush()
+        return True
+    except (OSError, IOError, PermissionError):
+        if _lock_file_handle:
+            _lock_file_handle.close()
+            _lock_file_handle = None
+        return False
 
 
 def load_dotenv(script_dir: Path) -> None:
@@ -910,6 +936,16 @@ def main():
     load_dotenv(get_script_dir())
     if len(sys.argv) > 1 and sys.argv[1] in ("--detach", "--background", "-d"):
         _launch_detached()
+        return
+    if not _acquire_instance_lock():
+        print("GitPulse is already running. Only one instance allowed.")
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            tk.messagebox.showinfo("GitPulse", "GitPulse is already running.\nOnly one instance is allowed at a time.")
+            root.destroy()
+        except Exception:
+            pass
         return
     app = GitPulse()
     if len(sys.argv) > 1 and sys.argv[1] in ("--cli", "--terminal"):
