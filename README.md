@@ -1,84 +1,149 @@
 # GitPulse
 
-Auto-commit and push multiple Git repos after a short period of inactivity. One window, zero manual commits.
+GitPulse is an automated Git synchronization tool designed to streamline the workflow of developers managing multiple repositories. It monitors file system changes and automatically stages, commits, and pushes updates after a period of inactivity. By automating these repetitive tasks, GitPulse ensures your work is always backed up and synced without manual intervention.
 
-## What it does
+## Features
 
-- **Discovers repos** — Scans a root folder (default: parent of the script, e.g. your `GitHub` folder) for direct subfolders that contain `.git`.
-- **Startup sync** — For each repo with uncommitted changes, runs add/commit/push once before watching.
-- **Watches all** — Single watcher; file events are attributed to the right repo.
-- **Per-repo debounce** — After **60 seconds** with no changes in a repo, runs only for that repo:
-  - `git add .` (then unstages `.env` so it is never committed)
-  - `git commit -m "Auto-sync: [files]"` with body from Groq summary or diff shortstat
-  - `git push origin [branch]`
+-   **Multi-Repository Monitoring**: Automatically discovers and watches all Git repositories within a specified root directory.
+-   **Smart Debouncing**: Waits for a customizable period of silence (default 60s) before triggering a sync, preventing excessive commits during active coding sessions.
+-   **AI-Powered Commit Messages**: Integrates with the Groq API (Llama 3.3 70B) to generate meaningful, context-aware commit summaries based on code diffs.
+-   **Dual Interface**:
+    -   **GUI Mode**: A clean Tkinter-based dashboard showing the status of all watched repos, last sync times, and error hints.
+    -   **CLI Mode**: A terminal-based interface using the `rich` library for live status updates.
+-   **Background Mode**: Supports detached execution to keep syncing even after the terminal or editor is closed.
+-   **Intelligent Error Handling**: Classifies Git errors (authentication, merge conflicts, network issues) and provides actionable fix suggestions.
+-   **Privacy First**: Automatically unstages `.env` files and respects `.gitignore` patterns to prevent accidental leaks of sensitive information.
 
-Only the repo that had changes is pushed.
+## Architecture
 
-## Requirements
+GitPulse operates as a lightweight background process with three primary stages:
 
-- Python 3.10+
-- Git installed (remote `origin` and branch set per repo)
+1.  **Observation**: A single `watchdog` observer monitors events across all target repositories.
+2.  **Evaluation**: Events are mapped to their respective repositories. If a change is detected, a debounced timer starts. Any subsequent change resets the timer.
+3.  **Synchronization**: Once the timer expires, the tool executes a sequence of:
+    -   `git add .`
+    -   `git reset .env` (precautionary)
+    -   Groq API call for commit summary (if configured and diff is significant)
+    -   `git commit -m "[Auto-sync]"`
+    -   `git push origin [branch]`
 
-## Install
+## Tech Stack
+
+-   **Language**: Python 3.10+
+-   **Core Libraries**:
+    -   `watchdog`: Cross-platform file system events.
+    -   `rich`: Professional CLI output and live table formatting.
+    -   `tkinter`: Native GUI framework for the dashboard.
+-   **APIs**: Groq Cloud (Llama 3.3 70B) for LLM-based commit generation.
+-   **OS Integration**: `subprocess` for Git CLI interaction, `threading` for concurrent monitoring.
+
+## Repository Structure
+
+Explain the purpose of major folders and important files:
+
+```
+/docs
+  /ARCHITECTURE.md  → Inferred system structure history
+  /CHANGELOG.md     → Development timeline
+  /DEVELOPMENT.md   → Detailed commit history documentation
+git-pulse.py        → Main application entry point and logic
+requirements.txt    → Python dependencies
+LICENSE             → Proprietary license terms
+.gitpulse.json      → (Optional) User configuration
+.git-pulse.log      → Application runtime logs
+.git-pulse.lock     → Single-instance execution lock
+```
+
+## Installation
+
+### Prerequisites
+
+-   Python 3.10 or higher.
+-   Git installed and configured with a remote `origin` for each repository.
+
+### Dependency Installation
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Run
+*Optional: To enable desktop notifications on successful push:*
+```bash
+pip install plyer
+```
 
+## Usage
+
+### Running the Dashboard (GUI)
+By default, GitPulse opens a window with a status table:
 ```bash
 python git-pulse.py
 ```
 
-A **window** opens with a table of repos (branch, status, last pushed, fix hint). **Close the window to stop.**
+### CLI Mode
+For a live terminal-based view (useful for SSH or remote environments):
+```bash
+python git-pulse.py --cli
+```
 
-- **Background mode:** `python git-pulse.py --detach` launches GitPulse as an independent process that keeps running after you close VS Code or your terminal.
-- **Terminal UI:** `python git-pulse.py --cli` (stop with Ctrl+C)
-- **Double-click** a row to open that repo’s folder.
-- **Refresh repos** — Rescan so new clones appear.
-- **Retry selected** — Retry push for the selected repo (selection is remembered when you click the button).
-- **Desktop notifications** — Optional: `pip install plyer` for a notification on successful push.
+### Background Mode
+To launch GitPulse as an independent process that keeps running after the terminal is closed:
+```bash
+python git-pulse.py --detach
+```
 
-## Optional: AI commit summary
+## Configuration
 
-Set `GROQ_API_KEY` in a `.env` file next to `git-pulse.py`. GitPulse loads it at startup and uses Groq to summarize the staged diff as the commit message body. Without the key, it uses the diff shortstat. **`.env` is in `.gitignore`** and the script unstages `.env` before every commit, so your key is never committed or pushed.
+### Environment Variables
+To enable AI commit summaries, create a `.env` file next to the script:
+```env
+GROQ_API_KEY=your_groq_api_key
+```
 
-## Config
-
-Optional `.gitpulse.json` next to `git-pulse.py`:
-
+### Configuration File
+Create an optional `.gitpulse.json` next to the script to override defaults:
 ```json
 {
-  "watch_root": "C:\\Users\\you\\Documents\\GitHub",
+  "watch_root": "C:\\Users\\User\\Documents\\GitHub",
   "debounce_seconds": 60
 }
 ```
 
-`debounce_seconds` must be between 10 and 86400.
+## Development
 
-## Behavior
+Developers can contribute by:
+-   **Running in Dev Mode**: Use `python git-pulse.py --cli` for real-time log output in the terminal.
+-   **Linting**: The codebase follows standard Python PEP8 patterns where possible.
+-   **Logging**: All internal actions and Git errors are logged to `.git-pulse.log`.
 
-| Item | Detail |
-|------|--------|
-| Repos | Direct subdirs of watch root that contain `.git`. |
-| Ignored | `.git/`, `__pycache__/`, `.git-pulse.log`, `git-pulse.py`, `.env`, and each repo’s `.gitignore`. `.env` is always unstaged before commit. |
-| Auth failure | **auth**; auto-retry once after 5s. Store credentials once (see below) and it recovers. |
-| Rules (GH013) | **rules** — GitHub repo rules block push to main. In repo Settings → Rules, allow direct push or use another branch. |
-| Other failures | **Fix** column and `.git-pulse.log` show a short hint. Use **Retry selected** after fixing. |
-| Log | `.git-pulse.log` next to the script. |
+## Testing
 
-## Credentials (one-time)
+Tests are currently conducted manually by:
+-   Verifying file event detection across different operating systems.
+-   Simulating Git errors (auth, conflicts) to verify the "Fix" suggestions.
+-   Checking `.git-pulse.log` for sync sequence integrity.
 
-If you see **Failed (auth)** (e.g. SEC_E_NO_CREDENTIALS), Git has no credentials in that run. Do this once:
+## Deployment
 
-1. `git config --global credential.helper store`
-2. In any repo: `git push origin main` (or your branch) and sign in when prompted.
+GitPulse is a portable script. To "deploy" it, simply place `git-pulse.py` and `requirements.txt` in your desired directory and run it. For persistent execution on Windows, use the `--detach` flag or add it to your Startup folder.
 
-Git saves credentials to a file. After that, GitPulse works from Cursor or anywhere. Auth failures also trigger one automatic retry after 5 seconds.
+## Roadmap
 
-**Alternative:** Use SSH: `git remote set-url origin git@github.com:USER/REPO.git` so push uses your SSH key.
+- [ ] Support for multiple LLM providers (OpenAI, Anthropic).
+- [ ] Customizable commit message templates and prefixes.
+- [ ] Tray icon support for minimized background execution.
+- [ ] Per-repo configuration for debounce and branch targets.
+
+## Contributing
+
+Basic contribution guidelines:
+1.  Fork the repository (if applicable).
+2.  Create a feature branch for your changes.
+3.  Ensure your code adheres to the single-file architecture.
+4.  Submit a pull request with a clear description of the enhancement.
 
 ## License
 
-Copyright (c) 2025 Rishi Praseeth Krishnan. All rights reserved. See [LICENSE](LICENSE) for full terms.
+Copyright (c) 2025 Rishi Praseeth Krishnan. All rights reserved.
+
+This repository and its source code are made visible for viewing and reference only. No license is granted to use, copy, modify, distribute, or create derivative works from this software without express written permission from the copyright holder. See [LICENSE](LICENSE) for full terms.
