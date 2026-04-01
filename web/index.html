@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitPulse - Privacy-First Automated Git Commits</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <span class="pulse-icon">⚡</span>
+                <span class="brand">GitPulse</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+                <li><a href="#docs">Docs</a></li>
+                <li><a href="#dashboard" class="btn-secondary">Dashboard</a></li>
+                <li><a href="#download" class="btn-primary">Download</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Never Think About Git Commits Again</h1>
+                <p class="hero-subtitle">GitPulse watches your code and automatically generates meaningful commit messages using local AI. Your code never leaves your machine.</p>
+                <div class="hero-cta">
+                    <a href="#download" class="btn-large btn-primary">Download Free</a>
+                    <a href="#demo" class="btn-large btn-secondary">Watch Demo</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">10hrs</span>
+                        <span class="stat-label">Saved per week</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Private & Local</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">$0</span>
+                        <span class="stat-label">API Costs</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-line">
+                            <span class="prompt">$</span> python git-pulse.py
+                        </div>
+                        <div class="terminal-line success">
+                            ✓ Watching 3 repositories
+                        </div>
+                        <div class="terminal-line">
+                            <span class="repo">GitPulse</span> → Auto-sync: Modified auth.py
+                        </div>
+                        <div class="terminal-line ai">
+                            🤖 Add user authentication with validation
+                        </div>
+                        <div class="terminal-line success">
+                            ✓ Committed and pushed in 4.2s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Why Developers Love GitPulse</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>Uses local AI by default. Your code never leaves your machine. Unlike GitHub Copilot, you're in complete control.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Multi-Provider AI</h3>
+                    <p>Choose from Ollama (local), OpenAI, or Claude. Automatic fallback ensures commits always work.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fully Automated</h3>
+                    <p>Set it and forget it. Watches your repos, waits for silence, then commits and pushes automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Analytics Built-In</h3>
+                    <p>Track commits, productivity, and AI accuracy. See how much time you're saving every day.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Multi-Repo Support</h3>
+                    <p>Watch unlimited repositories simultaneously. Perfect for developers juggling multiple projects.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Zero Recurring Cost</h3>
+                    <p>Free tier with local AI. No API fees, no subscriptions. Pay only if you want cloud AI.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="comparison">
+        <div class="container">
+            <h2>GitPulse vs The Competition</h2>
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>GitPulse</th>
+                            <th>GitHub Copilot</th>
+                            <th>GitKraken</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>AI Commit Messages</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Fully Automated</td>
+                            <td class="check">✓</td>
+                            <td class="cross">✗</td>
+                            <td class="cross">✗</td>
+                        </tr>
+                        <tr>
+                            <td>Local AI (Privacy)</td>
+                            <td class="check">✓</td>
+                            <td class="cross">✗</td>
+                            <td class="cross">✗</td>
+                        </tr>
+                        <tr>
+                            <td>Multi-Repo Watch</td>
+                            <td class="check">✓</td>
+                            <td class="cross">✗</td>
+                            <td class="check">✓</td>
+                        </tr>
+                        <tr>
+                            <td>Free Tier</td>
+                            <td class="check">✓ Full features</td>
+                            <td class="partial">~ Limited</td>
+                            <td class="partial">~ Basic only</td>
+                        </tr>
+                        <tr>
+                            <td>Price (Pro)</td>
+                            <td class="highlight">$9/mo</td>
+                            <td>$10/mo</td>
+                            <td>$4.95/mo</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p class="pricing-subtitle">Start free, upgrade when you need more</p>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Free</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">0</span>
+                            <span class="period">/forever</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ 1 repository</li>
+                        <li>✓ Local AI (Ollama)</li>
+                        <li>✓ 100 AI commits/month</li>
+                        <li>✓ Basic analytics</li>
+                        <li>✓ Community support</li>
+                    </ul>
+                    <a href="#download" class="btn-outline">Get Started</a>
+                </div>
+
+                <div class="pricing-card featured">
+                    <div class="badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Pro</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">9</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ Unlimited repositories</li>
+                        <li>✓ All AI providers</li>
+                        <li>✓ Unlimited AI commits</li>
+                        <li>✓ Full analytics dashboard</li>
+                        <li>✓ Email support</li>
+                        <li>✓ Cloud backup</li>
+                    </ul>
+                    <a href="#checkout" class="btn-primary">Start Free Trial</a>
+                </div>
+
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Team</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">19</span>
+                            <span class="period">/user/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✓ Everything in Pro</li>
+                        <li>✓ Shared workspaces</li>
+                        <li>✓ Team analytics</li>
+                        <li>✓ Integrations (Slack, Jira)</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ Admin controls</li>
+                    </ul>
+                    <a href="#contact" class="btn-outline">Contact Sales</a>
+                </div>
+            </div>
+            <p class="pricing-note">Enterprise pricing available for teams 50+. <a href="#contact">Contact us</a> for custom solutions.</p>
+        </div>
+    </section>
+
+    <section class="testimonials">
+        <div class="container">
+            <h2>Loved by Developers Worldwide</h2>
+            <div class="testimonials-grid">
+                <div class="testimonial">
+                    <p>"GitPulse saved me 10+ hours per week. I never think about commits anymore, and my commit history is actually readable now."</p>
+                    <div class="author">
+                        <strong>Sarah Chen</strong>
+                        <span>Senior Developer @ TechCorp</span>
+                    </div>
+                </div>
+                <div class="testimonial">
+                    <p>"The local AI is a game-changer. Finally, a tool that respects my privacy while making my workflow seamless."</p>
+                    <div class="author">
+                        <strong>Marcus Rodriguez</strong>
+                        <span>Freelance Developer</span>
+                    </div>
+                </div>
+                <div class="testimonial">
+                    <p>"We deployed GitPulse across our 20-person team. Commit quality improved 300% and onboarding time dropped by half."</p>
+                    <div class="author">
+                        <strong>Alex Kim</strong>
+                        <span>CTO @ StartupXYZ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="cta">
+        <div class="container">
+            <h2>Ready to Automate Your Git Workflow?</h2>
+            <p>Start with the free tier. No credit card required.</p>
+            <div class="download-buttons">
+                <a href="#" class="btn-large btn-primary">
+                    <span class="icon">🪟</span>
+                    Download for Windows
+                </a>
+                <a href="#" class="btn-large btn-primary">
+                    <span class="icon">🍎</span>
+                    Download for macOS
+                </a>
+                <a href="#" class="btn-large btn-primary">
+                    <span class="icon">🐧</span>
+                    Download for Linux
+                </a>
+            </div>
+            <p class="download-note">Or install via pip: <code>pip install gitpulse</code></p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                        <li><a href="#changelog">Changelog</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#blog">Blog</a></li>
+                        <li><a href="#careers">Careers</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#guides">Guides</a></li>
+                        <li><a href="#api">API Docs</a></li>
+                        <li><a href="#community">Community</a></li>
+                        <li><a href="#support">Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#privacy">Privacy</a></li>
+                        <li><a href="#terms">Terms</a></li>
+                        <li><a href="#security">Security</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 GitPulse. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="#twitter">Twitter</a>
+                    <a href="#github">GitHub</a>
+                    <a href="#discord">Discord</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

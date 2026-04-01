@@ -1,4 +1,10 @@
 watchdog>=4.0.0,<7
 rich>=13.0.0,<15
-# optional: desktop notifications on successful push
+
+# Optional: desktop notifications on successful push
 # plyer>=2.0.0
+
+# Note: No additional dependencies required for multi-provider AI support
+# - Ollama: Uses local HTTP API (no package needed)
+# - OpenAI: Uses urllib.request (built-in)
+# - Anthropic: Uses urllib.request (built-in)
