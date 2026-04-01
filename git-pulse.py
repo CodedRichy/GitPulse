@@ -46,15 +46,12 @@ GUI_REFRESH_MS = 1500
 CATCH_UP_EVERY_N_TICKS = 4  # Run catch-up every N GUI ticks (~6s when GUI_REFRESH_MS=1500)
 
 CONFIG_FILENAME = ".gitpulse.json"
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "llama-3.3-70b-versatile"
-MIN_DIFF_FOR_SUMMARY = 200  # Minimum diff size (chars) to trigger GROQ summary
-MAX_DIFF_FOR_SUMMARY = 4000  # Maximum diff size to send to GROQ
+OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate"
+OLLAMA_MODEL = "qwen3.5:9b"
+MIN_DIFF_FOR_SUMMARY = 200  # Minimum diff size (chars) to trigger Ollama summary
+MAX_DIFF_FOR_SUMMARY = 4000  # Maximum diff size to send to Ollama
 
-# Rate limiting for GROQ API
-GROQ_RATE_LIMIT = 10  # Max 10 requests per minute
-GROQ_RATE_WINDOW = 60  # Time window in seconds
-_groq_request_times: list[float] = []
+# Removed rate limiting for local Ollama
 
 # Hide console window for subprocess on Windows (prevents black window flash)
 _SUBPROCESS_FLAGS: dict = {"creationflags": 0x08000000} if os.name == "nt" else {}
@@ -379,47 +376,50 @@ def get_diff_cached(root: Path) -> str:
         return ""
 
 
-def groq_summarize_diff(diff: str) -> str | None:
-    global _groq_request_times
-    key = os.environ.get("GROQ_API_KEY")
-    if not key or not diff.strip():
+def ollama_summarize_diff(diff: str) -> str | None:
+    """Generate commit message summary using local Ollama model."""
+    if not diff.strip():
         return None
     
-    # Only summarize substantial changes to avoid unnecessary API calls
+    # Only summarize substantial changes to avoid unnecessary processing
     if len(diff) < MIN_DIFF_FOR_SUMMARY:
         return None
     
-    # Rate limiting check
-    now = time.time()
-    _groq_request_times = [t for t in _groq_request_times if now - t < GROQ_RATE_WINDOW]
-    if len(_groq_request_times) >= GROQ_RATE_LIMIT:
-        return None  # Rate limit exceeded, skip this request
-    
     prompt = "Summarize this git diff in one sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
+    
+    # Ollama API request body with fast mode settings
     body = json.dumps({
-        "model": GROQ_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 80,
-        "temperature": 0.2,
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "think": "false",  # Disable thinking mode for speed
+            "temperature": 0.2,  # More deterministic
+            "top_k": 10,  # Faster sampling
+            "top_p": 0.8,
+            "num_predict": 80,  # Limit response length
+            "keepalive": "5m"  # Keep model loaded
+        }
     }).encode("utf-8")
+    
     req = urllib.request.Request(
-        GROQ_API_URL,
+        OLLAMA_API_URL,
         data=body,
         headers={
-            "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         },
         method="POST",
     )
+    
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
-        _groq_request_times.append(time.time())  # Record successful request
-        content = (data.get("choices") or [{}])[0].get("message", {}).get("content")
+        content = data.get("response", "")
         if content and isinstance(content, str):
             return content.strip()[:200]
         return None
-    except Exception:
+    except Exception as e:
+        # Log error but don't crash - fallback to simple summary
         return None
 
 
@@ -439,9 +439,9 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
             return False, err, kind
         subprocess.run(["git", "reset", "HEAD", "--", ".env"], cwd=root, capture_output=True, timeout=5, env=env, **_SUBPROCESS_FLAGS)
         diff = get_diff_cached(root)
-        groq_desc = groq_summarize_diff(diff) if diff and os.environ.get("GROQ_API_KEY") else None
-        if groq_desc:
-            message = f"Auto-sync: {summary}\n\n{groq_desc}"
+        ollama_desc = ollama_summarize_diff(diff) if diff else None
+        if ollama_desc:
+            message = f"Auto-sync: {summary}\n\n{ollama_desc}"
         else:
             shortstat = get_diff_shortstat(root)
             if shortstat:
