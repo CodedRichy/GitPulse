@@ -1,0 +1,27 @@
+{
+  "total_commits": 1,
+  "ai_commits": 1,
+  "manual_commits": 0,
+  "total_pushes": 0,
+  "failed_pushes": 0,
+  "repos_tracked": 21,
+  "first_use": "2026-04-01T13:52:44.195373",
+  "last_use": "2026-04-01T13:52:44.195373",
+  "daily_stats": {
+    "2026-04-01": {
+      "commits": 1,
+      "ai_commits": 1,
+      "pushes": 0
+    }
+  },
+  "repo_stats": {
+    "test-repo": {
+      "commits": 1,
+      "ai_commits": 1,
+      "pushes": 0,
+      "errors": 0
+    }
+  },
+  "error_stats": {},
+  "ai_provider_stats": {}
+}

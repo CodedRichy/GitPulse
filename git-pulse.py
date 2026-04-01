@@ -16,6 +16,10 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import ttk
 
+from ai_providers import AIProviderManager
+from analytics import AnalyticsTracker
+from config import GitPulseConfig
+
 try:
     from plyer import notification as plyer_notification  # pyright: ignore[reportMissingImports]
     NOTIFY_AVAILABLE = True
@@ -49,7 +53,7 @@ CONFIG_FILENAME = ".gitpulse.json"
 OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate"
 OLLAMA_MODEL = "qwen3.5:9b"
 MIN_DIFF_FOR_SUMMARY = 200  # Minimum diff size (chars) to trigger Ollama summary
-MAX_DIFF_FOR_SUMMARY = 4000  # Maximum diff size to send to Ollama
+MAX_DIFF_FOR_SUMMARY = 1500  # Maximum diff size to send to Ollama (reduced for speed)
 
 # Removed rate limiting for local Ollama
 
@@ -376,8 +380,8 @@ def get_diff_cached(root: Path) -> str:
         return ""
 
 
-def ollama_summarize_diff(diff: str) -> str | None:
-    """Generate commit message summary using local Ollama model."""
+def ai_summarize_diff(diff: str, ai_manager: AIProviderManager, analytics: AnalyticsTracker | None = None) -> str | None:
+    """Generate commit message summary using configured AI provider."""
     if not diff.strip():
         return None
     
@@ -385,46 +389,22 @@ def ollama_summarize_diff(diff: str) -> str | None:
     if len(diff) < MIN_DIFF_FOR_SUMMARY:
         return None
     
-    prompt = "Summarize this git diff in one sentence for a commit message. No quotes, no prefix, just the sentence.\n\n" + diff
-    
-    # Ollama API request body with fast mode settings
-    body = json.dumps({
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "think": "false",  # Disable thinking mode for speed
-            "temperature": 0.2,  # More deterministic
-            "top_k": 10,  # Faster sampling
-            "top_p": 0.8,
-            "num_predict": 80,  # Limit response length
-            "keepalive": "5m"  # Keep model loaded
-        }
-    }).encode("utf-8")
-    
-    req = urllib.request.Request(
-        OLLAMA_API_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-    
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
-        content = data.get("response", "")
-        if content and isinstance(content, str):
-            return content.strip()[:200]
-        return None
-    except Exception as e:
-        # Log error but don't crash - fallback to simple summary
+        result = ai_manager.generate_commit_message(diff)
+        if analytics and result:
+            provider_name = ai_manager.get_available_providers()[0] if ai_manager.get_available_providers() else "unknown"
+            analytics.track_ai_provider_usage(provider_name, success=True)
+        return result
+    except Exception:
+        if analytics:
+            provider_name = ai_manager.get_available_providers()[0] if ai_manager.get_available_providers() else "unknown"
+            analytics.track_ai_provider_usage(provider_name, success=False)
         return None
 
 
-def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
+def run_git_sequence(root: Path, branch: str, ai_manager: AIProviderManager | None = None, analytics: AnalyticsTracker | None = None) -> tuple[bool, str, str]:
     summary = get_changed_files_summary(root)
+    repo_name = root.name
     try:
         env = os.environ.copy()
         home = os.path.expanduser("~")
@@ -436,12 +416,16 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
         if add.returncode != 0:
             err = add.stderr or add.stdout or "git add failed"
             kind, _ = classify_error(err)
+            if analytics:
+                analytics.track_error(repo_name, kind)
             return False, err, kind
         subprocess.run(["git", "reset", "HEAD", "--", ".env"], cwd=root, capture_output=True, timeout=5, env=env, **_SUBPROCESS_FLAGS)
         diff = get_diff_cached(root)
-        ollama_desc = ollama_summarize_diff(diff) if diff else None
-        if ollama_desc:
-            message = f"Auto-sync: {summary}\n\n{ollama_desc}"
+        ai_desc = None
+        if ai_manager and diff:
+            ai_desc = ai_summarize_diff(diff, ai_manager, analytics)
+        if ai_desc:
+            message = f"Auto-sync: {summary}\n\n{ai_desc}"
         else:
             shortstat = get_diff_shortstat(root)
             if shortstat:
@@ -457,18 +441,31 @@ def run_git_sequence(root: Path, branch: str) -> tuple[bool, str, str]:
                 return True, "", ""
             err = commit.stderr or commit.stdout or "git commit failed"
             kind, _ = classify_error(err)
+            if analytics:
+                analytics.track_error(repo_name, kind)
             return False, err, kind
+        if analytics:
+            analytics.track_commit(repo_name, ai_generated=bool(ai_desc))
         push = subprocess.run(
             ["git", "push", "origin", branch], cwd=root, capture_output=True, text=True, timeout=120, env=env, **_SUBPROCESS_FLAGS
         )
         if push.returncode != 0:
             err = push.stderr or push.stdout or "git push failed"
             kind, _ = classify_error(err)
+            if analytics:
+                analytics.track_error(repo_name, kind)
+                analytics.track_push(repo_name, success=False)
             return False, err, kind
+        if analytics:
+            analytics.track_push(repo_name, success=True)
         return True, "", ""
     except subprocess.TimeoutExpired as e:
+        if analytics:
+            analytics.track_error(repo_name, "timeout")
         return False, f"Timeout: {e}", "timeout"
     except Exception as e:
+        if analytics:
+            analytics.track_error(repo_name, "unknown")
         return False, str(e), "unknown"
 
 
@@ -507,6 +504,10 @@ class MultiRepoHandler(FileSystemEventHandler):
 
 class GitPulse:
     def __init__(self, watch_root: Path | None = None):
+        self._config = GitPulseConfig()
+        self._ai_manager = AIProviderManager()
+        self._analytics = AnalyticsTracker() if self._config.get("enable_analytics", True) else None
+        
         config = load_config()
         raw_root = config.get("watch_root") or (str(watch_root) if watch_root else None) or str(get_repos_root())
         self._watch_root = Path(raw_root).resolve()
@@ -529,6 +530,9 @@ class GitPulse:
         self._log_path = get_script_dir() / LOG_FILENAME
         self._console = Console() if RICH_AVAILABLE else None
         self._auth_retry_scheduled: set[Path] = set()
+        
+        if self._analytics:
+            self._analytics.update_repos_tracked(len(self._repos))
 
     def _schedule_auth_retry(self, repo: Path):
         if repo in self._auth_retry_scheduled:
@@ -542,7 +546,7 @@ class GitPulse:
             if not branch:
                 self._auth_retry_scheduled.discard(repo)
                 return
-            success, err, kind = run_git_sequence(repo, branch)
+            success, err, kind = run_git_sequence(repo, branch, self._ai_manager, self._analytics)
             self._auth_retry_scheduled.discard(repo)
             if success:
                 self._push_failed[repo] = False
@@ -584,7 +588,7 @@ class GitPulse:
         if not branch:
             self._log(f"{repo.name}: No branch. Skipping.", repo)
             return
-        success, err, kind = run_git_sequence(repo, branch)
+        success, err, kind = run_git_sequence(repo, branch, self._ai_manager, self._analytics)
         if success:
             self._push_failed[repo] = False
             self._last_error.pop(repo, None)

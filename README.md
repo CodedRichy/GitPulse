@@ -1,18 +1,33 @@
-# GitPulse
+# GitPulse 🚀
 
-GitPulse is an automated Git synchronization tool designed to streamline the workflow of developers managing multiple repositories. It monitors file system changes and automatically stages, commits, and pushes updates after a period of inactivity. By automating these repetitive tasks, GitPulse ensures your work is always backed up and synced without manual intervention.
+**The Privacy-First, Fully Automated Git Commit Assistant**
 
-## Features
+GitPulse is an intelligent Git automation tool that watches your repositories and automatically generates meaningful commit messages using local or cloud AI. Unlike GitHub Copilot, your code never leaves your machine when using local AI models.
 
--   **Multi-Repository Monitoring**: Automatically discovers and watches all Git repositories within a specified root directory.
--   **Smart Debouncing**: Waits for a customizable period of silence (default 60s) before triggering a sync, preventing excessive commits during active coding sessions.
--   **AI-Powered Commit Messages**: Integrates with the Groq API (Llama 3.3 70B) to generate meaningful, context-aware commit summaries based on code diffs.
--   **Dual Interface**:
-    -   **GUI Mode**: A clean Tkinter-based dashboard showing the status of all watched repos, last sync times, and error hints.
-    -   **CLI Mode**: A terminal-based interface using the `rich` library for live status updates.
--   **Background Mode**: Supports detached execution to keep syncing even after the terminal or editor is closed.
--   **Intelligent Error Handling**: Classifies Git errors (authentication, merge conflicts, network issues) and provides actionable fix suggestions.
--   **Privacy First**: Automatically unstages `.env` files and respects `.gitignore` patterns to prevent accidental leaks of sensitive information.
+## ✨ Key Features
+
+### 🤖 **Multi-Provider AI Support**
+-   **Local AI (Ollama)** - Privacy-first, zero cost, works offline
+-   **OpenAI GPT** - Cloud-based, high quality
+-   **Anthropic Claude** - Advanced reasoning
+-   **Automatic Fallback** - Tries each provider until one succeeds
+
+### 📊 **Smart Automation**
+-   **Multi-Repository Monitoring** - Watch unlimited repos simultaneously
+-   **Intelligent Debouncing** - Waits for coding silence (default 60s) before committing
+-   **Context-Aware Messages** - AI analyzes git diffs, not entire files
+-   **Selective Watching** - Respects `.gitignore` and custom patterns
+
+### 🎨 **Flexible Interface**
+-   **GUI Mode** - Clean dashboard with real-time status
+-   **CLI Mode** - Rich terminal interface for remote work
+-   **Background Mode** - Runs silently in system tray
+
+### 🛡️ **Enterprise-Ready**
+-   **Privacy First** - Local AI keeps code on your machine
+-   **Error Recovery** - Smart classification and auto-retry
+-   **Analytics** - Track productivity and AI accuracy
+-   **Secure** - Auto-excludes `.env` and sensitive files
 
 ## Architecture
 
@@ -94,18 +109,40 @@ python git-pulse.py --detach
 
 ## Configuration
 
-### Environment Variables
-To enable AI commit summaries, create a `.env` file next to the script:
+### AI Provider Setup
+
+#### Option 1: Local AI (Recommended - Free & Private)
+Install Ollama and pull a model:
+```bash
+# Install Ollama from https://ollama.ai
+ollama pull qwen3.5:9b
+```
+
+#### Option 2: Cloud AI (Optional)
+Add API keys to `.env` file:
 ```env
-GROQ_API_KEY=your_groq_api_key
+# OpenAI (optional)
+OPENAI_API_KEY=sk-...
+
+# Anthropic (optional)
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ### Configuration File
-Create an optional `.gitpulse.json` next to the script to override defaults:
+Create `.gitpulse.json` to customize settings:
 ```json
 {
   "watch_root": "C:\\Users\\User\\Documents\\GitHub",
-  "debounce_seconds": 60
+  "debounce_seconds": 60,
+  "ai_provider": "ollama",
+  "ollama_model": "qwen3.5:9b",
+  "openai_model": "gpt-4o-mini",
+  "anthropic_model": "claude-3-haiku-20240307",
+  "min_diff_for_summary": 200,
+  "max_diff_for_summary": 1500,
+  "enable_analytics": true,
+  "commit_preview": false,
+  "theme": "system"
 }
 ```
 
