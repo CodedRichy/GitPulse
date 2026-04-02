@@ -69,6 +69,7 @@ GitPulse operates as a modular system with multiple interfaces:
 
 ### Development Tools
 - **Testing**: pytest for Python backend
+- **CI/CD**: GitHub Actions for automated testing and deployment
 - **Linting**: Standard Python PEP8 patterns
 - **Package Management**: pip (Python), npm (Node.js)
 
@@ -76,35 +77,30 @@ GitPulse operates as a modular system with multiple interfaces:
 
 ```
 /
+├── .github/                 → GitHub configuration
+│   ├── workflows/          → CI/CD workflows
+│   │   └── ci.yml          → Continuous integration
+│   └── ISSUE_TEMPLATE/     → Issue templates
 ├── backend/                  → Modular Python backend
 │   ├── main.py              → Main application entry point
 │   ├── core/                → Core functionality
-│   │   ├── config.py       → Configuration management
-│   │   └── __init__.py
+│   │   └── config.py       → Configuration management
 │   ├── ai/                  → AI provider services
-│   │   ├── providers.py     → AI abstraction layer
-│   │   └── __init__.py
+│   │   └── providers.py     → AI abstraction layer
 │   ├── analytics/           → Usage tracking and metrics
-│   │   ├── engine.py       → Analytics engine
-│   │   └── __init__.py
+│   │   └── engine.py       → Analytics engine
 │   ├── api/                 → HTTP API server
-│   │   ├── server.py       → REST API endpoints
-│   │   └── __init__.py
+│   │   └── server.py       → REST API endpoints
 │   ├── git/                 → Git operations
-│   │   ├── commit_preview.py
-│   │   └── __init__.py
+│   │   └── commit_preview.py
 │   ├── integrations/        → Third-party integrations
-│   │   ├── handlers.py     → Integration handlers
-│   │   └── __init__.py
+│   │   └── handlers.py     → Integration handlers
 │   ├── team/                → Team collaboration
-│   │   ├── workspace.py    → Team workspace management
-│   │   └── __init__.py
+│   │   └── workspace.py    → Team workspace management
 │   ├── payments/            → Payment processing
-│   │   ├── stripe.py       → Stripe integration
-│   │   └── __init__.py
+│   │   └── stripe.py       → Stripe integration
 │   ├── deploy/              → Deployment utilities
-│   │   ├── manager.py      → Deployment manager
-│   │   └── __init__.py
+│   │   └── manager.py      → Deployment manager
 │   └── tests/               → Backend test suite
 │       ├── test_ai_providers.py
 │       ├── test_analytics.py
@@ -114,6 +110,7 @@ GitPulse operates as a modular system with multiple interfaces:
 │   │   ├── main/           → Electron main process
 │   │   └── renderer/       → React frontend
 │   ├── package.json        → Node.js dependencies
+│   ├── electron-builder.yml → Build configuration
 │   └── dist/               → Compiled output
 ├── scripts/                → Development and utility scripts
 │   ├── run-tests.py        → Test runner
@@ -126,7 +123,10 @@ GitPulse operates as a modular system with multiple interfaces:
 │   ├── CHANGELOG.md
 │   └── DEVELOPMENT.md
 ├── requirements.txt         → Python dependencies
-└── .env                    → Environment variables
+├── .env                    → Environment variables
+├── .gitignore              → Git ignore patterns
+├── LICENSE                 → License information
+└── README.md               → This file
 ```
 
 ## Installation
@@ -273,6 +273,17 @@ Run tests with:
 ```bash
 python scripts/run-tests.py
 ```
+
+## CI/CD
+
+GitPulse uses GitHub Actions for automated testing and deployment:
+
+- **Continuous Integration**: Automated testing on pull requests
+- **Automated Testing**: Runs full test suite on multiple Python versions
+- **Code Quality**: Enforces code style and standards
+- **Deployment**: Automated builds for desktop applications
+
+The CI configuration is located in `.github/workflows/ci.yml`.
 
 ## Deployment
 
