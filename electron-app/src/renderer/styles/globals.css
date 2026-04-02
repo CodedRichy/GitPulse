@@ -123,6 +123,21 @@ html.dark .text-foreground {
   color: #F0F5F9 !important;
 }
 
+.text-foreground,
+html .text-foreground {
+  color: #1E2022 !important;
+}
+
+.text-muted-foreground,
+html .text-muted-foreground {
+  color: rgba(30, 32, 34, 0.72) !important;
+}
+
+.dark .text-muted-foreground,
+html.dark .text-muted-foreground {
+  color: rgba(240, 245, 249, 0.78) !important;
+}
+
 /* Light mode colors */
 .neu-bg {
   background-color: #F0F5F9;
@@ -154,13 +169,31 @@ html.dark .text-foreground {
 
 .dark .neu-card .text-muted-foreground,
 .dark .neu-button .text-muted-foreground,
+.dark .neu-section .text-muted-foreground,
+.dark .neu-card-lg .text-muted-foreground,
 .dark .neu-card .text-foreground,
 .dark .neu-button .text-foreground,
+.dark .neu-section .text-foreground,
+.dark .neu-card-lg .text-foreground,
 html.dark .neu-card .text-muted-foreground,
 html.dark .neu-button .text-muted-foreground,
+html.dark .neu-section .text-muted-foreground,
+html.dark .neu-card-lg .text-muted-foreground,
 html.dark .neu-card .text-foreground,
-html.dark .neu-button .text-foreground {
+html.dark .neu-button .text-foreground,
+html.dark .neu-section .text-foreground,
+html.dark .neu-card-lg .text-foreground {
   color: rgba(30, 32, 34, 0.92) !important;
+}
+
+.neu-section .text-foreground,
+.neu-card-lg .text-foreground {
+  color: rgba(30, 32, 34, 0.92) !important;
+}
+
+.neu-section .text-muted-foreground,
+.neu-card-lg .text-muted-foreground {
+  color: rgba(30, 32, 34, 0.72) !important;
 }
 
 .neu-card .text-primary,
@@ -174,17 +207,29 @@ html.dark .neu-button .text-foreground {
 
 .dark .neu-card .text-primary,
 .dark .neu-button .text-primary,
+.dark .neu-section .text-primary,
+.dark .neu-card-lg .text-primary,
 .dark .neu-card .text-secondary,
 .dark .neu-button .text-secondary,
 .dark .neu-card .text-success,
 .dark .neu-button .text-success,
 html.dark .neu-card .text-primary,
 html.dark .neu-button .text-primary,
+html.dark .neu-section .text-primary,
+html.dark .neu-card-lg .text-primary,
 html.dark .neu-card .text-secondary,
 html.dark .neu-button .text-secondary,
 html.dark .neu-card .text-success,
 html.dark .neu-button .text-success {
   color: #1E2022 !important;
+}
+
+.neu-card a,
+.neu-button a,
+.neu-section a,
+.neu-card-lg a {
+  color: inherit !important;
+  text-decoration-color: currentColor !important;
 }
 
 .neu-container {

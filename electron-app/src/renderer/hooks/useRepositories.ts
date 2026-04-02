@@ -8,9 +8,17 @@ export function useRepositories() {
   const fetchRepositories = async () => {
     try {
       if (window.electronAPI) {
+        const githubData = await window.electronAPI.getGitHubRepositories()
+
+        if (!githubData?.error) {
+          setRepositories(githubData)
+          setError(null)
+          return
+        }
+
         const data = await window.electronAPI.getRepositories()
         if (data.error) {
-          setError(data.error)
+          setError(githubData.error || data.error)
         } else {
           setRepositories(data)
           setError(null)

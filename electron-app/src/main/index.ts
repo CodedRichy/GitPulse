@@ -1,7 +1,11 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, shell } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import Store = require('electron-store');
+
+// Load environment variables from .env file
+import { config } from 'dotenv';
+config({ path: path.join(__dirname, '../../.env') });
 
 const store = new Store();
 let mainWindow: BrowserWindow | null = null;
@@ -205,6 +209,49 @@ ipcMain.handle('get-repositories', async () => {
   }
 });
 
+ipcMain.handle('get-github-repositories', async () => {
+  const token = store.get('github_token');
+
+  if (typeof token !== 'string' || !token.trim()) {
+    return { error: 'GitHub account is not linked.' };
+  }
+
+  try {
+    const response = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+      },
+    });
+
+    if (response.status === 401) {
+      store.delete('github_token');
+      return { error: 'GitHub session expired. Please reconnect your account.' };
+    }
+
+    if (!response.ok) {
+      return { error: 'Failed to fetch repositories from GitHub.' };
+    }
+
+    const repos = (await response.json()) as any[];
+
+    const mapped = repos.reduce((acc: Record<string, any>, repo: any) => {
+      acc[repo.full_name || repo.name] = {
+        commits: 0,
+        pushes: 0,
+        errors: 0,
+        last_push: repo.pushed_at || undefined,
+        last_commit: repo.updated_at || undefined,
+      };
+      return acc;
+    }, {});
+
+    return mapped;
+  } catch {
+    return { error: 'Network error while fetching GitHub repositories.' };
+  }
+});
+
 ipcMain.handle('get-config', async () => {
   try {
     const response = await fetch('http://127.0.0.1:5000/api/config');
@@ -238,17 +285,185 @@ ipcMain.handle('stop-monitoring', () => {
 });
 
 ipcMain.handle('get-github-token', () => {
-  return store.get('github_token');
+  const token = store.get('github_token');
+  return typeof token === 'string' ? token : null;
 });
 
 ipcMain.handle('set-github-token', (_, token) => {
-  store.set('github_token', token);
+  if (typeof token !== 'string') {
+    return { success: false, error: 'Token must be a string' };
+  }
+
+  const trimmedToken = token.trim();
+  if (!trimmedToken) {
+    return { success: false, error: 'Token cannot be empty' };
+  }
+
+  store.set('github_token', trimmedToken);
   return { success: true };
 });
 
 ipcMain.handle('clear-github-token', () => {
   store.delete('github_token');
   return { success: true };
+});
+
+ipcMain.handle('open-external-url', async (_, url) => {
+  if (typeof url !== 'string' || !/^https?:\/\//.test(url)) {
+    return { success: false, error: 'Invalid URL' };
+  }
+
+  await shell.openExternal(url);
+  return { success: true };
+});
+
+ipcMain.handle('start-github-device-flow', async () => {
+  let clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  
+  // Fallback: read .env file directly if env var is missing
+  if (!clientId) {
+    try {
+      const fs = require('fs');
+      const envPath = path.join(__dirname, '../../../.env');
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        const match = envContent.match(/^GITHUB_OAUTH_CLIENT_ID=(.+)$/m);
+        if (match && match[1]) {
+          clientId = match[1].trim();
+        }
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+  
+  if (!clientId) {
+    return {
+      success: false,
+      error: 'Missing GITHUB_OAUTH_CLIENT_ID in environment.',
+    };
+  }
+
+  try {
+    const body = new URLSearchParams({
+      client_id: clientId,
+      scope: 'repo read:user',
+    });
+
+    const response = await fetch('https://github.com/login/device/code', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+
+    const data: any = await response.json();
+
+    if (!response.ok || data.error) {
+      return {
+        success: false,
+        error: data.error_description || 'Failed to start GitHub sign-in.',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        deviceCode: data.device_code,
+        userCode: data.user_code,
+        verificationUri: data.verification_uri,
+        expiresIn: data.expires_in,
+        interval: data.interval,
+      },
+    };
+  } catch {
+    return { success: false, error: 'Network error while starting GitHub sign-in.' };
+  }
+});
+
+ipcMain.handle('poll-github-device-flow', async (_, deviceCode) => {
+  if (typeof deviceCode !== 'string' || !deviceCode.trim()) {
+    return { success: false, status: 'error', error: 'Invalid device code.' };
+  }
+
+  let clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  
+  // Fallback: read .env file directly if env var is missing
+  if (!clientId) {
+    try {
+      const fs = require('fs');
+      const envPath = path.join(__dirname, '../../../.env');
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        const match = envContent.match(/^GITHUB_OAUTH_CLIENT_ID=(.+)$/m);
+        if (match && match[1]) {
+          clientId = match[1].trim();
+        }
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+  
+  if (!clientId) {
+    return {
+      success: false,
+      status: 'error',
+      error: 'Missing GITHUB_OAUTH_CLIENT_ID in environment.',
+    };
+  }
+
+  try {
+    const body = new URLSearchParams({
+      client_id: clientId,
+      device_code: deviceCode,
+      grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+    });
+
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body,
+    });
+
+    const data: any = await response.json();
+
+    if (data.error === 'authorization_pending') {
+      return { success: false, status: 'pending' };
+    }
+
+    if (data.error === 'slow_down') {
+      return { success: false, status: 'slow_down' };
+    }
+
+    if (data.error === 'expired_token') {
+      return { success: false, status: 'expired', error: 'GitHub sign-in code expired. Please retry.' };
+    }
+
+    if (data.error === 'access_denied') {
+      return { success: false, status: 'denied', error: 'GitHub sign-in was canceled.' };
+    }
+
+    if (!response.ok || data.error || !data.access_token) {
+      return {
+        success: false,
+        status: 'error',
+        error: data.error_description || 'Failed to complete GitHub sign-in.',
+      };
+    }
+
+    return {
+      success: true,
+      accessToken: data.access_token,
+    };
+  } catch {
+    return { success: false, status: 'error', error: 'Network error while completing GitHub sign-in.' };
+  }
 });
 
 // App lifecycle

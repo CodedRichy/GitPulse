@@ -18,8 +18,12 @@ declare global {
       startMonitoring: () => Promise<any>
       stopMonitoring: () => Promise<any>
       getGitHubToken: () => Promise<string | null>
+      getGitHubRepositories: () => Promise<any>
       setGitHubToken: (token: string) => Promise<any>
       clearGitHubToken: () => Promise<any>
+      startGitHubDeviceFlow: () => Promise<any>
+      pollGitHubDeviceFlow: (deviceCode: string) => Promise<any>
+      openExternalUrl: (url: string) => Promise<any>
       onPythonOutput: (callback: (output: string) => void) => void
       onPythonError: (callback: (error: string) => void) => void
       onPythonStopped: (callback: (code: number) => void) => void

@@ -25,6 +25,13 @@ export default function StatCard({
     destructive: 'text-destructive',
   }
 
+  const dotColorMap = {
+    primary: 'bg-primary',
+    secondary: 'bg-secondary',
+    success: 'bg-success',
+    destructive: 'bg-destructive',
+  }
+
   if (loading) {
     return (
       <div className="neu-card p-6 animate-pulse">
@@ -43,8 +50,8 @@ export default function StatCard({
         </div>
         
         {trend && (
-          <div className="px-2.5 py-1 rounded-neu-sm neu-section text-[11px] font-medium text-foreground/80 flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full bg-current ${colorMap[color]}`} />
+          <div className="px-2.5 py-1 rounded-neu-sm neu-button text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${dotColorMap[color]}`} />
             {trend}
           </div>
         )}
