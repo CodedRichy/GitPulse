@@ -29,7 +29,7 @@ declare global {
 
 function App() {
   const [isMonitoring, setIsMonitoring] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
+  const [darkMode, setDarkMode] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   useEffect(() => {
@@ -67,16 +67,25 @@ function App() {
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
-    document.documentElement.classList.toggle('dark')
   }
 
   return (
     <Router>
-      <div className={`flex flex-col h-screen neu-bg text-foreground ${darkMode ? 'dark' : ''} overflow-hidden`}>
+      <div 
+        className="flex flex-col h-screen text-foreground overflow-hidden"
+        style={{ 
+          backgroundColor: darkMode ? '#1E2022' : '#F0F5F9',
+          color: darkMode ? '#F0F5F9' : '#1E2022'
+        }}
+      >
         {/* Custom Title Bar - Neumorphic Style */}
         <div 
-          className="h-12 shrink-0 neu-section z-50 flex items-center justify-between px-4 relative border-b border-white/10"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+          className="h-12 shrink-0 z-50 flex items-center justify-between px-4 relative border-b"
+          style={{ 
+            backgroundColor: darkMode ? '#1E2022' : '#F0F5F9',
+            borderColor: darkMode ? '#52616B' : '#C9D6DF',
+            WebkitAppRegion: 'drag'
+          } as React.CSSProperties}
         >
           {/* Logo & Status */}
           <div className="flex items-center gap-4">
@@ -84,13 +93,13 @@ function App() {
               <div className="p-1.5 rounded-neu-sm neu-button">
                 <Zap className="w-4 h-4 text-primary" />
               </div>
-              <span className="text-white text-sm font-bold tracking-wide">GitPulse</span>
+              <span className="text-foreground text-sm font-bold tracking-wide">GitPulse</span>
             </div>
             
             {/* Global Status Indicator */}
-            <div className="h-4 w-px bg-white/10 mx-2" />
+            <div className="h-4 w-px bg-black/5 mx-2" />
             <div className="flex items-center gap-2 px-3 py-1 rounded-neu-sm neu-section text-xs font-medium">
-              <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-success glow-success animate-pulse' : 'bg-muted-foreground'}`} />
+              <div className={`w-2 h-2 rounded-full ${isMonitoring ? 'bg-success glow-success animate-pulse' : 'bg-destructive'}`} />
               <span className={isMonitoring ? 'text-success' : 'text-muted-foreground'}>
                 {isMonitoring ? 'Monitoring Active' : 'System Idle'}
               </span>
@@ -130,7 +139,10 @@ function App() {
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
           />
-          <main className="flex-1 overflow-auto neu-bg p-6 transition-all duration-300 relative">
+          <main 
+            className="flex-1 overflow-auto p-6 transition-all duration-300 relative"
+            style={{ backgroundColor: darkMode ? '#1E2022' : '#F0F5F9' }}
+          >
             <div className="max-w-7xl mx-auto h-full animate-fade-in relative z-10">
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

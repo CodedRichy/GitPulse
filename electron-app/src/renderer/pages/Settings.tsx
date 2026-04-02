@@ -52,7 +52,7 @@ export default function Settings() {
       </div>
 
       {/* AI Provider Settings */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <div className="flex items-center gap-2 mb-4">
           <Zap className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">AI Provider</h2>
@@ -67,10 +67,10 @@ export default function Settings() {
                   key={provider}
                   onClick={() => updateConfig('ai_provider', provider)}
                   className={`
-                    p-4 rounded-lg border-2 transition-all
+                    p-4 rounded-neu-sm border transition-all
                     ${config?.ai_provider === provider
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/50'
+                      ? 'border-primary bg-primary/5 shadow-neu-sm'
+                      : 'border-black/5 hover:border-primary/30 shadow-neu-sm'
                     }
                   `}
                 >
@@ -90,7 +90,7 @@ export default function Settings() {
                 type="text"
                 value={config?.ollama_model || 'qwen3.5:9b'}
                 onChange={(e) => updateConfig('ollama_model', e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-4 py-2 bg-neu-base border border-black/5 rounded-neu-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-neu-sm"
                 placeholder="qwen3.5:9b"
               />
             </div>
@@ -99,7 +99,7 @@ export default function Settings() {
       </div>
 
       {/* Timing Settings */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <div className="flex items-center gap-2 mb-4">
           <Clock className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">Timing</h2>
@@ -117,7 +117,7 @@ export default function Settings() {
               step="10"
               value={config?.debounce_seconds || 60}
               onChange={(e) => updateConfig('debounce_seconds', parseInt(e.target.value))}
-              className="w-full"
+              className="w-full accent-primary"
             />
             <p className="text-xs text-muted-foreground mt-2">
               Wait time after last file change before auto-commit
@@ -127,7 +127,7 @@ export default function Settings() {
       </div>
 
       {/* Analytics Settings */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">Analytics</h2>
@@ -139,7 +139,7 @@ export default function Settings() {
               type="checkbox"
               checked={config?.enable_analytics !== false}
               onChange={(e) => updateConfig('enable_analytics', e.target.checked)}
-              className="w-5 h-5 rounded border-border"
+              className="w-5 h-5 rounded border-black/5 accent-primary"
             />
             <div>
               <p className="font-medium">Enable Analytics Tracking</p>
@@ -152,7 +152,7 @@ export default function Settings() {
               type="checkbox"
               checked={config?.enable_notifications !== false}
               onChange={(e) => updateConfig('enable_notifications', e.target.checked)}
-              className="w-5 h-5 rounded border-border"
+              className="w-5 h-5 rounded border-black/5 accent-primary"
             />
             <div>
               <p className="font-medium">Desktop Notifications</p>
@@ -163,7 +163,7 @@ export default function Settings() {
       </div>
 
       {/* User Tier Info */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-primary/20 rounded-lg p-6">
+      <div className="bg-primary/5 border border-primary/10 rounded-neu-lg p-6 shadow-neu-sm">
         <h2 className="text-xl font-semibold mb-2">Current Plan</h2>
         <p className="text-2xl font-bold text-primary mb-4">{config?.user_tier?.toUpperCase() || 'FREE'} Tier</p>
         <div className="space-y-2 text-sm">
@@ -178,7 +178,7 @@ export default function Settings() {
           </p>
         </div>
         {config?.user_tier === 'free' && (
-          <button className="mt-4 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all">
+          <button className="mt-4 px-6 py-2 neu-button text-primary font-bold transition-all duration-300">
             Upgrade to Pro - $9/month
           </button>
         )}
@@ -189,7 +189,7 @@ export default function Settings() {
         <button
           onClick={saveConfig}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 neu-button text-primary font-bold transition-all duration-300 disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Settings'}

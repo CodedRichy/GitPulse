@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Mode Test</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui;
+      transition: all 0.3s;
+    }
+    
+    /* Light mode */
+    body {
+      background-color: #F0F5F9;
+      color: #1E2022;
+    }
+    
+    /* Dark mode */
+    [data-mode="dark"] body {
+      background-color: #1E2022;
+      color: #F0F5F9;
+    }
+    
+    .box {
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 12px;
+      background-color: #F0F5F9;
+    }
+    
+    [data-mode="dark"] .box {
+      background-color: #1E2022;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #52616B;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dark Mode Test</h1>
+  <p>Current mode: <span id="mode">light</span></p>
+  <p>HTML data-mode attribute: <span id="attr">none</span></p>
+  
+  <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  
+  <div class="box">
+    <h2>Test Box</h2>
+    <p>This box should change colors when you toggle dark mode.</p>
+  </div>
+  
+  <script>
+    function toggleDarkMode() {
+      const html = document.documentElement;
+      const currentMode = html.getAttribute('data-mode');
+      
+      console.log('Before toggle:', currentMode);
+      
+      if (currentMode === 'dark') {
+        html.removeAttribute('data-mode');
+        document.getElementById('mode').textContent = 'light';
+        document.getElementById('attr').textContent = 'none';
+        console.log('Switched to light mode');
+      } else {
+        html.setAttribute('data-mode', 'dark');
+        document.getElementById('mode').textContent = 'dark';
+        document.getElementById('attr').textContent = 'dark';
+        console.log('Switched to dark mode');
+      }
+      
+      console.log('After toggle:', html.getAttribute('data-mode'));
+    }
+    
+    // Update display on load
+    const currentMode = document.documentElement.getAttribute('data-mode');
+    document.getElementById('mode').textContent = currentMode || 'light';
+    document.getElementById('attr').textContent = currentMode || 'none';
+  </script>
+</body>
+</html>

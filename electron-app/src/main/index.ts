@@ -8,7 +8,32 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let pythonProcess: ChildProcess | null = null;
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = !app.isPackaged;
+
+async function resolveDevServerUrl(): Promise<string | null> {
+  const targetUrl = 'http://localhost:5173';
+
+  const start = Date.now();
+  const timeoutMs = 15000;
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 500);
+      const response = await fetch(targetUrl, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) {
+        return targetUrl;
+      }
+    } catch {
+      // Wait for renderer dev server to become available
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  return null;
+}
 
 // Add isQuitting property to app
 let isQuitting = false;
@@ -33,15 +58,37 @@ async function createWindow() {
     show: false,
   });
 
-  // Load the app
-  const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
-  mainWindow.loadFile(rendererPath);
   if (isDev) {
-    mainWindow.webContents.openDevTools();
+    const devServerUrl = await resolveDevServerUrl();
+    if (devServerUrl) {
+      console.log(`[Electron] Loading renderer from ${devServerUrl}`);
+      await mainWindow.loadURL(devServerUrl);
+    } else {
+      console.log('[Electron] Dev server not found, falling back to built renderer file');
+      const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+      await mainWindow.loadFile(rendererPath);
+    }
+    if (process.env.ELECTRON_OPEN_DEVTOOLS === '1') {
+      mainWindow.webContents.openDevTools({ mode: 'detach' });
+    }
+  } else {
+    const rendererPath = path.join(__dirname, '..', 'renderer', 'index.html');
+    await mainWindow.loadFile(rendererPath);
+  }
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+
+  if (isDev) {
+    mainWindow.show();
+    mainWindow.focus();
   }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    mainWindow?.focus();
   });
 
   mainWindow.on('close', (event) => {

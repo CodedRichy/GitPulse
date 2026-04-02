@@ -11,7 +11,7 @@ export default function Analytics() {
     return (
       <div className="p-8 flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+          <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto shadow-glow-primary"></div>
           <p className="text-muted-foreground mt-4">Loading analytics...</p>
         </div>
       </div>
@@ -94,7 +94,7 @@ export default function Analytics() {
       {/* Detailed Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Commit Statistics */}
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="neu-card p-6 border border-black/5">
           <h2 className="text-xl font-semibold mb-4">Commit Statistics</h2>
           <div className="space-y-4">
             <StatRow label="Total Commits" value={stats.total_commits || 0} />
@@ -106,7 +106,7 @@ export default function Analytics() {
         </div>
 
         {/* Repository Stats */}
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className="neu-card p-6 border border-black/5">
           <h2 className="text-xl font-semibold mb-4">Repository Stats</h2>
           <div className="space-y-4">
             <StatRow label="Repos Tracked" value={stats.repos_tracked || 0} />
@@ -118,7 +118,7 @@ export default function Analytics() {
       </div>
 
       {/* AI Provider Performance */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
           AI Provider Performance
@@ -131,9 +131,9 @@ export default function Analytics() {
       </div>
 
       {/* Error Analysis */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-red-500" />
+          <AlertCircle className="w-5 h-5 text-destructive" />
           Error Analysis
         </h2>
         <div className="space-y-3">
@@ -160,7 +160,7 @@ interface StatRowProps {
 
 function StatRow({ label, value, isText }: StatRowProps) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
+    <div className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className={`font-semibold ${isText ? 'text-sm' : 'text-lg'}`}>{value}</span>
     </div>
@@ -177,11 +177,11 @@ function ProviderCard({ name, requests, success }: ProviderCardProps) {
   const isActive = requests > 0
 
   return (
-    <div className={`p-4 rounded-lg border ${isActive ? 'border-primary bg-primary/5' : 'border-border bg-muted/50'}`}>
+    <div className={`p-4 rounded-neu-sm border border-black/5 transition-all duration-300 ${isActive ? 'bg-primary/5 shadow-neu-sm' : 'bg-neu-base shadow-neu-sm opacity-60'}`}>
       <h3 className="font-semibold mb-2">{name}</h3>
       <div className="space-y-1">
         <p className="text-sm text-muted-foreground">Requests: <span className="font-semibold text-foreground">{requests}</span></p>
-        <p className="text-sm text-muted-foreground">Success: <span className="font-semibold text-green-500">{success}%</span></p>
+        <p className="text-sm text-muted-foreground">Success: <span className="font-semibold text-primary">{success}%</span></p>
       </div>
     </div>
   )
@@ -194,9 +194,9 @@ interface ErrorRowProps {
 
 function ErrorRow({ type, count }: ErrorRowProps) {
   return (
-    <div className="flex items-center justify-between p-3 bg-red-500/5 border border-red-500/20 rounded">
-      <span className="text-sm">{type}</span>
-      <span className="font-semibold text-red-500">{count}</span>
+    <div className="flex items-center justify-between p-3 bg-destructive/5 border border-destructive/10 rounded-neu-sm shadow-neu-sm">
+      <span className="text-sm font-medium">{type}</span>
+      <span className="font-bold text-destructive">{count}</span>
     </div>
   )
 }
