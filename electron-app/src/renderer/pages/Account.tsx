@@ -1,17 +1,8 @@
-import { useState } from 'react'
 import { User, Github, LogOut, Crown, Shield } from 'lucide-react'
 import { useGitHub } from '../hooks/useGitHub'
 
 export default function Account() {
-  const { token, user, loading, setGitHubToken, clearGitHubToken, isAuthenticated } = useGitHub()
-  const [tokenInput, setTokenInput] = useState('')
-
-  const handleSetToken = async () => {
-    if (tokenInput) {
-      await setGitHubToken(tokenInput)
-      setTokenInput('')
-    }
-  }
+  const { user, loading, error, connecting, deviceAuth, connectWithGitHub, clearGitHubToken, clearError, isAuthenticated } = useGitHub()
 
   const handleLogout = async () => {
     await clearGitHubToken()
@@ -92,33 +83,39 @@ export default function Account() {
             </div>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-2">GitHub Personal Access Token</label>
-                <input
-                  type="password"
-                  value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  className="w-full px-4 py-2 bg-neu-base border border-black/5 rounded-neu-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-neu-sm"
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Create a token at{' '}
-                  <a
-                    href="https://github.com/settings/tokens"
-                    className="text-primary hover:underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    github.com/settings/tokens
-                  </a>
-                </p>
-              </div>
+              {deviceAuth && (
+                <div className="p-4 rounded-neu-sm border border-primary/20 bg-primary/5 shadow-neu-sm text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Use this code on GitHub</p>
+                  <p className="text-2xl font-bold tracking-[0.2em] text-primary">{deviceAuth.userCode}</p>
+                  <p className="text-xs text-muted-foreground">
+                    If your browser did not open, visit{' '}
+                    <a
+                      href={deviceAuth.verificationUri}
+                      className="text-primary hover:underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {deviceAuth.verificationUri}
+                    </a>
+                  </p>
+                </div>
+              )}
+
+              {error && (
+                <p className="mt-2 text-xs text-destructive font-medium">{error}</p>
+              )}
+
               <button
-                onClick={handleSetToken}
-                disabled={!tokenInput}
+                onClick={async () => {
+                  if (error) {
+                    clearError()
+                  }
+                  await connectWithGitHub()
+                }}
+                disabled={connecting}
                 className="w-full px-4 py-3 rounded-neu-sm bg-primary text-primary-foreground font-bold transition-all duration-300 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Connect GitHub
+                {connecting ? 'Waiting for GitHub authorization...' : 'Continue with GitHub'}
               </button>
             </div>
           </div>

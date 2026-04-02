@@ -17,8 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // GitHub
   getGitHubToken: () => ipcRenderer.invoke('get-github-token'),
+  getGitHubRepositories: () => ipcRenderer.invoke('get-github-repositories'),
   setGitHubToken: (token: string) => ipcRenderer.invoke('set-github-token', token),
   clearGitHubToken: () => ipcRenderer.invoke('clear-github-token'),
+  startGitHubDeviceFlow: () => ipcRenderer.invoke('start-github-device-flow'),
+  pollGitHubDeviceFlow: (deviceCode: string) => ipcRenderer.invoke('poll-github-device-flow', deviceCode),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('open-external-url', url),
   
   // Python output listeners
   onPythonOutput: (callback: (output: string) => void) => {
