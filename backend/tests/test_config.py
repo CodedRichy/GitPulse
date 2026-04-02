@@ -6,9 +6,9 @@ import sys
 import tempfile
 import os
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from config import GitPulseConfig
+from backend.core.config import GitPulseConfig
 
 
 class TestGitPulseConfig(unittest.TestCase):

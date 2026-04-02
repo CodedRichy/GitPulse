@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, Zap, AlertCircle } from 'lucide-react'
 import { useAnalytics } from '../hooks/useAnalytics'
-import Chart from '../components/Chart'
-import StatCard from '../components/StatCard'
+import Chart from '../components/charts/Chart'
+import StatCard from '../components/ui/StatCard'
 
 export default function Analytics() {
   const { analytics, loading, error } = useAnalytics()
@@ -51,24 +51,24 @@ export default function Analytics() {
           icon={BarChart3}
           title="Total Activity"
           value={stats.total_commits || 0}
-          subtitle="commits tracked"
-          color="blue"
+          trend="commits tracked"
+          color="primary"
           loading={loading}
         />
         <StatCard
           icon={Zap}
           title="AI Efficiency"
           value={`${stats.ai_percentage || 0}%`}
-          subtitle="AI-generated commits"
-          color="purple"
+          trend="AI-generated commits"
+          color="secondary"
           loading={loading}
         />
         <StatCard
           icon={TrendingUp}
           title="Success Rate"
           value={`${stats.success_rate || 100}%`}
-          subtitle="successful pushes"
-          color="green"
+          trend="successful pushes"
+          color="success"
           loading={loading}
         />
       </div>
