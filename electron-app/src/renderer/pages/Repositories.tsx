@@ -27,7 +27,7 @@ export default function Repositories() {
         </div>
         <button 
           onClick={() => setShowAddDialog(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 neu-button text-primary font-semibold transition-all duration-300"
         >
           <Plus className="w-4 h-4" />
           Add Repository
@@ -37,17 +37,17 @@ export default function Repositories() {
       {/* Repository List */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto shadow-glow-primary"></div>
           <p className="text-muted-foreground mt-4">Loading repositories...</p>
         </div>
       ) : repoList.length === 0 ? (
-        <div className="text-center py-12 bg-card border border-border rounded-lg">
+        <div className="text-center py-12 neu-card border border-black/5">
           <FolderGit2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold mb-2">No Repositories</h3>
           <p className="text-muted-foreground mb-6">Start monitoring repositories to see them here</p>
           <button 
             onClick={() => setShowAddDialog(true)}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-6 py-3 neu-button text-primary font-bold transition-all duration-300"
           >
             Add Your First Repository
           </button>
@@ -68,15 +68,15 @@ export default function Repositories() {
 
       {/* Add Repository Dialog */}
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card border border-border rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold mb-4">Add Repository</h3>
-            <p className="text-muted-foreground text-sm mb-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="neu-card-lg p-8 w-96 border border-black/5">
+            <h3 className="text-xl font-bold mb-4">Add Repository</h3>
+            <p className="text-muted-foreground text-sm mb-6">
               Repository management coming soon. For now, repositories are auto-detected.
             </p>
             <button
               onClick={() => setShowAddDialog(false)}
-              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              className="w-full px-4 py-3 neu-button text-primary font-bold transition-all duration-300"
             >
               Close
             </button>

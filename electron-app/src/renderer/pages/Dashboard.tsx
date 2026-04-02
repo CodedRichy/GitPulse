@@ -94,7 +94,7 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
           {/* AI Performance Panel */}
           <div className="neu-card-lg p-6 relative overflow-hidden">
             {/* Ambient background glow */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
             
             <div className="flex items-center justify-between mb-6 relative">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
           {/* Active Repositories Preview */}
           <div className="neu-card-lg p-6">
             <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
-              <FolderGit2 className="w-5 h-5 text-secondary" />
+              <FolderGit2 className="w-5 h-5 text-foreground" />
               Recently Active Repositories
             </h2>
             <div className="space-y-4">
@@ -144,7 +144,7 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
                 <div key={i} className="flex items-center justify-between p-4 rounded-neu-sm neu-button hover:shadow-neu-sm-hover transition-all duration-300 cursor-pointer group">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Github className="w-4 h-4 text-primary" />
+                      <Github className="w-4 h-4 text-foreground" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">project-repo-{i}</p>
@@ -155,7 +155,7 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
                     <div className="flex items-center gap-1.5 text-xs text-success">
                       <CheckCircle2 className="w-3 h-3" /> Clean
                     </div>
-                    <div className="w-px h-4 bg-white/10" />
+                    <div className="w-px h-4 bg-black/5" />
                     <span className="text-xs font-mono text-muted-foreground">main</span>
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
                       log.type === 'error' ? 'bg-destructive glow-error' : 
                       'bg-primary glow-primary'
                     }`} />
-                    {index !== logs.length - 1 && <div className="w-px h-full bg-white/10 mt-1" />}
+                    {index !== logs.length - 1 && <div className="w-px h-full bg-black/5 mt-1" />}
                   </div>
                   <div className="flex-1 pb-4">
                     <span className="text-[10px] font-mono text-muted-foreground mb-1 block group-hover:text-primary transition-colors">{log.time}</span>

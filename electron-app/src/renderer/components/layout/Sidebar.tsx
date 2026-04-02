@@ -23,16 +23,21 @@ export default function Sidebar({ isMonitoring, onToggleMonitoring, darkMode, on
 
   return (
     <div 
+      id="sidebar-container"
       className={`
-        bg-neu-base text-card-foreground flex flex-col h-[calc(100vh-3rem)] 
-        border-r border-neu-surface transition-all duration-300 relative z-40
+        text-card-foreground flex flex-col h-[calc(100vh-3rem)] 
+        border-r transition-all duration-300 relative z-40
         ${isOpen ? 'w-64' : 'w-20'}
       `}
+      style={{
+        backgroundColor: darkMode ? '#1E2022' : '#F0F5F9',
+        borderColor: darkMode ? '#52616B' : '#C9D6DF'
+      }}
     >
       {/* Collapse Toggle */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-neu-surface shadow-neu-sm flex items-center justify-center text-muted-foreground hover:text-primary transition-colors border border-neu-dark z-50"
+        className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-neu-surface shadow-neu-sm flex items-center justify-center text-muted-foreground hover:text-primary transition-colors border border-black/5 z-50"
       >
         {isOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
       </button>
@@ -78,18 +83,25 @@ export default function Sidebar({ isMonitoring, onToggleMonitoring, darkMode, on
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-neu-surface space-y-4">
+      <div className="p-4 border-t border-black/5 space-y-4">
         {/* Dark Mode Toggle */}
         <button
-          onClick={onToggleDarkMode}
+          onClick={() => {
+            console.log('Dark mode button clicked!')
+            onToggleDarkMode()
+          }}
           className={`
             w-full flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center'} py-3 
-            rounded-neu-sm bg-neu-base shadow-neu-flat hover:shadow-neu-pressed-sm 
-            transition-all duration-300 text-muted-foreground hover:text-primary group
+            rounded-lg shadow-sm border border-black/10
+            transition-all duration-300 active:scale-95
           `}
+          style={{
+            backgroundColor: darkMode ? '#1E2022' : '#F0F5F9',
+            color: darkMode ? '#F0F5F9' : '#1E2022',
+          }}
           title={!isOpen ? (darkMode ? 'Light Mode' : 'Dark Mode') : undefined}
         >
-          <div className="relative flex items-center justify-center w-5 h-5 group-hover:scale-110 transition-transform">
+          <div className="flex items-center justify-center w-5 h-5">
             {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </div>
           <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300
@@ -103,11 +115,13 @@ export default function Sidebar({ isMonitoring, onToggleMonitoring, darkMode, on
         <button 
           className={`
             w-full flex items-center ${isOpen ? 'justify-start px-4' : 'justify-center'} py-3 
-            rounded-neu-sm bg-neu-base
-            shadow-[inset_2px_2px_4px_rgba(255,255,255,0.05),4px_4px_8px_rgba(0,0,0,0.5)] 
-            hover:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.02),inset_2px_2px_4px_rgba(0,0,0,0.4)]
-            transition-all duration-300 text-primary border border-primary/20 hover:border-primary/50 group relative overflow-hidden
+            rounded-lg shadow-sm border border-black/10
+            transition-all duration-300 group relative overflow-hidden
           `}
+          style={{
+            backgroundColor: darkMode ? '#1E2022' : '#F0F5F9',
+            color: darkMode ? '#F0F5F9' : '#1E2022',
+          }}
           title={!isOpen ? 'Upgrade to Pro' : undefined}
         >
           {/* Subtle gradient overlay on hover */}
@@ -116,10 +130,10 @@ export default function Sidebar({ isMonitoring, onToggleMonitoring, darkMode, on
           <div className="relative flex items-center justify-center w-5 h-5 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all">
             <Zap className="w-4 h-4" />
           </div>
-          <span className={`text-sm font-semibold whitespace-nowrap transition-all duration-300 tracking-wide
+          <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300
             ${isOpen ? 'opacity-100 w-auto ml-3' : 'opacity-0 w-0 ml-0 overflow-hidden'}
           `}>
-            PRO TIER
+            Pro Tier
           </span>
         </button>
       </div>

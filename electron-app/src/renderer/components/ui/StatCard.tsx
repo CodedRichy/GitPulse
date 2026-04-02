@@ -43,7 +43,7 @@ export default function StatCard({
         </div>
         
         {trend && (
-          <div className="px-2.5 py-1 rounded-neu-sm neu-section text-[10px] font-medium text-muted-foreground flex items-center gap-1.5">
+          <div className="px-2.5 py-1 rounded-neu-sm neu-section text-[11px] font-medium text-foreground/80 flex items-center gap-1.5">
             <div className={`w-1.5 h-1.5 rounded-full bg-current ${colorMap[color]}`} />
             {trend}
           </div>

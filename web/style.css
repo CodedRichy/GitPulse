@@ -1,13 +1,13 @@
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --secondary: #8b5cf6;
-    --success: #10b981;
-    --bg-dark: #0f172a;
-    --bg-light: #f8fafc;
-    --text-dark: #1e293b;
-    --text-light: #64748b;
-    --border: #e2e8f0;
+    --primary: #52616B;
+    --primary-dark: #1E2022;
+    --secondary: #C9D6DF;
+    --success: #52616B;
+    --bg-dark: #1E2022;
+    --bg-light: #F0F5F9;
+    --text-dark: #1E2022;
+    --text-light: #52616B;
+    --border: #C9D6DF;
 }
 
 * {
@@ -125,7 +125,7 @@ body {
 /* Hero Section */
 .hero {
     padding: 6rem 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #52616B 0%, #1E2022 100%);
     color: white;
 }
 
@@ -176,14 +176,14 @@ body {
 
 /* Terminal Window */
 .terminal-window {
-    background: #1e293b;
+    background: #1E2022;
     border-radius: 0.75rem;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(30, 32, 34, 0.3);
 }
 
 .terminal-header {
-    background: #334155;
+    background: #52616B;
     padding: 0.75rem;
     display: flex;
     gap: 0.5rem;
@@ -207,7 +207,7 @@ body {
 
 .terminal-line {
     margin-bottom: 0.75rem;
-    color: #94a3b8;
+    color: #C9D6DF;
 }
 
 .prompt {
@@ -216,7 +216,7 @@ body {
 }
 
 .repo {
-    color: #8b5cf6;
+    color: #F0F5F9;
     font-weight: 600;
 }
 
@@ -225,7 +225,7 @@ body {
 }
 
 .terminal-line.ai {
-    color: #60a5fa;
+    color: #52616B;
 }
 
 /* Features Section */
@@ -471,7 +471,7 @@ body {
 /* CTA Section */
 .cta {
     padding: 6rem 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #52616B 0%, #1E2022 100%);
     color: white;
     text-align: center;
 }

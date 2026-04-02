@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ['class'],
+  darkMode: 'class',
   content: [
     './index.html',
     './src/renderer/**/*.{ts,tsx,js,jsx}',
@@ -13,25 +13,25 @@ export default {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
-        // Neumorphic specific colors
+        // Neumorphic specific colors - Light mode
         neu: {
-          base: '#0B0F1A',
-          surface: '#111624',
-          dark: '#080b13',
-          light: '#1a2135',
+          base: '#F0F5F9',
+          surface: '#FFFFFF',
+          dark: '#C9D6DF',
+          light: '#FFFFFF',
         },
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-          glow: 'rgba(99, 102, 241, 0.4)',
+          DEFAULT: '#52616B',
+          foreground: '#F0F5F9',
+          glow: 'rgba(82, 97, 107, 0.4)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: '#C9D6DF',
+          foreground: '#1E2022',
         },
         success: {
-          DEFAULT: '#10b981',
-          glow: 'rgba(16, 185, 129, 0.4)',
+          DEFAULT: '#52616B',
+          glow: 'rgba(82, 97, 107, 0.4)',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -48,23 +48,23 @@ export default {
         },
       },
       boxShadow: {
-        // Hybrid Neumorphism - balanced dual shadows
-        'neu-base': '4px 4px 10px rgba(0,0,0,0.35), -2px -2px 6px rgba(255,255,255,0.03)',
-        'neu-hover': '6px 6px 14px rgba(0,0,0,0.4), -3px -3px 8px rgba(255,255,255,0.04)',
-        'neu-active': 'inset 4px 4px 8px rgba(0,0,0,0.5), inset -2px -2px 6px rgba(255,255,255,0.03)',
+        // Hybrid Neumorphism - balanced dual shadows for light theme
+        'neu-base': '6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.8)',
+        'neu-hover': '8px 8px 16px rgba(163, 177, 198, 0.7), -8px -8px 16px rgba(255, 255, 255, 0.9)',
+        'neu-active': 'inset 4px 4px 8px rgba(163, 177, 198, 0.6), inset -4px -4px 8px rgba(255, 255, 255, 0.8)',
         
         // Small elements (buttons, icons)
-        'neu-sm': '2px 2px 6px rgba(0,0,0,0.35), -1px -1px 4px rgba(255,255,255,0.03)',
-        'neu-sm-hover': '3px 3px 8px rgba(0,0,0,0.4), -2px -2px 5px rgba(255,255,255,0.04)',
-        'neu-sm-active': 'inset 2px 2px 4px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.03)',
+        'neu-sm': '3px 3px 6px rgba(163, 177, 198, 0.6), -3px -3px 6px rgba(255, 255, 255, 0.8)',
+        'neu-sm-hover': '4px 4px 8px rgba(163, 177, 198, 0.7), -4px -4px 8px rgba(255, 255, 255, 0.9)',
+        'neu-sm-active': 'inset 2px 2px 4px rgba(163, 177, 198, 0.6), inset -2px -2px 4px rgba(255, 255, 255, 0.8)',
         
         // Large elements (cards, panels)
-        'neu-lg': '6px 6px 16px rgba(0,0,0,0.35), -3px -3px 10px rgba(255,255,255,0.03)',
-        'neu-lg-hover': '8px 8px 20px rgba(0,0,0,0.4), -4px -4px 12px rgba(255,255,255,0.04)',
+        'neu-lg': '8px 8px 20px rgba(163, 177, 198, 0.5), -8px -8px 20px rgba(255, 255, 255, 0.8)',
+        'neu-lg-hover': '12px 12px 24px rgba(163, 177, 198, 0.6), -12px -12px 24px rgba(255, 255, 255, 0.9)',
         
         // Glow effects - ONLY for active states and key metrics
-        'glow-primary': '0 0 12px rgba(99, 102, 241, 0.4)',
-        'glow-success': '0 0 12px rgba(16, 185, 129, 0.4)',
+        'glow-primary': '0 0 12px rgba(82, 97, 107, 0.4)',
+        'glow-success': '0 0 12px rgba(82, 97, 107, 0.4)',
         'glow-error': '0 0 12px rgba(239, 68, 68, 0.4)',
       },
       borderRadius: {

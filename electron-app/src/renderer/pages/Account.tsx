@@ -37,7 +37,7 @@ export default function Account() {
       </div>
 
       {/* GitHub Connection */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="neu-card p-6 border border-black/5">
         <div className="flex items-center gap-2 mb-4">
           <Github className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">GitHub Integration</h2>
@@ -45,12 +45,12 @@ export default function Account() {
 
         {isAuthenticated ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-success/5 border border-success/10 rounded-neu-sm shadow-neu-sm">
+              <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center shadow-neu-sm">
                 {user?.avatar_url ? (
                   <img src={user.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full" />
                 ) : (
-                  <User className="w-8 h-8 text-green-500" />
+                  <User className="w-8 h-8 text-success" />
                 )}
               </div>
               <div className="flex-1">
@@ -61,7 +61,7 @@ export default function Account() {
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 neu-button text-destructive font-semibold transition-all duration-300"
               >
                 <LogOut className="w-4 h-4" />
                 Disconnect
@@ -69,13 +69,13 @@ export default function Account() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="p-4 neu-section rounded-neu-sm shadow-neu-sm">
                 <p className="text-sm text-muted-foreground mb-1">Repositories</p>
-                <p className="text-2xl font-bold">{user?.public_repos || 21}</p>
+                <p className="text-2xl font-bold text-foreground">{user?.public_repos || 21}</p>
               </div>
-              <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="p-4 neu-section rounded-neu-sm shadow-neu-sm">
                 <p className="text-sm text-muted-foreground mb-1">Member Since</p>
-                <p className="text-lg font-semibold">
+                <p className="text-lg font-semibold text-foreground">
                   {user?.created_at ? new Date(user.created_at).getFullYear() : 2024}
                 </p>
               </div>
@@ -99,7 +99,7 @@ export default function Account() {
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
                   placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                  className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2 bg-neu-base border border-black/5 rounded-neu-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-neu-sm"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   Create a token at{' '}
@@ -116,7 +116,7 @@ export default function Account() {
               <button
                 onClick={handleSetToken}
                 disabled={!tokenInput}
-                className="w-full px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 rounded-neu-sm bg-primary text-primary-foreground font-bold transition-all duration-300 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Connect GitHub
               </button>
@@ -126,7 +126,7 @@ export default function Account() {
       </div>
 
       {/* Subscription Info */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-primary/20 rounded-lg p-6">
+      <div className="bg-primary/5 border border-primary/10 rounded-neu-lg p-6 shadow-neu-sm">
         <div className="flex items-center gap-2 mb-4">
           <Crown className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-semibold">Subscription</h2>
@@ -139,37 +139,37 @@ export default function Account() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-background/50 rounded-lg">
+            <div className="p-4 neu-section rounded-neu-sm shadow-neu-sm">
               <p className="text-sm text-muted-foreground mb-1">Max Repositories</p>
-              <p className="text-2xl font-bold">1</p>
+              <p className="text-2xl font-bold text-foreground">1</p>
             </div>
-            <div className="p-4 bg-background/50 rounded-lg">
+            <div className="p-4 neu-section rounded-neu-sm shadow-neu-sm">
               <p className="text-sm text-muted-foreground mb-1">AI Commits/Month</p>
-              <p className="text-2xl font-bold">100</p>
+              <p className="text-2xl font-bold text-foreground">100</p>
             </div>
           </div>
 
-          <div className="border-t border-border pt-4">
+          <div className="border-t border-black/5 pt-4">
             <h3 className="font-semibold mb-3">Upgrade to Pro</h3>
             <ul className="space-y-2 mb-4">
               <li className="flex items-center gap-2 text-sm">
-                <Shield className="w-4 h-4 text-green-500" />
+                <Shield className="w-4 h-4 text-success" />
                 Unlimited repositories
               </li>
               <li className="flex items-center gap-2 text-sm">
-                <Shield className="w-4 h-4 text-green-500" />
+                <Shield className="w-4 h-4 text-success" />
                 Unlimited AI commits
               </li>
               <li className="flex items-center gap-2 text-sm">
-                <Shield className="w-4 h-4 text-green-500" />
+                <Shield className="w-4 h-4 text-success" />
                 All AI providers (OpenAI, Claude)
               </li>
               <li className="flex items-center gap-2 text-sm">
-                <Shield className="w-4 h-4 text-green-500" />
+                <Shield className="w-4 h-4 text-success" />
                 Priority support
               </li>
             </ul>
-            <button className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all font-semibold">
+            <button className="w-full px-6 py-3 neu-button text-primary font-bold transition-all duration-300">
               Upgrade to Pro - $9/month
             </button>
           </div>
@@ -177,16 +177,16 @@ export default function Account() {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-red-500 mb-4">Danger Zone</h2>
+      <div className="bg-destructive/5 border border-destructive/10 rounded-neu-lg p-6">
+        <h2 className="text-xl font-semibold text-destructive mb-4">Danger Zone</h2>
         <div className="space-y-3">
-          <button className="w-full px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors text-left">
+          <button className="w-full px-4 py-2 rounded-neu-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 text-left">
             Clear All Analytics Data
           </button>
-          <button className="w-full px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors text-left">
+          <button className="w-full px-4 py-2 rounded-neu-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 text-left">
             Reset All Settings
           </button>
-          <button className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors text-left">
+          <button className="w-full px-4 py-2 rounded-neu-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all duration-300 text-left">
             Delete Account
           </button>
         </div>
