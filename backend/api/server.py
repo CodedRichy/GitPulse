@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
-from analytics import AnalyticsTracker
-from config import GitPulseConfig
+from backend.analytics.engine import AnalyticsTracker
+from backend.core.config import GitPulseConfig
 
 
 class GitPulseAPIHandler(BaseHTTPRequestHandler):

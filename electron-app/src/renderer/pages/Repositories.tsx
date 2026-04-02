@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FolderGit2, Plus } from 'lucide-react'
 import { useRepositories } from '../hooks/useRepositories'
-import RepoCard from '../components/RepoCard'
+import RepoCard from '../components/features/RepoCard'
 
 export default function Repositories() {
   const { repositories, loading, error, refetch } = useRepositories()

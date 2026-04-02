@@ -6,9 +6,9 @@ import sys
 import tempfile
 import os
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from analytics import AnalyticsTracker
+from backend.analytics.engine import AnalyticsTracker
 
 
 class TestAnalyticsTracker(unittest.TestCase):

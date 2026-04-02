@@ -16,9 +16,9 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import ttk
 
-from ai_providers import AIProviderManager
-from analytics import AnalyticsTracker
-from config import GitPulseConfig
+from backend.ai.providers import AIProviderManager
+from backend.analytics.engine import AnalyticsTracker
+from backend.core.config import GitPulseConfig
 
 try:
     from plyer import notification as plyer_notification  # pyright: ignore[reportMissingImports]

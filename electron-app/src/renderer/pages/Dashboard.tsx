@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Activity, GitCommit, Zap, CheckCircle2, TrendingUp, Github, Clock, AlertCircle, FolderGit2 } from 'lucide-react'
 import { useAnalytics } from '../hooks/useAnalytics'
-import StatCard from '../components/StatCard'
+import StatCard from '../components/ui/StatCard'
 
 export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) {
   const { analytics, loading } = useAnalytics()

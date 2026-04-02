@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Zap, Play, Square, Plus, Activity } from 'lucide-react'
-import Sidebar from './components/Sidebar'
+import Sidebar from './components/layout/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Repositories from './pages/Repositories'
 import Analytics from './pages/Analytics'

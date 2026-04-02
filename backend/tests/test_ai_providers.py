@@ -4,10 +4,10 @@ import unittest
 from pathlib import Path
 import sys
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add parent directory to path for backend imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ai_providers import OllamaProvider, AIProviderManager
+from backend.ai.providers import OllamaProvider, AIProviderManager
 
 
 class TestOllamaProvider(unittest.TestCase):
