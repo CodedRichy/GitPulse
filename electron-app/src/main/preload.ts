@@ -34,4 +34,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onPythonStopped: (callback: (code: number) => void) => {
     ipcRenderer.on('python-stopped', (_, code) => callback(code));
   },
+  
+  // Pipeline events streaming
+  onPipelineEvent: (callback: (event: { id: string; timestamp: string; step: string; status: string; repo_name?: string; message?: string; risk_level?: string; confidence?: number }) => void) => {
+    ipcRenderer.on('pipeline-event', (_, event) => callback(event));
+  },
+  onNotificationEvent: (callback: (event: { id: string; timestamp: string; type: 'success' | 'warning' | 'error' | 'info'; message: string; repo_name?: string; read: boolean }) => void) => {
+    ipcRenderer.on('notification-event', (_, event) => callback(event));
+  },
+  markNotificationRead: (id: string) => ipcRenderer.invoke('mark-notification-read', id),
+  clearAllNotifications: () => ipcRenderer.invoke('clear-all-notifications'),
+  getNotifications: () => ipcRenderer.invoke('get-notifications'),
+  getPipelineEvents: () => ipcRenderer.invoke('get-pipeline-events'),
+  
+  // Git operations
+  getGitDiff: (repoPath: string) => ipcRenderer.invoke('get-git-diff', repoPath),
+  getGitStatus: (repoPath: string) => ipcRenderer.invoke('get-git-status', repoPath),
+  generateCommitMessage: (params: { repoPath: string; diff: string }) => ipcRenderer.invoke('generate-commit-message', params),
+  commitChanges: (params: { repoPath: string; message: string }) => ipcRenderer.invoke('commit-changes', params),
+  pushChanges: (repoPath: string) => ipcRenderer.invoke('push-changes', repoPath),
+  discardChanges: (repoPath: string) => ipcRenderer.invoke('discard-changes', repoPath),
 });

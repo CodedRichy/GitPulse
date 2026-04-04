@@ -1,36 +1,52 @@
 import { useState, useEffect } from 'react'
-import { Activity, GitCommit, Zap, CheckCircle2, TrendingUp, Github, Clock, AlertCircle, FolderGit2 } from 'lucide-react'
+import { Activity, GitCommit, Zap, CheckCircle2, Github, Clock, FolderGit2, FileDiff } from 'lucide-react'
 import { useAnalytics } from '../hooks/useAnalytics'
+import { useRepositories } from '../hooks/useRepositories'
+import { usePipelineEvents } from '../hooks/useEvents'
 import StatCard from '../components/ui/StatCard'
+
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
 
 export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) {
   const { analytics, loading } = useAnalytics()
-  const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'success'|'error'}[]>([])
+  const { repositories, loading: reposLoading } = useRepositories()
+  const { events: pipelineEvents } = usePipelineEvents()
+  const [logs, setLogs] = useState<{time: string, msg: string, type: 'info'|'success'|'error', step?: string}[]>([])
 
   useEffect(() => {
-    if (window.electronAPI) {
-      window.electronAPI.onPythonOutput((output: string) => {
-        setLogs(prev => [{
-          time: new Date().toLocaleTimeString([], { hour12: false }),
-          msg: output,
-          type: (output.toLowerCase().includes('success') ? 'success' : 'info') as 'info' | 'success' | 'error'
-        }, ...prev].slice(0, 50))
-      })
-      window.electronAPI.onPythonError((error: string) => {
-        setLogs(prev => [{
-          time: new Date().toLocaleTimeString([], { hour12: false }),
-          msg: error,
-          type: 'error' as 'info' | 'success' | 'error'
-        }, ...prev].slice(0, 50))
-      })
-    }
-  }, [])
+    // Convert pipeline events to logs
+    const newLogs = pipelineEvents.slice(0, 20).map(event => ({
+      time: new Date(event.timestamp).toLocaleTimeString([], { hour12: false }),
+      msg: event.message || `${event.step.replace(/_/g, ' ')}`,
+      type: (event.status === 'failed' ? 'error' : event.status === 'done' ? 'success' : 'info') as 'info' | 'success' | 'error',
+      step: event.step
+    }))
+    setLogs(newLogs)
+  }, [pipelineEvents])
+
+  // Get top 3 recently active repos
+  const recentRepos = Object.entries(repositories)
+    .sort(([, a]: [string, any], [, b]: [string, any]) => {
+      const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0
+      const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0
+      return dateB - dateA
+    })
+    .slice(0, 3)
 
   const stats = analytics || {
     total_commits: 0,
     ai_commits: 0,
     ai_percentage: 0,
-    repos_tracked: 0,
+    repos_tracked: Object.keys(repositories).length,
     total_pushes: 0,
     success_rate: 100
   }
@@ -140,26 +156,48 @@ export default function Dashboard({ isMonitoring }: { isMonitoring?: boolean }) 
               Recently Active Repositories
             </h2>
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-neu-sm neu-button hover:shadow-neu-sm-hover transition-all duration-300 cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Github className="w-4 h-4 text-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">project-repo-{i}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Last synced 2m ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 text-xs text-success">
-                      <CheckCircle2 className="w-3 h-3" /> Clean
-                    </div>
-                    <div className="w-px h-4 bg-black/5" />
-                    <span className="text-xs font-mono text-muted-foreground">main</span>
-                  </div>
+              {reposLoading ? (
+                <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              ) : recentRepos.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No repositories tracked yet
                 </div>
-              ))}
+              ) : (
+                recentRepos.map(([name, stats]: [string, any]) => {
+                  const timeAgo = stats.last_activity 
+                    ? getTimeAgo(new Date(stats.last_activity))
+                    : 'Never'
+                  const status = stats.status || 'idle'
+                  const isClean = status === 'idle'
+                  
+                  return (
+                    <div key={name} className="flex items-center justify-between p-4 rounded-neu-sm neu-button hover:shadow-neu-sm-hover transition-all duration-300 cursor-pointer group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full neu-button flex items-center justify-center group-hover:scale-105 transition-transform">
+                          <Github className="w-4 h-4 text-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">Last synced {timeAgo}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-1.5 text-xs ${isClean ? 'text-success' : 'text-amber-600'}`}>
+                          {isClean ? <CheckCircle2 className="w-3 h-3" /> : <FileDiff className="w-3 h-3" />}
+                          {isClean ? 'Clean' : 'Changes'}
+                        </div>
+                        <div className="w-px h-4 bg-black/5" />
+                        <span className={`text-xs font-medium ${
+                          stats.risk_level === 'high' ? 'text-red-600' : 
+                          stats.risk_level === 'medium' ? 'text-amber-600' : 'text-green-600'
+                        }`}>
+                          {stats.risk_level?.toUpperCase() || 'LOW'} RISK
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </div>
         </div>

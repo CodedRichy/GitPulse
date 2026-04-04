@@ -14,8 +14,15 @@ export default function Sidebar({ isMonitoring, onToggleMonitoring, darkMode, on
   const location = useLocation()
 
   const navItems = [
+    { path: '/onboarding', icon: Zap, label: 'Onboarding' },
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/repositories', icon: FolderGit2, label: 'Repositories' },
+    { path: '/timeline', icon: BarChart3, label: 'Timeline' },
+    { path: '/automation-rules', icon: Settings, label: 'Rules' },
+    { path: '/risk-engine', icon: Settings, label: 'Risk Engine' },
+    { path: '/security', icon: Settings, label: 'Security' },
+    { path: '/simulation', icon: Settings, label: 'Simulation' },
+    { path: '/notifications', icon: User, label: 'Notifications' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
     { path: '/settings', icon: Settings, label: 'Settings' },
     { path: '/account', icon: User, label: 'Account' },

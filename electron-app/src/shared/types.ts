@@ -16,6 +16,11 @@ export interface RepositoryStats {
   errors: number
   last_commit?: string
   last_push?: string
+  last_activity?: string
+  status?: 'idle' | 'watching' | 'committing'
+  risk_level?: 'low' | 'medium' | 'high'
+  confidence?: number
+  local_path?: string
 }
 
 export interface ConfigData {
@@ -62,4 +67,24 @@ export interface ErrorStats {
   type: string
   count: number
   last_occurred?: string
+}
+
+export interface PipelineEvent {
+  id: string
+  timestamp: string
+  step: 'change_detected' | 'debounce_closed' | 'ai_analyzed' | 'commit_generated' | 'push_queued' | 'push_completed' | 'push_failed' | 'risk_exceeded' | 'commit_approved' | 'commit_rejected'
+  status: 'pending' | 'done' | 'failed'
+  repo_name?: string
+  message?: string
+  risk_level?: 'low' | 'medium' | 'high'
+  confidence?: number
+}
+
+export interface NotificationEvent {
+  id: string
+  timestamp: string
+  type: 'success' | 'warning' | 'error' | 'info'
+  message: string
+  repo_name?: string
+  read: boolean
 }
