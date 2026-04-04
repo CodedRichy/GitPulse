@@ -168,6 +168,9 @@ function startPythonBackend() {
     const output = data.toString();
     console.log('[Python]', output);
     mainWindow?.webContents.send('python-output', output);
+    
+    // Parse output for pipeline events
+    parsePythonOutput(output);
   });
 
   pythonProcess.stderr?.on('data', (data) => {
@@ -236,12 +239,22 @@ ipcMain.handle('get-github-repositories', async () => {
     const repos = (await response.json()) as any[];
 
     const mapped = repos.reduce((acc: Record<string, any>, repo: any) => {
+      const hasRecentActivity = Boolean(repo.pushed_at);
+      const status = hasRecentActivity ? 'watching' : 'idle';
+      const riskLevel = repo.archived ? 'high' : repo.private ? 'medium' : 'low';
+      const confidence = riskLevel === 'low' ? 92 : riskLevel === 'medium' ? 78 : 61;
+
       acc[repo.full_name || repo.name] = {
         commits: 0,
         pushes: 0,
         errors: 0,
         last_push: repo.pushed_at || undefined,
         last_commit: repo.updated_at || undefined,
+        last_activity: repo.pushed_at || repo.updated_at || undefined,
+        status,
+        risk_level: riskLevel,
+        confidence,
+        local_path: '', // Will be set when user selects local repo
       };
       return acc;
     }, {});
@@ -465,6 +478,403 @@ ipcMain.handle('poll-github-device-flow', async (_, deviceCode) => {
     return { success: false, status: 'error', error: 'Network error while completing GitHub sign-in.' };
   }
 });
+
+// Notifications and pipeline events
+ipcMain.handle('mark-notification-read', (_, id) => {
+  const notifications = store.get('notifications', []) as any[];
+  const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+  store.set('notifications', updated);
+  return { success: true };
+});
+
+ipcMain.handle('clear-all-notifications', () => {
+  store.set('notifications', []);
+  return { success: true };
+});
+
+ipcMain.handle('get-notifications', () => {
+  return store.get('notifications', []);
+});
+
+ipcMain.handle('get-pipeline-events', () => {
+  return store.get('pipeline_events', []);
+});
+
+// Git operations
+ipcMain.handle('get-git-diff', async (_, repoPath) => {
+  if (typeof repoPath !== 'string' || !repoPath.trim()) {
+    return { error: 'Invalid repository path' };
+  }
+  
+  try {
+    const { execSync } = require('child_process');
+    const diff = execSync('git diff', { 
+      cwd: repoPath, 
+      encoding: 'utf-8',
+      timeout: 10000 
+    });
+    return { success: true, diff };
+  } catch (error: any) {
+    // No changes or not a git repo
+    if (error.status === 1 && error.stdout) {
+      return { success: true, diff: error.stdout };
+    }
+    return { error: 'Failed to get git diff: ' + error.message };
+  }
+});
+
+ipcMain.handle('get-git-status', async (_, repoPath) => {
+  if (typeof repoPath !== 'string' || !repoPath.trim()) {
+    return { error: 'Invalid repository path' };
+  }
+  
+  try {
+    const { execSync } = require('child_process');
+    const status = execSync('git status --porcelain', { 
+      cwd: repoPath, 
+      encoding: 'utf-8',
+      timeout: 5000 
+    });
+    
+    const files = status.split('\n').filter((line: string) => line.trim()).map((line: string) => ({
+      status: line.substring(0, 2).trim(),
+      file: line.substring(3).trim(),
+    }));
+    
+    return { success: true, files };
+  } catch (error: any) {
+    return { error: 'Failed to get git status: ' + error.message };
+  }
+});
+
+ipcMain.handle('generate-commit-message', async (_, { repoPath, diff }) => {
+  if (!repoPath || !diff) {
+    return { error: 'Repository path and diff are required' };
+  }
+  
+  // Call Python backend to generate commit message
+  try {
+    const response = await fetch('http://127.0.0.1:5000/api/generate-commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo_path: repoPath, diff }),
+    });
+    
+    if (!response.ok) {
+      return { error: 'Failed to generate commit message' };
+    }
+    
+    const data: any = await response.json();
+    return { success: true, message: data.message, risk: data.risk, confidence: data.confidence };
+  } catch {
+    // Fallback: return a basic message
+    const files = diff.split('\n')
+      .filter((line: string) => line.startsWith('diff --git'))
+      .map((line: string) => line.split(' ')[2].replace('a/', ''))
+      .slice(0, 3);
+    
+    return { 
+      success: true, 
+      message: `feat: update ${files.join(', ')}`,
+      risk: 'low',
+      confidence: 75
+    };
+  }
+});
+
+// Commit and push operations
+ipcMain.handle('commit-changes', async (_, { repoPath, message }) => {
+  if (!repoPath || !message) {
+    return { error: 'Repository path and commit message are required' };
+  }
+  
+  try {
+    const { execSync } = require('child_process');
+    
+    // Stage all changes
+    execSync('git add -A', { cwd: repoPath, timeout: 5000 });
+    
+    // Create commit
+    const commitOutput = execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { 
+      cwd: repoPath, 
+      encoding: 'utf-8',
+      timeout: 10000 
+    });
+    
+    broadcastPipelineEvent({
+      id: `commit-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      step: 'commit_generated',
+      status: 'done',
+      message: `Committed: ${message}`,
+    });
+    
+    return { success: true, output: commitOutput };
+  } catch (error: any) {
+    return { error: 'Failed to commit: ' + error.message };
+  }
+});
+
+ipcMain.handle('push-changes', async (_, repoPath) => {
+  if (!repoPath) {
+    return { error: 'Repository path is required' };
+  }
+  
+  try {
+    const { execSync } = require('child_process');
+    
+    broadcastPipelineEvent({
+      id: `push-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      step: 'push_queued',
+      status: 'pending',
+      message: 'Pushing to remote...',
+    });
+    
+    const pushOutput = execSync('git push', { 
+      cwd: repoPath, 
+      encoding: 'utf-8',
+      timeout: 30000 
+    });
+    
+    broadcastPipelineEvent({
+      id: `push-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      step: 'push_completed',
+      status: 'done',
+      message: 'Push completed',
+    });
+    
+    broadcastNotification({
+      id: `notif-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'success',
+      message: 'Changes pushed to remote',
+      read: false,
+    });
+    
+    return { success: true, output: pushOutput };
+  } catch (error: any) {
+    broadcastPipelineEvent({
+      id: `push-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      step: 'push_failed',
+      status: 'failed',
+      message: error.message,
+    });
+    
+    broadcastNotification({
+      id: `notif-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'error',
+      message: 'Push failed: ' + error.message,
+      read: false,
+    });
+    
+    return { error: 'Failed to push: ' + error.message };
+  }
+});
+
+ipcMain.handle('discard-changes', async (_, repoPath) => {
+  if (!repoPath) {
+    return { error: 'Repository path is required' };
+  }
+  
+  try {
+    const { execSync } = require('child_process');
+    execSync('git checkout -- .', { cwd: repoPath, timeout: 5000 });
+    execSync('git clean -fd', { cwd: repoPath, timeout: 5000 });
+    
+    broadcastNotification({
+      id: `notif-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      type: 'info',
+      message: 'Changes discarded',
+      read: false,
+    });
+    
+    return { success: true };
+  } catch (error: any) {
+    return { error: 'Failed to discard: ' + error.message };
+  }
+});
+
+// Helpers to broadcast events to renderer
+function broadcastPipelineEvent(event: any) {
+  const events = store.get('pipeline_events', []) as any[];
+  events.unshift(event);
+  if (events.length > 50) events.pop();
+  store.set('pipeline_events', events);
+  mainWindow?.webContents.send('pipeline-event', event);
+}
+
+function broadcastNotification(event: any) {
+  const notifications = store.get('notifications', []) as any[];
+  notifications.unshift(event);
+  if (notifications.length > 100) notifications.pop();
+  store.set('notifications', notifications);
+  mainWindow?.webContents.send('notification-event', event);
+}
+
+// Parse Python output to generate pipeline events
+function parsePythonOutput(output: string) {
+  const lines = output.split('\n');
+  const timestamp = new Date().toISOString();
+  
+  for (const line of lines) {
+    const lower = line.toLowerCase();
+    
+    // Change detected
+    if (lower.includes('change detected') || lower.includes('file changed')) {
+      broadcastPipelineEvent({
+        id: `change-${Date.now()}`,
+        timestamp,
+        step: 'change_detected',
+        status: 'done',
+        message: line.trim(),
+      });
+    }
+    
+    // Debounce/waiting
+    if (lower.includes('debounce') || lower.includes('waiting')) {
+      broadcastPipelineEvent({
+        id: `debounce-${Date.now()}`,
+        timestamp,
+        step: 'debounce_closed',
+        status: 'done',
+        message: line.trim(),
+      });
+    }
+    
+    // AI analysis
+    if (lower.includes('ai analyzed') || lower.includes('analyzing') || lower.includes('ollama') || lower.includes('openai')) {
+      broadcastPipelineEvent({
+        id: `ai-${Date.now()}`,
+        timestamp,
+        step: 'ai_analyzed',
+        status: 'done',
+        message: line.trim(),
+      });
+    }
+    
+    // Commit generated
+    if (lower.includes('commit generated') || lower.includes('commit created') || lower.includes('git commit')) {
+      broadcastPipelineEvent({
+        id: `commit-${Date.now()}`,
+        timestamp,
+        step: 'commit_generated',
+        status: 'done',
+        message: line.trim(),
+      });
+      
+      broadcastNotification({
+        id: `notif-${Date.now()}`,
+        timestamp,
+        type: 'success',
+        message: 'Commit generated successfully',
+        read: false,
+      });
+    }
+    
+    // Push events
+    if (lower.includes('push queued') || lower.includes('pushing')) {
+      broadcastPipelineEvent({
+        id: `push-${Date.now()}`,
+        timestamp,
+        step: 'push_queued',
+        status: 'pending',
+        message: line.trim(),
+      });
+    }
+    
+    if (lower.includes('push completed') || lower.includes('pushed')) {
+      broadcastPipelineEvent({
+        id: `push-${Date.now()}`,
+        timestamp,
+        step: 'push_completed',
+        status: 'done',
+        message: line.trim(),
+      });
+      
+      broadcastNotification({
+        id: `notif-${Date.now()}`,
+        timestamp,
+        type: 'success',
+        message: 'Changes pushed to remote',
+        read: false,
+      });
+    }
+    
+    if (lower.includes('push failed') || lower.includes('push error')) {
+      broadcastPipelineEvent({
+        id: `push-${Date.now()}`,
+        timestamp,
+        step: 'push_failed',
+        status: 'failed',
+        message: line.trim(),
+      });
+      
+      broadcastNotification({
+        id: `notif-${Date.now()}`,
+        timestamp,
+        type: 'error',
+        message: 'Push failed: ' + line.trim(),
+        read: false,
+      });
+    }
+    
+    // Risk exceeded
+    if (lower.includes('risk') || lower.includes('threshold exceeded')) {
+      broadcastPipelineEvent({
+        id: `risk-${Date.now()}`,
+        timestamp,
+        step: 'risk_exceeded',
+        status: 'pending',
+        message: line.trim(),
+      });
+      
+      broadcastNotification({
+        id: `notif-${Date.now()}`,
+        timestamp,
+        type: 'warning',
+        message: 'Risk threshold exceeded - review required',
+        read: false,
+      });
+    }
+    
+    // Commit approved/rejected
+    if (lower.includes('commit approved')) {
+      broadcastPipelineEvent({
+        id: `approval-${Date.now()}`,
+        timestamp,
+        step: 'commit_approved',
+        status: 'done',
+        message: line.trim(),
+      });
+    }
+    
+    if (lower.includes('commit rejected')) {
+      broadcastPipelineEvent({
+        id: `approval-${Date.now()}`,
+        timestamp,
+        step: 'commit_rejected',
+        status: 'failed',
+        message: line.trim(),
+      });
+    }
+    
+    // General errors
+    if (lower.includes('error') && !lower.includes('push error')) {
+      broadcastNotification({
+        id: `notif-${Date.now()}`,
+        timestamp,
+        type: 'error',
+        message: line.trim(),
+        read: false,
+      });
+    }
+  }
+}
 
 // App lifecycle
 app.whenReady().then(() => {

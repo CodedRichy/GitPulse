@@ -1,20 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { FolderGit2, Plus } from 'lucide-react'
 import { useRepositories } from '../hooks/useRepositories'
 import RepoCard from '../components/features/RepoCard'
+import { RepositoryStats } from '../../shared/types'
 
 export default function Repositories() {
-  const { repositories, loading, error, refetch } = useRepositories()
+  const navigate = useNavigate()
+  const { repositories, loading, error } = useRepositories()
   const [showAddDialog, setShowAddDialog] = useState(false)
 
   const repoList = Object.entries(repositories)
 
-  const handleRepoDetails = (name: string) => {
-    console.log('View details for:', name)
+  const handleRepoDetails = (name: string, stats: RepositoryStats) => {
+    navigate(`/repository/${encodeURIComponent(name)}`, {
+      state: { repoName: name, stats, repoPath: stats.local_path }
+    })
   }
 
-  const handleRepoSettings = (name: string) => {
-    console.log('Settings for:', name)
+  const handleRepoSettings = (name: string, stats: RepositoryStats) => {
+    navigate('/automation-rules', {
+      state: { repoName: name, stats }
+    })
   }
 
   return (
@@ -35,6 +42,12 @@ export default function Repositories() {
       </div>
 
       {/* Repository List */}
+      {error && (
+        <div className="neu-section rounded-neu-sm p-3 text-sm text-[rgb(180,83,9)] font-semibold">
+          {error}
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto shadow-glow-primary"></div>

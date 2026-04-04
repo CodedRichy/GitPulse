@@ -7,34 +7,23 @@ import Repositories from './pages/Repositories'
 import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import Account from './pages/Account'
-
-declare global {
-  interface Window {
-    electronAPI: {
-      getAnalytics: () => Promise<any>
-      getRepositories: () => Promise<any>
-      getConfig: () => Promise<any>
-      updateConfig: (config: any) => Promise<any>
-      startMonitoring: () => Promise<any>
-      stopMonitoring: () => Promise<any>
-      getGitHubToken: () => Promise<string | null>
-      getGitHubRepositories: () => Promise<any>
-      setGitHubToken: (token: string) => Promise<any>
-      clearGitHubToken: () => Promise<any>
-      startGitHubDeviceFlow: () => Promise<any>
-      pollGitHubDeviceFlow: (deviceCode: string) => Promise<any>
-      openExternalUrl: (url: string) => Promise<any>
-      onPythonOutput: (callback: (output: string) => void) => void
-      onPythonError: (callback: (error: string) => void) => void
-      onPythonStopped: (callback: (code: number) => void) => void
-    }
-  }
-}
+import Onboarding from './pages/Onboarding'
+import RepositoryDetail from './pages/RepositoryDetail'
+import CommitReview from './pages/CommitReview'
+import ActivityTimeline from './pages/ActivityTimeline'
+import AutomationRules from './pages/AutomationRules'
+import RiskEngine from './pages/RiskEngine'
+import SecuritySafety from './pages/SecuritySafety'
+import SimulationMode from './pages/SimulationMode'
+import Notifications from './pages/Notifications'
 
 function App() {
   const [isMonitoring, setIsMonitoring] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [onboardingComplete, setOnboardingComplete] = useState(() => {
+    return localStorage.getItem('gitpulse_onboarding_complete') === 'true'
+  })
 
   useEffect(() => {
     if (darkMode) {
@@ -71,6 +60,11 @@ function App() {
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode)
+  }
+
+  const handleCompleteOnboarding = () => {
+    localStorage.setItem('gitpulse_onboarding_complete', 'true')
+    setOnboardingComplete(true)
   }
 
   return (
@@ -149,10 +143,22 @@ function App() {
           >
             <div className="max-w-7xl mx-auto h-full animate-fade-in relative z-10">
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route
+                  path="/"
+                  element={<Navigate to={onboardingComplete ? '/dashboard' : '/onboarding'} replace />}
+                />
+                <Route path="/onboarding" element={<Onboarding onComplete={handleCompleteOnboarding} />} />
                 <Route path="/dashboard" element={<Dashboard isMonitoring={isMonitoring} />} />
                 <Route path="/repositories" element={<Repositories />} />
+                <Route path="/repository/:name" element={<RepositoryDetail />} />
+                <Route path="/commit-review" element={<CommitReview />} />
+                <Route path="/timeline" element={<ActivityTimeline />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/automation-rules" element={<AutomationRules />} />
+                <Route path="/risk-engine" element={<RiskEngine />} />
+                <Route path="/security" element={<SecuritySafety />} />
+                <Route path="/simulation" element={<SimulationMode />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/account" element={<Account />} />
               </Routes>
