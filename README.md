@@ -32,25 +32,13 @@ GitPulse is an intelligent Git automation tool that watches your repositories an
 
 ## Architecture
 
-GitPulse operates as a modular system with multiple interfaces:
+GitPulse is a modular system with a Python backend and an Electron frontend. For a detailed breakdown of components, data flow, and system design, see [architecture.md](docs/architecture.md).
 
-### Core Python Backend
-- **File System Observer** - Uses `watchdog` to monitor repository changes
-- **AI Provider Manager** - Abstract layer supporting multiple AI services
-- **Git Operations Engine** - Handles add, commit, push sequences
-- **Analytics Tracker** - Records usage metrics and performance
-
-### Desktop Application (Electron)
-- **React Frontend** - Modern UI with TypeScript and TailwindCSS
-- **Main Process** - Controls Python backend and system integration
-- **IPC Bridge** - Secure communication between UI and backend
-- **System Integration** - Tray, notifications, auto-launch
-
-### Data Flow
-1. **Observation**: File system events detected across target repositories
-2. **Evaluation**: Changes mapped to repos with debounced timers
-3. **Processing**: AI generates commit messages from git diffs
-4. **Synchronization**: Automated add, commit, push sequence
+### Core Components
+- **File System Observer:** Monitors repositories for changes.
+- **AI Provider Manager:** Handles multiple AI services (Ollama, OpenAI, Anthropic).
+- **Git Operations Engine:** Automates the commit and push workflow.
+- **Electron Dashboard:** Provides a modern UI for configuration and analytics.
 
 ## Tech Stack
 
@@ -82,52 +70,19 @@ GitPulse operates as a modular system with multiple interfaces:
 │   │   └── ci.yml          → Continuous integration
 │   └── ISSUE_TEMPLATE/     → Issue templates
 ├── backend/                  → Modular Python backend
-│   ├── main.py              → Main application entry point
-│   ├── core/                → Core functionality
-│   │   └── config.py       → Configuration management
-│   ├── ai/                  → AI provider services
-│   │   └── providers.py     → AI abstraction layer
-│   ├── analytics/           → Usage tracking and metrics
-│   │   └── engine.py       → Analytics engine
-│   ├── api/                 → HTTP API server
-│   │   └── server.py       → REST API endpoints
-│   ├── git/                 → Git operations
-│   │   └── commit_preview.py
-│   ├── integrations/        → Third-party integrations
-│   │   └── handlers.py     → Integration handlers
-│   ├── team/                → Team collaboration
-│   │   └── workspace.py    → Team workspace management
-│   ├── payments/            → Payment processing
-│   │   └── stripe.py       → Stripe integration
-│   ├── deploy/              → Deployment utilities
-│   │   └── manager.py      → Deployment manager
-│   └── tests/               → Backend test suite
-│       ├── test_ai_providers.py
-│       ├── test_analytics.py
-│       └── test_config.py
 ├── electron-app/            → Modern desktop application
-│   ├── src/
-│   │   ├── main/           → Electron main process
-│   │   └── renderer/       → React frontend
-│   ├── package.json        → Node.js dependencies
-│   ├── electron-builder.yml → Build configuration
-│   └── dist/               → Compiled output
+├── docs/                     → Project Memory & Documentation
+│   ├── project_memory.md     → Primary source of truth
+│   ├── architecture.md       → System design & components
+│   ├── dev_log.md            → Chronological update history
+│   ├── tasks.md              → Roadmap & pending tasks
+│   └── agent.md              → AI usage instructions
 ├── scripts/                → Development and utility scripts
-│   ├── run-tests.py        → Test runner
-│   └── setup-dev.py        → Development setup
-├── web/                    → Web interface (optional)
-│   ├── index.html
-│   └── style.css
-├── docs/                   → Documentation
-│   ├── ARCHITECTURE.md
-│   ├── CHANGELOG.md
-│   └── DEVELOPMENT.md
 ├── requirements.txt         → Python dependencies
-├── .env                    → Environment variables
-├── .gitignore              → Git ignore patterns
-├── LICENSE                 → License information
 └── README.md               → This file
 ```
+
+For more detailed documentation, see the [docs/](docs/) directory.
 
 ## Installation
 
@@ -230,46 +185,27 @@ Create `.gitpulse.json` to customize settings:
 - `OPENAI_API_KEY` - OpenAI API key
 - `ANTHROPIC_API_KEY` - Anthropic API key
 
-## Development
+## Development & Testing
 
-### Running Tests
+For detailed development guidelines, testing procedures, and contribution workflows, please refer to:
+
+- [architecture.md](docs/architecture.md) - System overview.
+- [dev_log.md](docs/dev_log.md) - History of changes and technical decisions.
+- [docs/archive/](docs/archive/) - Legacy setup and development guides.
+
+### Quick Commands
+
+#### Run Backend
 ```bash
-# Run all backend tests
-python scripts/run-tests.py
-
-# Run specific module tests
-python -m pytest backend/tests/
-
-# Test specific module
-python -m pytest backend/tests/test_ai_providers.py
+python backend/main.py
 ```
 
-### Code Style
-- Python follows PEP8 standards
-- TypeScript uses ESLint and Prettier (configured in electron-app)
-- Commit messages follow conventional format
+#### Run Desktop App
+```bash
+cd electron-app && npm run dev
+```
 
-### Adding Features
-1. **Backend**: Modify modules in `backend/` directory
-2. **UI**: Update React components in `electron-app/src/renderer/`
-3. **Integration**: Update IPC bridge in `electron-app/src/main/preload.ts`
-4. **API**: Add endpoints in `backend/api/server.py`
-
-### Debugging
-- Python logs: `.git-pulse.log`
-- Electron DevTools: Available in development mode
-- Analytics data: `.gitpulse-analytics.json`
-- API server: Runs on http://localhost:8000 (when enabled)
-
-## Testing
-
-The project includes comprehensive test coverage:
-
-- **AI Providers**: Test all AI service integrations
-- **Analytics**: Verify metrics tracking and data persistence
-- **Configuration**: Test settings loading and validation
-
-Run tests with:
+#### Run Tests
 ```bash
 python scripts/run-tests.py
 ```
@@ -308,24 +244,7 @@ Desktop app includes electron-updater for automatic updates.
 
 ## Roadmap
 
-### Completed Features
-- Multi-provider AI support
-- Desktop application with modern UI
-- Analytics and usage tracking
-- System tray integration
-
-### Planned Features
-- [ ] Team collaboration features
-- [ ] Advanced commit message templates
-- [ ] Git hooks integration
-- [ ] Repository-specific settings
-- [ ] Performance optimizations
-
-### Future Enhancements
-- [ ] Web-based dashboard
-- [ ] Mobile companion app
-- [ ] Enterprise SSO integration
-- [ ] Advanced analytics and reporting
+See [tasks.md](docs/tasks.md) for a comprehensive list of planned features, future enhancements, and current project focus.
 
 ## Contributing
 
