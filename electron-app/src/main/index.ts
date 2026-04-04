@@ -589,17 +589,28 @@ ipcMain.handle('commit-changes', async (_, { repoPath, message }) => {
   }
   
   try {
-    const { execSync } = require('child_process');
+    const { spawnSync } = require('child_process');
     
     // Stage all changes
-    execSync('git add -A', { cwd: repoPath, timeout: 5000 });
+    const addResult = spawnSync('git', ['add', '-A'], { 
+      cwd: repoPath, 
+      encoding: 'utf-8',
+      timeout: 5000 
+    });
+    if (addResult.status !== 0) {
+      throw new Error(addResult.stderr || 'git add failed');
+    }
     
     // Create commit
-    const commitOutput = execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { 
+    const commitResult = spawnSync('git', ['commit', '-m', message], { 
       cwd: repoPath, 
       encoding: 'utf-8',
       timeout: 10000 
     });
+    if (commitResult.status !== 0) {
+      throw new Error(commitResult.stderr || 'git commit failed');
+    }
+    const commitOutput = commitResult.stdout;
     
     broadcastPipelineEvent({
       id: `commit-${Date.now()}`,
