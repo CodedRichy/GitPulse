@@ -46,10 +46,12 @@ class TestAIProviderManager(unittest.TestCase):
         self.assertGreater(len(self.manager.providers), 0)
     
     def test_available_providers(self):
-        """Test getting available providers."""
-        providers = self.manager.get_available_providers()
-        self.assertIsInstance(providers, list)
-        self.assertGreater(len(providers), 0)
+        """Test getting available providers with mocking."""
+        from unittest.mock import patch
+        with patch.object(OllamaProvider, 'is_available', return_value=True):
+            providers = self.manager.get_available_providers()
+            self.assertIsInstance(providers, list)
+            self.assertGreater(len(providers), 0)
     
     def test_empty_diff(self):
         """Test manager with empty diff."""
