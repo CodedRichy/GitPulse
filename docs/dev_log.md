@@ -5,6 +5,11 @@ GitPulse has evolved from a simple Python script for automated commits to a feat
 
 ## Major Updates
 
+### v1.0.1 (2026-04-04) - CI/CD Stabilization
+- **CI/CD:** Fixed missing `pytest` dependency in GitHub Actions.
+- **Testing:** Introduced `requirements-dev.txt` for development dependencies.
+- **Testing:** Updated `test_ai_providers.py` with mocking to ensure environment-independent test results.
+
 ### v1.0.0 (2026-04-01) - Initial Commercial Launch
 - **Commercial:** Integrated Stripe for Pro/Team/Enterprise subscriptions.
 - **Collaboration:** Added Team Workspaces and shared repo settings.
