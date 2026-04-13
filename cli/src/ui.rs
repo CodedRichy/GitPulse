@@ -91,26 +91,25 @@ pub fn title_box(width: usize, title: &str) -> String {
 
 /// Simple panel with content
 pub fn panel(content: &[&str]) -> String {
-    let max_width = content.iter().map(|s| s.len()).max().unwrap_or(0);
-    let width = max_width.max(40) + 4;
-    
     let mut output = String::new();
+    let width = 60;
     
     // Top border
-    output.push_str(&format!("{}\n", top_border(width).color(colors::ACCENT)));
+    output.push_str(&format!("{}\n", top_border(width).bright_yellow()));
     
     // Content lines
     for line in content {
-        let padded = format!(" {:1$}", line, width - 4);
-        output.push_str(&format!("{} {} {}\n", 
-            chars::VERTICAL.color(colors::ACCENT),
-            padded,
-            chars::VERTICAL.color(colors::ACCENT)
+        let padding = width.saturating_sub(line.chars().count() + 2);
+        output.push_str(&format!("{} {}{} {}\n", 
+            chars::VERTICAL.bright_yellow(),
+            line,
+            " ".repeat(padding),
+            chars::VERTICAL.bright_yellow()
         ));
     }
     
     // Bottom border
-    output.push_str(&format!("{}", bottom_border(width).color(colors::ACCENT)));
+    output.push_str(&format!("{}", bottom_border(width).bright_yellow()));
     
     output
 }
@@ -234,20 +233,17 @@ pub fn error(message: &str) -> String {
 
 /// Two column layout (like Claude Code split view)
 pub fn two_column(left: &[&str], right: &[&str]) -> String {
-    let left_width = 28;
-    let right_width = 28;
-    let _total_width = left_width + right_width + 3;
-    
     let mut output = String::new();
     
     // Top border with divider
-    output.push_str(&format!("{}{}{}{}{}\n",
-        chars::TOP_LEFT.bright_yellow(),
-        line(left_width).bright_yellow(),
-        chars::T_TOP.bright_yellow(),
-        line(right_width).bright_yellow(),
-        chars::TOP_RIGHT.bright_yellow()
-    ));
+    let top = format!("{}{}{}{}{}",
+        chars::TOP_LEFT,
+        line(28),
+        chars::T_TOP,
+        line(28),
+        chars::TOP_RIGHT
+    );
+    output.push_str(&format!("{}\n", top.bright_yellow()));
     
     // Content rows
     let max_rows = left.len().max(right.len());
@@ -255,25 +251,38 @@ pub fn two_column(left: &[&str], right: &[&str]) -> String {
         let left_line = left.get(i).unwrap_or(&"");
         let right_line = right.get(i).unwrap_or(&"");
         
-        output.push_str(&format!("{} {:<left_width$} {} {:<right_width$} {}\n",
-            chars::VERTICAL.bright_yellow(),
-            left_line,
-            chars::VERTICAL.bright_yellow(),
-            right_line,
-            chars::VERTICAL.bright_yellow(),
-            left_width = left_width,
-            right_width = right_width
-        ));
+        // Truncate if too long
+        let left_display = if left_line.len() > 26 {
+            format!("{:<28}", format!("{}...", &left_line[..23]))
+        } else {
+            format!("{:<28}", left_line)
+        };
+        
+        let right_display = if right_line.len() > 26 {
+            format!("{:<28}", format!("{}...", &right_line[..23]))
+        } else {
+            format!("{:<28}", right_line)
+        };
+        
+        let row = format!("{} {} {} {} {}",
+            chars::VERTICAL,
+            left_display,
+            chars::VERTICAL,
+            right_display,
+            chars::VERTICAL
+        );
+        output.push_str(&format!("{}\n", row.bright_yellow()));
     }
     
     // Bottom border
-    output.push_str(&format!("{}{}{}{}{}",
-        chars::BOTTOM_LEFT.bright_yellow(),
-        line(left_width).bright_yellow(),
-        chars::T_BOTTOM.bright_yellow(),
-        line(right_width).bright_yellow(),
-        chars::BOTTOM_RIGHT.bright_yellow()
-    ));
+    let bottom = format!("{}{}{}{}{}",
+        chars::BOTTOM_LEFT,
+        line(28),
+        chars::T_BOTTOM,
+        line(28),
+        chars::BOTTOM_RIGHT
+    );
+    output.push_str(&format!("{}", bottom.bright_yellow()));
     
     output
 }

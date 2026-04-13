@@ -278,8 +278,16 @@ async fn main() -> Result<()> {
                             // Show staged files if any
                             if !status.staged.is_empty() {
                                 left.push("  Staged:".to_string());
-                                for file in &status.staged {
-                                    left.push(format!("    • {}", file));
+                                for file in status.staged.iter().take(10) {
+                                    let display = if file.len() > 40 {
+                                        format!("...{}", &file[file.len().saturating_sub(37)..])
+                                    } else {
+                                        file.clone()
+                                    };
+                                    left.push(format!("    • {}", display));
+                                }
+                                if status.staged.len() > 10 {
+                                    left.push(format!("    ... and {} more", status.staged.len() - 10));
                                 }
                                 left.push("".to_string());
                             }
@@ -287,8 +295,16 @@ async fn main() -> Result<()> {
                             // Show unstaged files if any
                             if !status.unstaged.is_empty() {
                                 left.push("  Unstaged:".to_string());
-                                for file in &status.unstaged {
-                                    left.push(format!("    • {}", file));
+                                for file in status.unstaged.iter().take(10) {
+                                    let display = if file.len() > 40 {
+                                        format!("...{}", &file[file.len().saturating_sub(37)..])
+                                    } else {
+                                        file.clone()
+                                    };
+                                    left.push(format!("    • {}", display));
+                                }
+                                if status.unstaged.len() > 10 {
+                                    left.push(format!("    ... and {} more", status.unstaged.len() - 10));
                                 }
                                 left.push("".to_string());
                             }
