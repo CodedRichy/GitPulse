@@ -1,16 +1,39 @@
 # Rust
 /target/
 **/*.rs.bk
+Cargo.lock
+**/*.pdb
+**/*.exe
 
 # IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-*
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
 
 # OS
 .DS_Store
 Thumbs.db
+*.lnk
+desktop.ini
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Development tools
+*.log
+*.tmp
+*.temp
+.env.local
+.env.development
+.env.test
+coverage/
+*.profraw
 
 # Project-specific
 .gitpulse/
@@ -18,3 +41,7 @@ Thumbs.db
 node_modules/
 dist/
 build/
+comprehensive_test.py
+.gitpulse-analytics.json
+*.sqlite
+*.db
