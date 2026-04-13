@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
-use owo_colors::OwoColorize;
 use std::env;
 
 mod ui;
@@ -70,317 +69,264 @@ enum ConfigCommands {
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Commit { dry_run, edit } => {
             let current_dir = env::current_dir()?;
-            
+
             match GitAnalyzer::new(&current_dir) {
                 Ok(git) => {
-                    // Get git status
                     match git.get_status() {
                         Ok(status) => {
-                            print!("{}", welcome_screen("lfm-2.5-instruct", &status.branch));
-                            
-                            // Show staged changes
+                            print!("{}", welcome_header(&format!(
+                                "on {}  ·  model lfm-2.5-instruct", status.branch
+                            )));
+
                             if !status.staged.is_empty() {
-                                let mut content: Vec<String> = vec!["".to_string(), "Staged changes:".to_string(), "".to_string()];
+                                print!("{}", section("Staged changes"));
                                 for file in &status.staged {
-                                    content.push(format!("  • {}", file));
+                                    print!("{}", file_entry(chars::PLUS, file));
                                 }
-                                content.push("".to_string());
-                                
-                                let content_refs: Vec<&str> = content.iter().map(|s| s.as_str()).collect();
-                                println!("{}", panel(&content_refs));
-                                
-                                // Get the actual diff for AI analysis
+
+                                // Diff preview
                                 match git.get_staged_diff() {
                                     Ok(diff) => {
                                         if !diff.is_empty() && diff.len() < 5000 {
-                                            // Truncate for display
-                                            let preview: String = diff.lines().take(10).collect::<Vec<_>>().join("\n");
-                                            println!("{}", section_header("Diff preview:"));
-                                            println!("{}\n", preview);
+                                            print!("\n{}\n", labeled_separator("diff preview"));
+                                            print!("{}", diff_preview(&diff, 12));
                                         }
                                     }
                                     Err(_) => {}
                                 }
-                                
-                                println!("{}", section_header("Suggested commit message:"));
-                                println!("  {} (AI would generate based on diff)\n", 
-                                    ui::chars::BULLET.bright_yellow());
-                                
+
+                                print!("{}", section("Suggested commit message"));
+                                print!("{}", hint("(AI would generate based on diff)"));
+
                                 if dry_run {
-                                    print!("{}", status_bar("dry-run / no commit made"));
+                                    print!("{}", status_bar("Dry run", "no commit made"));
                                 } else if edit {
-                                    print!("{}", status_bar("editing / waiting for input"));
+                                    print!("{}", status_bar("Edit mode", "waiting for input"));
                                 } else {
-                                    print!("{}", status_bar("ready to commit"));
+                                    print!("{}", status_bar("Ready", "commit"));
                                 }
                             } else {
                                 print!("{}", error("No staged changes. Run 'git add' first."));
+                                print!("{}", hint("Stage files with: git add <file>"));
                             }
                         }
-                        Err(e) => {
-                            print!("{}", error(&format!("Failed to get status: {}", e)));
-                        }
+                        Err(e) => print!("{}", error(&format!("Failed to get status: {}", e))),
                     }
                 }
-                Err(e) => {
-                    print!("{}", error(&format!("Not a git repository: {}", e)));
-                }
+                Err(e) => print!("{}", error(&format!("Not a git repository: {}", e))),
             }
         }
-        
+
         Commands::Explain { file, depth } => {
             let current_dir = env::current_dir()?;
-            
+
             match GitAnalyzer::new(&current_dir) {
                 Ok(git) => {
                     match git.get_file_history(&file, depth) {
                         Ok(commits) => {
-                            print!("{}", welcome_screen("gpt-oss-120b", &file));
-                            
-                            let mut content: Vec<String> = vec![
-                                "".to_string(),
-                                format!("Found {} commits", commits.len()),
-                                "".to_string(),
-                                "Recent activity:".to_string(),
-                            ];
-                            
+                            print!("{}", welcome_header(&format!(
+                                "explaining {}  ·  model gpt-oss-120b", file
+                            )));
+
+                            print!("{}", section(&format!(
+                                "History  ({})",
+                                if commits.is_empty() {
+                                    "no commits found".to_string()
+                                } else {
+                                    format!("{} commits", commits.len())
+                                }
+                            )));
+
                             for commit in &commits {
                                 let msg = commit.message.lines().next().unwrap_or("No message");
-                                content.push(format!("  • {} - {}", &commit.hash[..7], msg));
+                                print!("{}", commit_entry(&commit.hash[..7], msg));
                             }
-                            
-                            content.push("".to_string());
-                            content.push("File purpose:".to_string());
-                            content.push("  (AI analysis would go here)".to_string());
-                            content.push("".to_string());
-                            
-                            let content_refs: Vec<&str> = content.iter().map(|s| s.as_str()).collect();
-                            println!("{}", panel(&content_refs));
-                            print!("{}", status_bar("analyzed"));
+
+                            if !commits.is_empty() {
+                                print!("\n");
+                                let block = vec![
+                                    "File purpose:",
+                                    "  (AI analysis would go here)",
+                                ];
+                                print!("{}", accent_block(&block));
+                            }
+
+                            print!("{}", status_bar("Done", "analyzed"));
                         }
-                        Err(e) => {
-                            print!("{}", error(&format!("Failed to get history: {}", e)));
-                        }
+                        Err(e) => print!("{}", error(&format!("Failed to get history: {}", e))),
                     }
                 }
-                Err(e) => {
-                    print!("{}", error(&format!("Not a git repository: {}", e)));
-                }
+                Err(e) => print!("{}", error(&format!("Not a git repository: {}", e))),
             }
         }
-        
+
         Commands::Pr { base, dry_run } => {
             let current_dir = env::current_dir()?;
-            
+
             match GitAnalyzer::new(&current_dir) {
                 Ok(git) => {
-                    // Get recent commits
                     match git.get_recent_commits(10) {
                         Ok(commits) => {
-                            print!("{}", welcome_screen("gpt-oss-120b", &format!("vs {}", base)));
-                            
-                            let total_commits = commits.len();
-                            let mut content: Vec<String> = vec![
-                                "".to_string(),
-                                format!("Analyzing {} commits...", total_commits),
-                                "".to_string(),
-                                "Recent commits:".to_string(),
-                            ];
-                            
-                            // Show last 5 commits
-                            for commit in commits.iter().take(5) {
+                            print!("{}", welcome_header(&format!(
+                                "PR vs {}  ·  model gpt-oss-120b", base
+                            )));
+
+                            let total = commits.len();
+
+                            // Commits section
+                            print!("{}", section(&format!("Commits  ({})", total)));
+                            for commit in commits.iter().take(8) {
                                 let msg = commit.message.lines().next().unwrap_or("No message");
-                                content.push(format!("  • {} - {}", &commit.hash[..7], msg));
+                                print!("{}", commit_entry(&commit.hash[..7], msg));
                             }
-                            
-                            if total_commits > 5 {
-                                content.push(format!("  ... and {} more", total_commits - 5));
+                            if total > 8 {
+                                print!("{}", overflow(total - 8));
                             }
-                            
-                            content.push("".to_string());
-                            content.push("Files changed:".to_string());
-                            
-                            // Collect all files
+
+                            // Files changed section
                             let mut all_files: Vec<String> = Vec::new();
                             for commit in &commits {
-                                for file in &commit.files_changed {
-                                    if !all_files.contains(file) {
-                                        all_files.push(file.clone());
+                                for f in &commit.files_changed {
+                                    if !all_files.contains(f) {
+                                        all_files.push(f.clone());
                                     }
                                 }
                             }
-                            
-                            for file in all_files.iter().take(5) {
-                                content.push(format!("  • {}", file));
+
+                            print!("{}", section(&format!("Files changed  ({})", all_files.len())));
+                            for f in all_files.iter().take(10) {
+                                print!("{}", file_entry(chars::MODIFIED, f));
                             }
-                            
-                            if all_files.len() > 5 {
-                                content.push(format!("  ... and {} more", all_files.len() - 5));
+                            if all_files.len() > 10 {
+                                print!("{}", overflow(all_files.len() - 10));
                             }
-                            
-                            content.push("".to_string());
-                            
-                            let content_refs: Vec<&str> = content.iter().map(|s| s.as_str()).collect();
-                            println!("{}", panel(&content_refs));
-                            
-                            println!("{}", section_header("Suggested PR Title:"));
-                            println!("  {} feat: {}\n",
-                                ui::chars::BULLET.bright_yellow(),
-                                if !commits.is_empty() {
-                                    commits[0].message.lines().next().unwrap_or("Update")
-                                } else {
-                                    "Update"
-                                }
-                            );
-                            
-                            if dry_run {
-                                print!("{}", status_bar("preview"));
+
+                            // Suggested title
+                            print!("{}", section("Suggested PR title"));
+                            let title = if !commits.is_empty() {
+                                commits[0].message.lines().next().unwrap_or("Update")
                             } else {
-                                print!("{}", status_bar("creating"));
+                                "Update"
+                            };
+                            let block = vec![title];
+                            print!("{}", accent_block(&block));
+
+                            if dry_run {
+                                print!("{}", status_bar("Preview", "dry run"));
+                            } else {
+                                print!("{}", status_bar("Ready", "create PR"));
                             }
                         }
-                        Err(e) => {
-                            print!("{}", error(&format!("Failed to get commits: {}", e)));
-                        }
+                        Err(e) => print!("{}", error(&format!("Failed to get commits: {}", e))),
                     }
                 }
-                Err(e) => {
-                    print!("{}", error(&format!("Not a git repository: {}", e)));
-                }
+                Err(e) => print!("{}", error(&format!("Not a git repository: {}", e))),
             }
         }
-        
+
         Commands::Status => {
-            // Get current directory and find git repo
             let current_dir = env::current_dir()?;
-            
+
             match GitAnalyzer::new(&current_dir) {
                 Ok(git) => {
                     match git.get_status() {
                         Ok(status) => {
-                            print!("{}", welcome_screen("lfm-2.5-instruct", &status.branch));
-                            
-                            // Build status content
-                            let mut left: Vec<String> = vec!["  Status".to_string(), "".to_string()];
-                            left.push(format!("  • {} staged", status.staged.len()));
-                            left.push(format!("  • {} unstaged", status.unstaged.len()));
-                            left.push(format!("  • {} untracked", status.untracked.len()));
-                            left.push("".to_string());
-                            left.push(format!("  On branch: {}", status.branch));
-                            left.push("".to_string());
-                            
-                            // Show staged files if any
+                            print!("{}", welcome_header(&format!(
+                                "on {}  ·  model lfm-2.5-instruct", status.branch
+                            )));
+
+                            // Summary
+                            print!("{}", section("Overview"));
+                            print!("{}", kv_line("branch", &status.branch));
+                            print!("{}", kv_line("staged", &format!("{}", status.staged.len())));
+                            print!("{}", kv_line("unstaged", &format!("{}", status.unstaged.len())));
+                            print!("{}", kv_line("untracked", &format!("{}", status.untracked.len())));
+
+                            // Staged files
                             if !status.staged.is_empty() {
-                                left.push("  Staged:".to_string());
-                                for file in status.staged.iter().take(10) {
-                                    let display = if file.len() > 40 {
-                                        format!("...{}", &file[file.len().saturating_sub(37)..])
-                                    } else {
-                                        file.clone()
-                                    };
-                                    left.push(format!("    • {}", display));
+                                print!("{}", section("Staged"));
+                                for file in status.staged.iter().take(15) {
+                                    print!("{}", file_entry(chars::PLUS, file));
                                 }
-                                if status.staged.len() > 10 {
-                                    left.push(format!("    ... and {} more", status.staged.len() - 10));
+                                if status.staged.len() > 15 {
+                                    print!("{}", overflow(status.staged.len() - 15));
                                 }
-                                left.push("".to_string());
                             }
-                            
-                            // Show unstaged files if any
+
+                            // Unstaged files
                             if !status.unstaged.is_empty() {
-                                left.push("  Unstaged:".to_string());
-                                for file in status.unstaged.iter().take(10) {
-                                    let display = if file.len() > 40 {
-                                        format!("...{}", &file[file.len().saturating_sub(37)..])
-                                    } else {
-                                        file.clone()
-                                    };
-                                    left.push(format!("    • {}", display));
+                                print!("{}", section("Unstaged"));
+                                for file in status.unstaged.iter().take(15) {
+                                    print!("{}", file_entry(chars::MODIFIED, file));
                                 }
-                                if status.unstaged.len() > 10 {
-                                    left.push(format!("    ... and {} more", status.unstaged.len() - 10));
+                                if status.unstaged.len() > 15 {
+                                    print!("{}", overflow(status.unstaged.len() - 15));
                                 }
-                                left.push("".to_string());
                             }
-                            
-                            let right = vec![
-                                "  Tips",
-                                "",
-                                "  Run 'gitpulse",
-                                "  commit' to",
-                                "  generate message",
-                                "",
-                                "",
-                            ];
-                            
-                            let left_str: Vec<String> = left.iter().map(|s| s.to_string()).collect();
-                            let right_str: Vec<String> = right.iter().map(|s| s.to_string()).collect();
-                            
-                            // Convert to str slices for the function
-                            let left_refs: Vec<&str> = left_str.iter().map(|s| s.as_str()).collect();
-                            let right_refs: Vec<&str> = right_str.iter().map(|s| s.as_str()).collect();
-                            
-                            println!("{}", two_column(&left_refs, &right_refs));
-                            
+
+                            // Untracked files
+                            if !status.untracked.is_empty() {
+                                print!("{}", section("Untracked"));
+                                for file in status.untracked.iter().take(10) {
+                                    print!("{}", file_entry_dim("?", file));
+                                }
+                                if status.untracked.len() > 10 {
+                                    print!("{}", overflow(status.untracked.len() - 10));
+                                }
+                            }
+
+                            // Tips
+                            if !status.is_clean {
+                                print!("\n");
+                                print!("{}", hint("Run 'gitpulse commit' to generate a message"));
+                            }
+
                             if status.is_clean {
-                                print!("{}", status_bar("clean"));
+                                print!("{}", status_bar("Clean", "working tree clean"));
                             } else {
-                                print!("{}", status_bar("changes pending"));
+                                print!("{}", status_bar("Pending", &format!(
+                                    "{} file(s) changed",
+                                    status.staged.len() + status.unstaged.len() + status.untracked.len()
+                                )));
                             }
                         }
-                        Err(e) => {
-                            print!("{}", error(&format!("Failed to get status: {}", e)));
-                        }
+                        Err(e) => print!("{}", error(&format!("Failed to get status: {}", e))),
                     }
                 }
-                Err(e) => {
-                    print!("{}", error(&format!("Not a git repository: {}", e)));
-                }
+                Err(e) => print!("{}", error(&format!("Not a git repository: {}", e))),
             }
         }
-        
+
         Commands::Config { command } => match command {
             ConfigCommands::Show => {
-                print!("{}", welcome_screen("local", "config"));
-                
-                let content = vec![
-                    "",
-                    "Current configuration:",
-                    "",
-                    "  AI Provider:    lfm-2.5-instruct",
-                    "  Commit style:   conventional",
-                    "  Auto-commit:    false",
-                    "  Theme:          claude",
-                    "",
-                ];
-                println!("{}", panel(&content));
-                print!("{}", status_bar("config"));
+                print!("{}", welcome_header("configuration"));
+
+                print!("{}", section("Settings"));
+                print!("{}", kv_line("ai provider", "lfm-2.5-instruct"));
+                print!("{}", kv_line("commit style", "conventional"));
+                print!("{}", kv_line("auto-commit", "false"));
+                print!("{}", kv_line("theme", "claude"));
+
+                print!("{}", status_bar("Config", "loaded"));
             }
             ConfigCommands::Set { key, value } => {
-                print!("{}", welcome_screen("local", "config"));
-                println!("{}", success(&format!("Set {} = {}", key, value)));
-                print!("{}", status_bar("saved"));
+                print!("{}", welcome_header("configuration"));
+                print!("{}", success(&format!("{} = {}", key, value)));
+                print!("{}", status_bar("Saved", "config updated"));
             }
             ConfigCommands::Reset => {
-                print!("{}", welcome_screen("local", "config"));
-                println!("{}", success("Configuration reset to defaults"));
-                print!("{}", status_bar("reset"));
+                print!("{}", welcome_header("configuration"));
+                print!("{}", success("Configuration reset to defaults"));
+                print!("{}", status_bar("Reset", "defaults restored"));
             }
         },
     }
-    
+
     Ok(())
 }
-
-// Modules:
-// - ui: Terminal UI (Claude Code aesthetic)
-// - git: Git repository analysis (TODO)
-// - ai: AI orchestration (TODO)
-// - context: Codebase context management (TODO)
-// - config: Configuration management (TODO)
