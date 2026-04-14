@@ -90,13 +90,13 @@ gitpulse init
 
 **Implementation:**
 ```bash
-gitpulse hook install
+pulse hook install
 ```
 - Create `.git/hooks/pre-commit`
-- Hook runs: `gitpulse commit --check`
+- Hook runs: `pulse commit --check`
 - Blocks bad commits (no docs, security issues)
 - Configurable rules
-- Add `gitpulse hook uninstall`
+- Add `pulse hook uninstall`
 
 ### 3.3 Multi-File Context
 **File:** `src/core/context.ts` (new)

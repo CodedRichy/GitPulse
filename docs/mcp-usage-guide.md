@@ -24,7 +24,7 @@ Add to your `~/.codeium/windsurf/mcp_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "gitpulse",
+        "pulse",
         "mcp",
         "start"
       ]
@@ -44,7 +44,7 @@ Add to your `claude_desktop_config.json`:
       "command": "npx",
       "args": [
         "-y",
-        "gitpulse",
+        "pulse",
         "mcp",
         "start"
       ]
@@ -61,7 +61,7 @@ If you have GitPulse installed globally:
 {
   "mcpServers": {
     "gitpulse": {
-      "command": "gitpulse",
+      "command": "pulse",
       "args": [
         "mcp",
         "start"
@@ -288,12 +288,12 @@ If the MCP server fails to start:
 
 1. Check GitPulse is installed:
 ```bash
-npx -y gitpulse --version
+npx -y pulse --version
 ```
 
 2. Test the MCP command:
 ```bash
-npx -y gitpulse mcp config
+npx -y pulse mcp config
 ```
 
 3. Check for port conflicts (if using SSE transport)
@@ -387,10 +387,10 @@ Test specific tools:
 
 ```bash
 # Test MCP config
-gitpulse mcp config
+pulse mcp config
 
 # Start server manually (for debugging)
-gitpulse mcp start
+pulse mcp start
 ```
 
 ---
@@ -444,7 +444,7 @@ AI: [Shows quality issues, suggests fixes, uses team conventions]
 For issues or questions:
 
 - Check documentation: `docs/mcp-integration-complete-summary.md`
-- Run: `gitpulse mcp config` for configuration help
+- Run: `pulse mcp config` for configuration help
 - Review logs in your IDE for detailed error messages
 
 ---

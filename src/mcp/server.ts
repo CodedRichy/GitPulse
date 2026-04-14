@@ -32,6 +32,10 @@ const SUGGEST_COMMIT_TOOL: Tool = {
   inputSchema: {
     type: 'object',
     properties: {
+      path: {
+        type: 'string',
+        description: 'Path to repository (optional, defaults to current)',
+      },
       context: {
         type: 'string',
         description: 'Additional context about the changes',
@@ -46,6 +50,10 @@ const REVIEW_CHANGES_TOOL: Tool = {
   inputSchema: {
     type: 'object',
     properties: {
+      path: {
+        type: 'string',
+        description: 'Path to repository (optional, defaults to current)',
+      },
       target: {
         type: 'string',
         enum: ['staged', 'unstaged', 'last-commit'],
@@ -158,8 +166,10 @@ export class GitPulseMCPServer {
   }
 
   private async handleAnalyzeRepo(args: any) {
-    const status = await this.gitOps.getStatus();
-    const isRepo = await this.gitOps.isRepo();
+    const repoPath = args?.path || '.';
+    const gitOps = new GitOperations(repoPath);
+    const status = await gitOps.getStatus();
+    const isRepo = await gitOps.isRepo();
 
     const analysis = {
       isRepository: isRepo,
@@ -188,7 +198,9 @@ export class GitPulseMCPServer {
   }
 
   private async handleSuggestCommit(args: any) {
-    const status = await this.gitOps.getStatus();
+    const repoPath = args?.path || '.';
+    const gitOps = new GitOperations(repoPath);
+    const status = await gitOps.getStatus();
 
     if (status.staged.length === 0) {
       return {
@@ -205,7 +217,7 @@ export class GitPulseMCPServer {
       };
     }
 
-    const diff = await this.gitOps.getStagedDiff();
+    const diff = await gitOps.getStagedDiff();
     const ai = getAIProvider();
 
     if (!ai) {
@@ -255,11 +267,12 @@ Respond with ONLY the commit message, nothing else.`;
   }
 
   private async handleReviewChanges(args: any) {
+    const repoPath = args?.path || '.';
     const target = args?.target || 'staged';
 
     if (target === 'staged') {
-      const result = await reviewStagedChanges();
-      
+      const result = await reviewStagedChanges(repoPath);
+
       return {
         content: [
           {

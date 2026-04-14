@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useApp } from 'ink';
+import {  Box, Text, useApp  } from "ink";
+import { useGitPulseApp } from "./useGitPulseApp.js";;
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
 import { ChatMessage, StatusBar, Spinner, SuccessCheck, SectionDivider, CodeBlock } from './ui.js';

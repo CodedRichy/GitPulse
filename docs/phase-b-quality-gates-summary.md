@@ -77,13 +77,13 @@ STAGED CHANGES
 #### Usage:
 ```bash
 # Normal mode (shows warnings but allows commit)
-gitpulse commit
+pulse commit
 
 # Strict mode (blocks commit on gate failures)
-gitpulse commit --strict
+pulse commit --strict
 
 # Lax mode (hides quality warnings)
-gitpulse commit --lax
+pulse commit --lax
 ```
 
 ### 3. UI Enhancements
@@ -179,7 +179,7 @@ query(`SELECT * FROM users WHERE id = ${userId}`);
 Then run:
 ```bash
 git add test-quality.ts
-gitpulse commit
+pulse commit
 # Should show quality warnings
 ```
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
+import { GitPulseContext } from './useGitPulseApp.js';
 import * as fs from 'fs';
 import { CommitWizard } from './CommitWizard.js';
 import { StatusPanel } from './StatusPanel.js';
@@ -35,6 +36,33 @@ export function App({ command, args, flags }: AppProps) {
   const [activeArgs, setActiveArgs] = useState<string[]>(args);
   const [commandResult, setCommandResult] = useState<CommandResult | null>(null);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [ctrlCCount, setCtrlCCount] = useState(0);
+  const [showExitWarning, setShowExitWarning] = useState(false);
+
+  useInput((input, key) => {
+    if (key.ctrl && input === 'c') {
+      if (ctrlCCount >= 1) {
+        process.exit(0);
+      } else {
+        setCtrlCCount(1);
+        setShowExitWarning(true);
+        setTimeout(() => {
+          setCtrlCCount(0);
+          setShowExitWarning(false);
+        }, 3000);
+      }
+    } else {
+       if (ctrlCCount > 0) {
+         setCtrlCCount(0);
+         setShowExitWarning(false);
+       }
+    }
+  });
+
+  const returnToMenu = () => {
+    setActiveCommand('welcome');
+    setActiveArgs([]);
+  };
 
   useEffect(() => {
     initializeCommands();
@@ -154,6 +182,7 @@ export function App({ command, args, flags }: AppProps) {
   const isNewCommand = hasCommand(activeCommand);
 
   return (
+    <GitPulseContext.Provider value={{ returnToMenu, exitApp: () => process.exit(0) }}>
     <Box flexDirection="column" padding={1}>
       <Header />
 
@@ -215,7 +244,14 @@ export function App({ command, args, flags }: AppProps) {
           )}
         </>
       )}
+      
+      {showExitWarning && (
+        <Box marginTop={1}>
+          <Text color="yellow">Press Ctrl+C again to exit GitPulse</Text>
+        </Box>
+      )}
     </Box>
+    </GitPulseContext.Provider>
   );
 }
 

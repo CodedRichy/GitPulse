@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import {  Box, Text, useInput, useApp  } from "ink";
+import { useGitPulseApp } from "./useGitPulseApp.js";;
 import { GitOperations } from '../core/git.js';
 import { getLastCommit, type CommitHistoryEntry } from '../utils/history.js';
 import { ChatMessage, StatusBar, Spinner, SuccessCheck, ErrorX, ActionButton, SectionDivider } from './ui.js';

@@ -2,25 +2,34 @@
 
 ## System Design
 
-GitPulse is a TypeScript CLI application that uses Ink (React for terminal) to provide an interactive terminal UI. The application integrates with multiple AI providers to generate commit messages, PR descriptions, and code documentation.
+GitPulse is a TypeScript CLI application that uses Ink (React for terminal) to provide an interactive terminal UI. The application integrates with multiple AI providers to generate commit messages, PR descriptions, and code documentation. It also serves as an MCP (Model Context Protocol) server, exposing git intelligence to other AI agents.
 
 ### Core Principles
 
 - **Local-First**: Code never leaves the local machine when using local AI models
-- **Multi-Provider**: Support for Ollama, OpenRouter, and OpenAI
+- **Multi-Provider**: Support for Ollama, OpenRouter, OpenAI, Google, Groq
 - **Context-Aware**: Understands codebase context and team conventions
 - **Learning**: Adapts to user preferences over time
+- **Quality-First**: Quality gates prevent tech debt before commits
+- **MCP-Enabled**: Exposes git intelligence via MCP protocol
 
 ## Module Structure
 
 ```
-GitPulse v3.0 (TypeScript + Ink)
+GitPulse v3.1.0 (TypeScript + Ink + MCP)
 ├── src/
 │   ├── index.ts              # CLI entry point
 │   ├── components/           # React Ink UI components
 │   ├── core/                 # Git operations & models
+│   │   ├── quality-gates.ts  # Quality gates engine
+│   │   ├── convention-learner.ts # Context-aware intelligence
+│   │   ├── branch-intelligence.ts # Branch management
+│   │   ├── code-review.ts    # Code review automation
+│   │   └── issue-tracker.ts  # Issue tracker integration
+│   ├── mcp/                  # MCP server
+│   │   ├── server.ts         # MCP server with stdio transport
+│   │   └── index.ts          # MCP entry point
 │   ├── ai/                   # AI provider integrations
-│   ├── auth/                 # Authentication
 │   ├── commands/             # CLI commands
 │   └── utils/                # Configuration & helpers
 ├── web/                      # Next.js web dashboard
@@ -49,13 +58,21 @@ React Ink UI components for terminal interface:
 ### `src/core/`
 Core business logic:
 
-- **git.ts**: Git operations (status, diff, commit, history)
+- **git.ts**: Git operations (status, diff, commit, history, undo/redo)
 - **models.ts**: Data models and types
-- **analyzer.ts**: Code analysis engine (planned)
-  - AST parsing
-  - Function extraction
-  - Dependency graph generation
-  - Documentation coverage detection
+- **quality-gates.ts**: Quality gates engine
+  - Security scan (secrets, SQL injection, XSS)
+  - Code smells detection (long functions, TODOs, console.log)
+  - Test coverage validation
+  - Documentation checks
+- **convention-learner.ts**: Context-aware intelligence
+  - Analyzes commit history for patterns
+  - Detects naming conventions
+  - Identifies architectural boundaries
+  - Finds file relationships (co-changes)
+- **branch-intelligence.ts**: AI-powered branch management
+- **code-review.ts**: Code review automation with static analysis + AI
+- **issue-tracker.ts**: Issue tracker integration (GitHub/Linear/Jira)
 
 ### `src/ai/`
 AI provider integrations:
@@ -69,18 +86,34 @@ Authentication and database:
 
 - **database.ts**: User data and configuration storage
 
+### `src/mcp/`
+MCP (Model Context Protocol) server:
+
+- **server.ts**: MCP server implementation
+  - Tool handlers: analyze_repo, suggest_commit, review_changes
+  - Resource handlers: repo://status, repo://config
+  - Stdio transport for CLI integration
+- **index.ts**: MCP server entry point
+
 ### `src/commands/`
 CLI command implementations:
 
+- **index.ts**: Command registry and router
+- **mcp.ts**: MCP server command (start, config)
 - **branch.ts**: Branch management commands
-- **index.ts**: Command router
+- **review.ts**: Code review commands
+- **resolve.ts**: Conflict resolution commands
+- **test.ts**: Test coverage commands
+- **issues.ts**: Issue tracker commands
 - **init.ts**: Project initialization
 
 ### `src/utils/`
 Utility functions:
 
 - **config.ts**: Configuration management
-- **ast-parser.ts**: AST parsing utilities (planned)
+- **history.ts**: Commit history tracking
+- **settings.ts**: User settings persistence
+- **context.ts**: Multi-file context gathering
 
 ### `web/`
 Next.js web dashboard for team analytics (separate project):
@@ -91,19 +124,29 @@ Next.js web dashboard for team analytics (separate project):
 
 ## Data Flow
 
-### Commit Message Generation
+### Commit Message Generation (with Quality Gates & Context-Awareness)
 ```
-1. User runs: gitpulse commit
-2. CLI reads git status and diff
-3. AI provider analyzes changes
-4. Context is built from:
+1. User runs: pulse commit
+2. CLI checks git repository status
+3. Quality gates run on staged changes:
+   - Security scan (secrets, SQL injection, XSS)
+   - Code smells (long functions, TODOs, console.log)
+   - Test coverage check
+   - Documentation validation
+4. Convention learner analyzes repo:
+   - Extracts naming patterns
+   - Identifies commit patterns
+   - Detects architectural boundaries
+5. Context is built from:
    - File changes
    - Past commit history
    - Team conventions (learned)
-5. AI generates commit message
-6. User reviews and edits (optional)
-7. Commit is created
-8. Learning system stores user corrections
+   - Quality gate results
+6. AI provider analyzes changes with context
+7. AI generates commit message using team conventions
+8. User reviews and edits (optional)
+9. Commit is created
+10. Learning system stores user corrections
 ```
 
 ### PR Description Generation
@@ -142,6 +185,19 @@ Next.js web dashboard for team analytics (separate project):
 7. Documentation inserted into file
 ```
 
+### MCP Server Communication
+```
+1. External AI agent (Windsurf, Claude Desktop) calls MCP tool
+2. MCP server receives request via stdio
+3. Server routes to appropriate tool handler:
+   - analyze_repo: Git operations and health checks
+   - suggest_commit: AI commit message generation
+   - review_changes: Quality review of staged changes
+4. Tool executes using GitPulse core modules
+5. Result returned as JSON to AI agent
+6. AI agent uses result in its workflow
+```
+
 ## Component Interaction
 
 ```
@@ -155,10 +211,10 @@ Next.js web dashboard for team analytics (separate project):
 │  commands/  │                   │      components/   │
 │             │                   │                    │
 │ - commit    │──────────────────►│ - CommitWizard     │
-│ - status    │──────────────────►│ - StatusPanel      │
-│ - doc       │──────────────────►│ - ExplainView      │
-│ - pr        │──────────────────►│ - PRGenerator      │
-│ - config    │──────────────────►│ - ConfigPanel      │
+│ - mcp       │                   │ - StatusPanel      │
+│ - branch    │──────────────────►│ - ExplainView      │
+│ - review    │──────────────────►│ - PRGenerator      │
+│ - init      │──────────────────►│ - ConfigPanel      │
 └──────┬──────┘                   └──────────┬─────────┘
        │                                     │
        │                                     │
@@ -167,15 +223,25 @@ Next.js web dashboard for team analytics (separate project):
 │             │                   │                    │
 │ - git.ts    │                   │                    │
 │ - models.ts │                   │                    │
-│ - analyzer  │                   │                    │
+│ - quality   │                   │                    │
+│ - convention│                   │                    │
+│ - branch    │                   │                    │
+│ - review    │                   │                    │
 └──────┬──────┘                   └────────────────────┘
        │
        │
 ┌──────▼──────┐
 │     ai/     │
 │             │
-│ - providers │◄──────► AI APIs (Ollama, OpenRouter, OpenAI)
+│ - providers │◄──────► AI APIs (Ollama, OpenRouter, OpenAI, Google, Groq)
 │ - learning  │
+└──────┬──────┘
+       │
+       │
+┌──────▼──────┐
+│    mcp/     │
+│             │
+│ - server    │◄──────► External AI Agents (Windsurf, Claude Desktop)
 └─────────────┘
 ```
 
@@ -184,7 +250,9 @@ Next.js web dashboard for team analytics (separate project):
 Configuration is stored in:
 - `.env` file for AI provider settings
 - `.gitpulse/config.json` for project-specific settings
+- `.gitpulse/conventions.json` for learned team conventions
 - Local cache for learned patterns
+- `.gitpulse/history.json` for commit history
 
 ## Integration Points
 
@@ -196,6 +264,13 @@ Configuration is stored in:
 - **Ollama**: Local models, zero cost, privacy-first
 - **OpenRouter**: Cloud models, multiple options
 - **OpenAI**: GPT models for advanced features
+- **Google**: Gemini models
+- **Groq**: Fast inference models
+
+### MCP Integration
+- **Windsurf**: AI-powered IDE integration
+- **Claude Desktop**: Anthropic's desktop app
+- **Other MCP-compatible tools**: Any tool supporting MCP protocol
 
 ### Future Integrations
 - **GitHub/GitLab API**: PR automation, issue linking
@@ -222,12 +297,23 @@ Configuration is stored in:
 - Promise-based API
 - Comprehensive Git feature coverage
 
+### MCP SDK
+- Standard protocol for AI tool integration
+- Stdio transport for CLI compatibility
+- Tool and resource handlers
+- Support for multiple AI agents
+
 ## Security Considerations
 
 - API keys stored in `.env` (never committed)
 - Code never leaves local machine with Ollama
-- Optional pre-commit hooks for security scanning
+- Quality gates automatically scan for security issues:
+  - Hardcoded secrets detection
+  - SQL injection vulnerability detection
+  - XSS vulnerability detection
+  - Path traversal detection
 - Pattern matching for secret detection
+- Strict mode blocks commits with security issues
 
 ## Performance Optimization
 
@@ -235,3 +321,6 @@ Configuration is stored in:
 - Caching of AI responses
 - Async operations for non-blocking UI
 - Minimal dependencies for fast startup
+- Convention caching (`.gitpulse/conventions.json`) to avoid re-analysis
+- Quality gate incremental scanning (only changed files)
+- MCP server stdio transport for low-latency communication

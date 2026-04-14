@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import {  Box, Text, useInput, useApp  } from "ink";
+import { useGitPulseApp } from "./useGitPulseApp.js";;
 import { loadConfig, saveConfig, resetConfig } from '../utils/config.js';
 import { Config } from '../core/models.js';
 import { ChatMessage, StatusBar, SuccessCheck, SectionDivider } from './ui.js';

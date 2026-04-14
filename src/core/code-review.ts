@@ -29,10 +29,10 @@ export interface CodeReviewResult {
 /**
  * Perform code review on staged changes
  */
-export async function reviewStagedChanges(): Promise<CodeReviewResult> {
-  const git = new GitOperations();
+export async function reviewStagedChanges(repoPath: string = '.'): Promise<CodeReviewResult> {
+  const git = new GitOperations(repoPath);
   const status = await git.getStatus();
-  
+
   if (status.staged.length === 0) {
     return {
       issues: [],
@@ -40,18 +40,18 @@ export async function reviewStagedChanges(): Promise<CodeReviewResult> {
       filesReviewed: 0,
     };
   }
-  
+
   const issues: ReviewIssue[] = [];
-  
+
   for (const file of status.staged) {
-    const filePath = path.resolve(file);
+    const filePath = path.resolve(repoPath, file);
     if (!fs.existsSync(filePath)) continue;
-    
+
     const content = fs.readFileSync(filePath, 'utf-8');
     const fileIssues = await reviewFile(filePath, content);
     issues.push(...fileIssues);
   }
-  
+
   return {
     issues,
     summary: summarizeIssues(issues),

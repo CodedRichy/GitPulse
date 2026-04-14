@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import {  Box, Text, useInput, useApp  } from "ink";
+import { useGitPulseApp } from "./useGitPulseApp.js";;
 import { GitOperations } from '../core/git.js';
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
