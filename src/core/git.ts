@@ -49,6 +49,14 @@ export class GitOperations {
   }
 
   /**
+   * Get diff for a specific staged file
+   */
+  async getStagedDiffForFile(filePath: string): Promise<string> {
+    const diff = await this.git.diff(['--cached', '--', filePath]);
+    return diff || '';
+  }
+
+  /**
    * Get diff for unstaged files
    */
   async getUnstagedDiff(): Promise<string> {

@@ -5,6 +5,9 @@ import { ChatMessage, StatusBar, SectionDivider } from './ui.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { GitOperations } from '../core/git.js';
+import { MODEL_ALIASES, resolveModel } from '../utils/config.js';
+import { getSetting, setSetting } from '../utils/settings.js';
+import { AIProviderFactory } from '../ai/providers.js';
 
 interface RecentActivity {
   type: 'commit' | 'doc' | 'pr' | 'analyze';
@@ -23,22 +26,39 @@ const COMMANDS = [
   { name: 'analyze', desc: 'Analyze documentation coverage', example: 'analyze [path]' },
   { name: 'pr', desc: 'Generate PR description', example: 'pr' },
   { name: 'explain', desc: 'Explain file history', example: 'explain <file>' },
+  { name: 'model', desc: 'Select AI model', example: 'model' },
   { name: 'config', desc: 'Configure settings', example: 'config' },
   { name: 'undo', desc: 'Undo last commit', example: 'undo' },
   { name: 'redo', desc: 'Redo last undone commit', example: 'redo' },
   { name: 'quit', desc: 'Exit GitPulse', example: 'quit' }
 ];
 
+const MODEL_OPTIONS = [
+  { alias: 'auto', name: 'Auto - We select for you', model: '', provider: '' },
+  { alias: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 120B', model: 'nvidia/nemotron-3-super-120b-a12b:free', provider: 'OpenRouter' },
+  { alias: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron Nano 30B', model: 'nvidia/nemotron-3-nano-30b-a3b:free', provider: 'OpenRouter' },
+  { alias: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B', model: 'google/gemma-4-31b-it:free', provider: 'OpenRouter' },
+  { alias: 'llama-3.3-70b-versatile', name: '3.3-70B', model: 'llama-3.3-70b-versatile', provider: 'Groq' },
+  { alias: 'meta-llama/llama-4-scout-17b-16e-instruct', name: '4-Scout', model: 'meta-llama/llama-4-scout-17b-16e-instruct', provider: 'Groq' },
+  { alias: 'llama-3.1-8b-instant', name: '3.1-8B', model: 'llama-3.1-8b-instant', provider: 'Groq' },
+  { alias: 'gemini-3.1-flash-lite-preview', name: 'Gemini', model: 'gemini-3.1-flash-lite-preview', provider: 'Google' }
+];
+
 export function Welcome({ onCommandSelect }: WelcomeProps) {
   const { exit } = useApp();
   const [input, setInput] = useState('');
   const [showCommands, setShowCommands] = useState(false);
+  const [showModelSelector, setShowModelSelector] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedModelIndex, setSelectedModelIndex] = useState(0);
+  const [currentModel, setCurrentModel] = useState(resolveModel(getSetting('model', 'auto')));
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [repoInfo, setRepoInfo] = useState<{ name: string; branch: string; clean: boolean } | null>(null);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [dynamicModelOptions, setDynamicModelOptions] = useState(MODEL_OPTIONS);
   const [tips] = useState([
     'Type / to see all commands',
-    'Use "gitpulse doc <file>" to auto-document your code',
+    'Use /model to switch AI models',
     'Try "gitpulse analyze" to check documentation coverage',
     '"gitpulse pr" creates comprehensive PR descriptions',
     'Configure AI providers with "gitpulse config"'
@@ -51,7 +71,35 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
   useEffect(() => {
     loadRecentActivity();
     loadRepoInfo();
+    loadOllamaModels();
   }, []);
+
+  async function loadOllamaModels() {
+    try {
+      const ollamaProvider = AIProviderFactory.create('ollama', {
+        ollamaHost: process.env.OLLAMA_HOST || 'http://localhost:11434',
+        model: ''
+      }) as any;
+      
+      const models = await ollamaProvider.listModels();
+      if (models && models.length > 0) {
+        setOllamaModels(models);
+        
+        // Add Ollama models to dynamic options
+        const ollamaOptions = models.map((model: string) => ({
+          alias: model,
+          name: model.split(':')[0], // Remove tag if present (e.g., gemma4:e2b -> gemma4)
+          model: model,
+          provider: 'Ollama'
+        }));
+        
+        setDynamicModelOptions([...MODEL_OPTIONS, ...ollamaOptions]);
+      }
+    } catch {
+      // Ollama not available, keep default options
+      setDynamicModelOptions(MODEL_OPTIONS);
+    }
+  }
 
   async function loadRepoInfo() {
     try {
@@ -96,11 +144,32 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
   }
 
   useInput((value, key) => {
-    if (showCommands) {
+    if (showModelSelector) {
+      if (key.return) {
+        const selected = dynamicModelOptions[selectedModelIndex];
+        if (selected) {
+          setSetting('model', selected.alias);
+          setCurrentModel(selected.model);
+          setShowModelSelector(false);
+        }
+      } else if (key.escape) {
+        setShowModelSelector(false);
+      } else if (key.upArrow) {
+        setSelectedModelIndex(prev => Math.max(0, prev - 1));
+      } else if (key.downArrow) {
+        setSelectedModelIndex(prev => Math.min(dynamicModelOptions.length - 1, prev + 1));
+      }
+    } else if (showCommands) {
       if (key.return) {
         const selected = filteredCommands[selectedIndex];
         if (selected) {
-          executeCommand(selected.name);
+          if (selected.name === 'model') {
+            setShowModelSelector(true);
+            setShowCommands(false);
+            setInput('');
+          } else {
+            executeCommand(selected.name);
+          }
         }
       } else if (key.escape) {
         setShowCommands(false);
@@ -118,7 +187,13 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
       // TextInput handles other keys
     } else {
       if (key.return && input.trim()) {
-        executeCommand(input.trim().toLowerCase());
+        const cmd = input.trim().toLowerCase();
+        if (cmd === '/model' || cmd === 'model') {
+          setShowModelSelector(true);
+          setInput('');
+        } else {
+          executeCommand(cmd);
+        }
       } else if (value === '/') {
         setShowCommands(true);
         setInput('/');
@@ -182,9 +257,10 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
           </Box>
           
           <Box width="50%" flexDirection="column">
-             <Text bold color="#D4A5FF">─ Pro Tip</Text>
+             <Text bold color="#D4A5FF">─ Current Model</Text>
              <Box marginTop={0} flexDirection="column">
-               <Text dimColor>  {randomTip}</Text>
+               <Text dimColor>  {currentModel}</Text>
+               <Text dimColor>  Type /model to change</Text>
              </Box>
           </Box>
         </Box>
@@ -251,6 +327,46 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
           </>
         )}
       </Box>
+
+      {/* Model Selector */}
+      {showModelSelector && (
+        <Box 
+          marginTop={1} 
+          paddingX={2} 
+          paddingY={1} 
+          borderStyle="single" 
+          borderColor="#D4A5FF"
+          flexDirection="column"
+          width={78}
+        >
+          <Text bold color="#D4A5FF">Select AI Model</Text>
+          <SectionDivider />
+          {dynamicModelOptions.map((option, index) => (
+            <Box key={option.alias}>
+              <Text color={selectedModelIndex === index ? '#D4A5FF' : undefined}>
+                {selectedModelIndex === index ? '▸ ' : '  '}
+              </Text>
+              <Text 
+                bold={selectedModelIndex === index}
+                color={selectedModelIndex === index ? '#D4A5FF' : '#50FA7B'}
+              >
+                {option.alias}
+              </Text>
+              <Text dimColor> — </Text>
+              <Text color="#50FA7B">{option.name}</Text>
+              {option.provider && (
+                <>
+                  <Text dimColor> — </Text>
+                  <Text dimColor>{option.provider}</Text>
+                </>
+              )}
+            </Box>
+          ))}
+          <Box marginTop={1}>
+            <Text dimColor>↑↓ to select · Enter to choose · Esc to cancel</Text>
+          </Box>
+        </Box>
+      )}
 
       <StatusBar mode="welcome" />
     </Box>
