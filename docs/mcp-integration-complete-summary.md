@@ -37,7 +37,7 @@ GitPulse has been successfully transformed into an MCP (Model Context Protocol) 
 
 **Usage:**
 ```bash
-gitpulse mcp config    # Show configuration instructions
+pulse mcp config    # Show configuration instructions
 ```
 
 ---
@@ -84,9 +84,9 @@ element.innerHTML = userInput;             // 🟠 High
 
 **CLI Flags:**
 ```bash
-gitpulse commit          # Shows warnings, allows commit
-gitpulse commit --strict # Blocks commit on any failure
-gitpulse commit --lax    # Hides quality warnings
+pulse commit          # Shows warnings, allows commit
+pulse commit --strict # Blocks commit on any failure
+pulse commit --lax    # Hides quality warnings
 ```
 
 ---
@@ -220,28 +220,28 @@ STAGED CHANGES
 ```bash
 # Normal commit with quality warnings
 git add src/utils/auth.ts
-gitpulse commit
+pulse commit
 
 # Strict mode - blocks on any issue
 git add src/api/users.ts
-gitpulse commit --strict
+pulse commit --strict
 
 # Lax mode - skip quality warnings
 git add docs/README.md
-gitpulse commit --lax
+pulse commit --lax
 ```
 
 ### MCP Server
 ```bash
 # Get configuration instructions
-gitpulse mcp config
+pulse mcp config
 
 # For use with Claude Desktop, add to claude_desktop_config.json:
 {
   "mcpServers": {
     "gitpulse": {
       "command": "npx",
-      "args": ["gitpulse", "mcp"]
+      "args": ["-y", "pulse", "mcp", "start"]
     }
   }
 }

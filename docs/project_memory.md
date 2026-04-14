@@ -69,14 +69,14 @@
 
 ## Architecture Overview
 
-GitPulse v3.0 (TypeScript + Ink)
+GitPulse v3.1.0 (TypeScript + Ink + MCP)
 
 ```
 src/
 ├── index.ts              # CLI entry point
 ├── components/           # React Ink UI components
 │   ├── App.tsx
-│   ├── CommitWizard.tsx  # Commit with diff preview, edit, retry
+│   ├── CommitWizard.tsx  # Commit with quality gates + conventions
 │   ├── StatusPanel.tsx
 │   ├── ConfigPanel.tsx
 │   ├── ExplainView.tsx
@@ -87,22 +87,34 @@ src/
 │   └── Welcome.tsx       # Welcome screen with model selector
 ├── core/                 # Git operations & models
 │   ├── git.ts            # Git operations including undo/redo
-│   └── models.ts
+│   ├── models.ts
+│   ├── quality-gates.ts  # Quality gates engine (Phase 5)
+│   ├── convention-learner.ts # Context-aware intelligence (Phase 5)
+│   ├── branch-intelligence.ts # Branch management
+│   ├── code-review.ts    # Code review automation
+│   └── issue-tracker.ts  # Issue tracker integration
 ├── ai/                   # AI provider integrations
 │   ├── providers.ts      # OpenRouter, Ollama, Google, Groq
 │   ├── learning.ts       # Real-time learning from corrections
 │   ├── model-selector.ts # Auto model selection
 │   └── model-tester.ts   # Model testing and benchmarking
+├── mcp/                  # MCP server (Phase 5)
+│   ├── server.ts         # MCP server with stdio transport
+│   └── index.ts          # MCP entry point
 ├── utils/                # Configuration & helpers
 │   ├── config.ts         # Config management with model aliases
 │   ├── history.ts        # Commit history tracking
-│   └── settings.ts       # User settings persistence
-└── commands/             # CLI commands (future)
-    ├── branch.ts
-    ├── init.ts
-    ├── resolve.ts
-    ├── review.ts
-    └── test.ts
+│   ├── settings.ts       # User settings persistence
+│   └── context.ts        # Multi-file context gathering
+└── commands/             # CLI commands
+    ├── index.ts          # Command registry
+    ├── mcp.ts            # MCP command
+    ├── branch.ts         # Branch management
+    ├── review.ts         # Code review
+    ├── resolve.ts        # Conflict resolution
+    ├── test.ts           # Test coverage
+    ├── issues.ts         # Issue tracker
+    └── init.ts           # Initialization
 ```
 
 ## Key Components

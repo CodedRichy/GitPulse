@@ -123,7 +123,7 @@ async function main() {
       {
         stdout: process.stdout,
         stdin: process.stdin,
-        exitOnCtrlC: true
+        exitOnCtrlC: false
       }
     );
     return;
@@ -159,7 +159,7 @@ async function main() {
     {
       stdout: process.stdout,
       stdin: process.stdin,
-      exitOnCtrlC: true
+      exitOnCtrlC: false
     }
   );
 }

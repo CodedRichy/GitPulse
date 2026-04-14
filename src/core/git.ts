@@ -165,6 +165,13 @@ export class GitOperations {
   }
 
   /**
+   * Stage all changes (unstaged and untracked)
+   */
+  async stageAll(): Promise<void> {
+    await this.git.add(['-A']);
+  }
+
+  /**
    * Unstage files
    */
   async unstage(files: string[]): Promise<void> {

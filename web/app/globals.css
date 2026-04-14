@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FCFAF8; /* Soft linen */
+  --foreground: #1A1A1A; /* Not quite black */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-newsreader);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #18181B; /* Zinc 900 / soft charcoal */
+    --foreground: #F4F4F5; /* Soft white */
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Fallbacks */
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}

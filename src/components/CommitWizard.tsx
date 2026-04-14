@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import {  Box, Text, useInput, useApp  } from "ink";
+import { useGitPulseApp } from "./useGitPulseApp.js";;
 import { GitOperations } from '../core/git.js';
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
@@ -48,19 +49,25 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
         return;
       }
 
-      // Step 2: Check for staged changes
+      // Step 2: Check for staged changes, auto-stage if needed
       setStep('analyze');
       const status = await git.getStatus();
-      
+
       if (status.staged.length === 0) {
         if (status.unstaged.length === 0 && status.untracked.length === 0) {
           setError('No changes to commit');
           setStep('error');
           return;
         }
-        setError('No staged changes. Run "git add" first or use "gitpulse commit --all"');
-        setStep('error');
-        return;
+        // Auto-stage all changed files
+        await git.stageAll();
+        // Reload status after staging
+        const newStatus = await git.getStatus();
+        if (newStatus.staged.length === 0) {
+          setError('Failed to stage changes');
+          setStep('error');
+          return;
+        }
       }
 
       // Step 3: Run quality gates
