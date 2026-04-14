@@ -70,12 +70,24 @@ export interface AIProvider {
  * GitPulse configuration
  */
 export interface Config {
-  aiProvider: 'ollama' | 'openrouter' | 'openai' | 'anthropic';
+  aiProvider: 'ollama' | 'openrouter' | 'openai' | 'anthropic' | 'groq' | 'google';
   commitStyle: 'conventional' | 'semantic' | 'simple';
   autoCommit: boolean;
   openrouterApiKey?: string;
   ollamaHost?: string;
   ollamaModel?: string;
+  groqApiKey?: string;
+  googleApiKey?: string;
+  // Issue tracker configuration
+  githubToken?: string;
+  githubOwner?: string;
+  githubRepo?: string;
+  linearApiKey?: string;
+  linearTeamId?: string;
+  jiraDomain?: string;
+  jiraEmail?: string;
+  jiraApiToken?: string;
+  jiraProjectKey?: string;
 }
 
 /**

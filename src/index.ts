@@ -20,10 +20,21 @@ const cli = meow(`
     config     Manage configuration
     undo       Undo last commit
     redo       Redo last undone commit
+    init       Initialize GitPulse in repository
+    branch     Branch management (create, switch, delete, list, rename, suggest)
+    resolve    Resolve merge conflicts with AI
+    review     Code review with AI suggestions
+    test       Run tests and analyze coverage
+    issues     Issue tracker integration (GitHub/Linear/Jira)
+    mcp        Start MCP server for AI agent integration
 
   Options
     --dry-run, -d    Show what would be done without executing
     --edit, -e       Edit commit message before committing
+    --strict         Require quality gates to pass before commit
+    --lax            Skip quality gate warnings
+    --coverage       Show test coverage (for test command)
+    --force          Force operation (for init/branch commands)
     --help           Show help
 
   Examples
@@ -35,6 +46,12 @@ const cli = meow(`
     $ gitpulse analyze src/utils/
     $ gitpulse explain src/auth.ts
     $ gitpulse pr --dry-run
+    $ gitpulse init
+    $ gitpulse branch list
+    $ gitpulse branch create feature-branch
+    $ gitpulse resolve ai
+    $ gitpulse review staged
+    $ gitpulse test --coverage
 `, {
   importMeta: import.meta,
   flags: {
@@ -47,6 +64,29 @@ const cli = meow(`
       type: 'boolean',
       shortFlag: 'e',
       default: false
+    },
+    strict: {
+      type: 'boolean',
+      default: false
+    },
+    lax: {
+      type: 'boolean',
+      default: false
+    },
+    coverage: {
+      type: 'boolean',
+      default: false
+    },
+    force: {
+      type: 'boolean',
+      default: false
+    },
+    base: {
+      type: 'string',
+      default: 'main'
+    },
+    to: {
+      type: 'string',
     },
     help: {
       type: 'boolean',
@@ -63,7 +103,10 @@ async function main() {
     return;
   }
 
-  const validCommands = ['commit', 'status', 'doc', 'analyze', 'explain', 'pr', 'config', 'undo', 'redo'];
+  const validCommands = [
+    'commit', 'status', 'doc', 'analyze', 'explain', 'pr', 'config', 'undo', 'redo',
+    'init', 'branch', 'resolve', 'review', 'test', 'issues', 'mcp'
+  ];
   
   // If no command or invalid command, show welcome screen
   if (!command || !validCommands.includes(command)) {
@@ -76,7 +119,12 @@ async function main() {
         command: '',  // Empty command triggers welcome screen
         args: [],
         flags: cli.flags
-      })
+      }),
+      {
+        stdout: process.stdout,
+        stdin: process.stdin,
+        exitOnCtrlC: true
+      }
     );
     return;
   }
@@ -84,13 +132,35 @@ async function main() {
   // Load config to ensure it's initialized
   loadConfig();
 
+  // Handle MCP command specially (spawns server process)
+  if (command === 'mcp') {
+    const { mcpCommand } = await import('./commands/mcp.js');
+    const result = await mcpCommand.handler({ 
+      args, 
+      flags: cli.flags as Record<string, string | number | boolean | undefined> 
+    });
+    
+    if (result.success) {
+      console.log(result.message);
+    } else {
+      console.error(result.error);
+      process.exit(1);
+    }
+    return;
+  }
+
   // Render the Ink app
   render(
     React.createElement(App, {
       command,
       args,
       flags: cli.flags
-    })
+    }),
+    {
+      stdout: process.stdout,
+      stdin: process.stdin,
+      exitOnCtrlC: true
+    }
   );
 }
 

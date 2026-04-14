@@ -139,16 +139,18 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
 
 // Action button
 interface ActionButtonProps {
-  key: string;
+  actionKey: string;
   label: string;
   color?: string;
 }
 
-export function ActionButton({ key, label, color = '#D4A5FF' }: ActionButtonProps) {
+export function ActionButton({ actionKey, label, color = '#D4A5FF' }: ActionButtonProps) {
   return (
     <Box marginRight={2}>
-      <Text color={color} bold>[{key}]</Text>
-      <Text> {label}</Text>
+      <Text color="#6272A4">[</Text>
+      <Text color={color} bold>{actionKey}</Text>
+      <Text color="#6272A4">]</Text>
+      <Text dimColor> {label}</Text>
     </Box>
   );
 }

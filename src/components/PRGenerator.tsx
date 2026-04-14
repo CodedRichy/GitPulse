@@ -271,8 +271,8 @@ Respond with a JSON object:
           
           <ChatMessage role="system">
             <Box>
-              <ActionButton key="c" label="Copy to clipboard" color="#50FA7B" />
-              <ActionButton key="q" label="Quit" color="#FF5555" />
+              <ActionButton actionKey="c" label="Copy to clipboard" color="#50FA7B" />
+              <ActionButton actionKey="q" label="Quit" color="#FF5555" />
               {dryRun && <Text dimColor> (dry-run)</Text>}
             </Box>
           </ChatMessage>

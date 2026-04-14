@@ -107,8 +107,8 @@ export function UndoRedo({ action }: UndoRedoProps) {
           </ChatMessage>
           <ChatMessage role="system">
             <Box>
-              <ActionButton key="Y" label="Confirm" color="#50FA7B" />
-              <ActionButton key="n" label="Cancel" color="#FF5555" />
+              <ActionButton actionKey="Y" label="Confirm" color="#50FA7B" />
+              <ActionButton actionKey="n" label="Cancel" color="#FF5555" />
             </Box>
           </ChatMessage>
         </>

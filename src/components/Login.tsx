@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
 import { ChatMessage, Spinner, SuccessCheck, ErrorX, SectionDivider } from './ui.js';
-import { saveConfig, loadConfig } from '../utils/config.js';
+import { saveConfig } from '../utils/config.js';
+import { setSetting } from '../utils/settings.js';
 import { AIProviderFactory } from '../ai/providers.js';
 
 interface LoginProps {
@@ -18,8 +19,46 @@ export function Login({ onLoginComplete }: LoginProps) {
   const [selectedProvider, setSelectedProvider] = useState<'openrouter' | 'ollama'>('openrouter');
   const [apiKey, setApiKey] = useState('');
   const [ollamaHost, setOllamaHost] = useState('http://localhost:11434');
-  const [ollamaModel, setOllamaModel] = useState('llama3.2');
+  const [ollamaModel, setOllamaModel] = useState('');
   const [focusField, setFocusField] = useState<'host' | 'model'>('host');
+
+  useEffect(() => {
+    // Auto-detect available providers
+    async function detectProviders() {
+      // Check if Ollama is available
+      try {
+        const ollamaProvider = AIProviderFactory.create('ollama', { ollamaHost: 'http://localhost:11434', ollamaModel: '', model: '' }) as any;
+        const ollamaAvailable = await ollamaProvider.isAvailable();
+        
+        if (ollamaAvailable) {
+          // Get available models
+          const models = await ollamaProvider.listModels();
+          if (models.length > 0) {
+            setSelectedProvider('ollama');
+            const firstModel = models[0];
+            setOllamaModel(firstModel);
+            testAndSaveOllama('http://localhost:11434', firstModel);
+            return;
+          }
+        }
+      } catch {
+        // Ollama not available, continue
+      }
+
+      // Check if OpenRouter API key exists in environment
+      if (process.env.OPENROUTER_API_KEY) {
+        setSelectedProvider('openrouter');
+        setApiKey(process.env.OPENROUTER_API_KEY);
+        testAndSaveOpenRouter(process.env.OPENROUTER_API_KEY);
+        return;
+      }
+
+      // No auto-detected provider, show selection screen
+      setStep('provider');
+    }
+
+    detectProviders();
+  }, []);
 
   useInput((input, key) => {
     if (step === 'provider') {
@@ -69,7 +108,7 @@ export function Login({ onLoginComplete }: LoginProps) {
   async function testAndSaveOpenRouter(key: string) {
     setStep('testing');
     try {
-      const provider = AIProviderFactory.create('openrouter', { openrouterApiKey: key });
+      const provider = AIProviderFactory.create('openrouter', { openrouterApiKey: key, model: 'google/gemma-2-9b-it:free' });
       const isAvailable = await provider.isAvailable();
       
       if (isAvailable) {
@@ -77,6 +116,7 @@ export function Login({ onLoginComplete }: LoginProps) {
           aiProvider: 'openrouter',
           openrouterApiKey: key
         });
+        setSetting('model', 'default');
         setStep('success');
       } else {
         throw new Error('API key validation failed');
@@ -90,7 +130,7 @@ export function Login({ onLoginComplete }: LoginProps) {
   async function testAndSaveOllama(host: string, model: string) {
     setStep('testing');
     try {
-      const provider = AIProviderFactory.create('ollama', { ollamaHost: host, ollamaModel: model });
+      const provider = AIProviderFactory.create('ollama', { ollamaHost: host, ollamaModel: model, model: model });
       const isAvailable = await provider.isAvailable();
       
       if (isAvailable) {
@@ -99,6 +139,7 @@ export function Login({ onLoginComplete }: LoginProps) {
           ollamaHost: host,
           ollamaModel: model
         });
+        setSetting('model', 'default');
         setStep('success');
       } else {
         throw new Error(`Ollama not available at ${host} or model ${model} not found`);

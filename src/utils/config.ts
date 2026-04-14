@@ -3,9 +3,24 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import 'dotenv/config';
+import { getSetting as getSettingsSetting } from './settings.js';
 
-const CONFIG_DIR = path.join(os.homedir(), '.gitpulse');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+export const CONFIG_DIR = path.join(os.homedir(), '.gitpulse');
+export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+
+/**
+ * Model aliases for quick selection
+ */
+export const MODEL_ALIASES: Record<string, string> = {
+  'auto': '',
+  'nvidia/nemotron-3-super-120b-a12b:free': 'nvidia/nemotron-3-super-120b-a12b:free',
+  'nvidia/nemotron-3-nano-30b-a3b:free': 'nvidia/nemotron-3-nano-30b-a3b:free',
+  'google/gemma-4-31b-it:free': 'google/gemma-4-31b-it:free',
+  'llama-3.3-70b-versatile': 'llama-3.3-70b-versatile',
+  'meta-llama/llama-4-scout-17b-16e-instruct': 'meta-llama/llama-4-scout-17b-16e-instruct',
+  'llama-3.1-8b-instant': 'llama-3.1-8b-instant',
+  'gemini-3.1-flash-lite-preview': 'gemini-3.1-flash-lite-preview'
+};
 
 /**
  * Default configuration
@@ -117,13 +132,31 @@ export function getAIProviderConfig(): {
   ollamaHost?: string;
   ollamaModel?: string;
   openaiApiKey?: string;
+  model?: string;
 } {
   const config = loadConfig();
+  const modelAlias = getSettingsSetting('model', 'default');
   return {
     openrouterApiKey: config.openrouterApiKey,
     ollamaHost: config.ollamaHost,
-    ollamaModel: config.ollamaModel
+    ollamaModel: config.ollamaModel,
+    model: resolveModel(modelAlias)
   };
+}
+
+/**
+ * Resolve model alias to actual model ID
+ */
+export function resolveModel(model?: string): string {
+  if (!model) {
+    return MODEL_ALIASES['auto'];
+  }
+  // If it's an alias, return the resolved model
+  if (MODEL_ALIASES[model]) {
+    return MODEL_ALIASES[model];
+  }
+  // Otherwise, return it as-is (custom model ID)
+  return model;
 }
 
 export default {
@@ -133,5 +166,7 @@ export default {
   setConfig,
   resetConfig,
   showConfig,
-  getAIProviderConfig
+  getAIProviderConfig,
+  MODEL_ALIASES,
+  resolveModel
 };
