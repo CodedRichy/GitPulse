@@ -12,10 +12,13 @@
     "@netlify/plugin-nextjs": "^5.15.9",
     "@supabase/realtime-js": "^2.103.2",
     "@supabase/supabase-js": "^2.103.2",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.2",
     "jsonwebtoken": "^9.0.3",
     "next": "16.2.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
