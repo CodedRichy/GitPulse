@@ -10,6 +10,7 @@ import { AreaChart, BarChart } from '@/components/charts';
 import { ActivityHeatmap, StatsCard } from '@/components/activity-heatmap';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
+import { useSession } from '@/lib/session';
 
 interface DashboardData {
   analytics: Analytics;
@@ -73,6 +74,7 @@ const cloudFetcher = async (url: string): Promise<DashboardData> => {
 const localFetcher = (url: string) => fetch(url).then(r => r.json());
 
 function DashboardContent() {
+  const { user } = useSession();
   const searchParams = useSearchParams();
   const localPort = searchParams.get('local');
   const isLocalMode = !!localPort;
@@ -136,7 +138,9 @@ function DashboardContent() {
 
   if (!data) return null;
 
-  const { analytics, recentRuns, tier } = data;
+  const { analytics, recentRuns } = data;
+  // Use session tier instead of API-calculated tier for consistency
+  const tier = (user?.tier as Tier) || 'free';
   const tierBadge = getTierBadge(tier);
   const hasAnalytics = canUseFeature(tier, 'analytics');
 
