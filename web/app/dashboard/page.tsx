@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
@@ -72,7 +72,7 @@ const cloudFetcher = async (url: string): Promise<DashboardData> => {
 // Fetcher for local CLI (already in correct format)
 const localFetcher = (url: string) => fetch(url).then(r => r.json());
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const localPort = searchParams.get('local');
   const isLocalMode = !!localPort;
@@ -348,6 +348,18 @@ export default function DashboardPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#09090B] flex flex-col items-center justify-center font-mono text-emerald-500 animate-pulse">
+        <span className="text-xl tracking-[0.5em] uppercase mb-4">Initialising_Pulse</span>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
 
