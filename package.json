@@ -1,7 +1,7 @@
 {
   "name": "gitpulse",
-  "version": "3.0.0",
-  "description": "AI-powered Git workflow assistant with rich terminal UI",
+  "version": "3.1.0",
+  "description": "AI-powered guardrails for git workflows — quality gates, convention enforcement, and intelligent commit automation",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -12,29 +12,54 @@
     "build": "tsc",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run --reporter=verbose --coverage",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodedRichy/GitPulse.git"
+  },
+  "homepage": "https://github.com/CodedRichy/GitPulse#readme",
+  "bugs": {
+    "url": "https://github.com/CodedRichy/GitPulse/issues"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",
     "@babel/traverse": "^7.29.0",
     "@babel/types": "^7.29.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@types/bcryptjs": "^2.4.6",
     "axios": "^1.6.7",
+    "bcryptjs": "^3.0.3",
     "chalk": "^5.3.0",
     "dotenv": "^16.4.5",
     "ink": "^4.4.1",
     "ink-spinner": "^5.0.0",
-    "ink-text-input": "^6.0.0",
+    "ink-text-input": "^5.0.0",
     "meow": "^12.0.1",
+    "open": "^8.4.2",
     "react": "^18.2.0",
     "simple-git": "^3.22.0",
+    "swr": "^2.4.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.1.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.55",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -44,6 +69,10 @@
     "ai",
     "cli",
     "commit",
+    "quality-gates",
+    "convention-enforcement",
+    "mcp",
+    "developer-tools",
     "terminal"
   ],
   "author": "GitPulse Team",

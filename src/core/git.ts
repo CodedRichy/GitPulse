@@ -18,7 +18,11 @@ export class GitOperations {
     try {
       await this.git.status();
       return true;
-    } catch {
+    } catch (error) {
+      // Log error for debugging but still return false
+      if (error instanceof Error && !error.message.includes('not a git repository')) {
+        console.warn(`Git error in isRepo(): ${error.message}`);
+      }
       return false;
     }
   }

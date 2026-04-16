@@ -1,3 +1,4 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 import { GitOperations } from '../core/git.js';
@@ -88,7 +89,7 @@ export function StatusPanel() {
       <ChatMessage role="assistant">
         <Box flexDirection="column">
           <Text>Repository status for branch </Text>
-          <Text bold color="#D4A5FF">{status.branch}</Text>
+          <Text bold color="#10B981">{status.branch}</Text>
           {status.ahead > 0 && (
             <Text color="green">  {status.ahead} commit(s) ahead of remote</Text>
           )}

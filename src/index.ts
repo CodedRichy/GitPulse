@@ -27,6 +27,7 @@ const cli = meow(`
     test       Run tests and analyze coverage
     issues     Issue tracker integration (GitHub/Linear/Jira)
     mcp        Start MCP server for AI agent integration
+    dashboard  Open web dashboard for analytics (Pro/Team)
 
   Options
     --dry-run, -d    Show what would be done without executing
@@ -52,6 +53,8 @@ const cli = meow(`
     $ gitpulse resolve ai
     $ gitpulse review staged
     $ gitpulse test --coverage
+    $ gitpulse dashboard          # Pro/Team: Open analytics dashboard
+    $ gitpulse dashboard --port 3001
 `, {
   importMeta: import.meta,
   flags: {
@@ -88,6 +91,9 @@ const cli = meow(`
     to: {
       type: 'string',
     },
+    port: {
+      type: 'string',
+    },
     help: {
       type: 'boolean',
       default: false
@@ -105,7 +111,7 @@ async function main() {
 
   const validCommands = [
     'commit', 'status', 'doc', 'analyze', 'explain', 'pr', 'config', 'undo', 'redo',
-    'init', 'branch', 'resolve', 'review', 'test', 'issues', 'mcp'
+    'init', 'branch', 'resolve', 'review', 'test', 'issues', 'mcp', 'dashboard'
   ];
   
   // If no command or invalid command, show welcome screen
@@ -146,6 +152,14 @@ async function main() {
       console.error(result.error);
       process.exit(1);
     }
+    return;
+  }
+
+  // Handle dashboard command specially (opens browser)
+  if (command === 'dashboard') {
+    const port = cli.flags.port ? parseInt(cli.flags.port as string, 10) : undefined;
+    const { dashboardCommand } = await import('./commands/dashboard.js');
+    await dashboardCommand({ port, open: true });
     return;
   }
 

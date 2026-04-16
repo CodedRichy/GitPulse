@@ -21,13 +21,25 @@ export interface HistoryData {
 }
 
 /**
+ * Safe JSON parse with error handling
+ */
+function safeJSONParse<T = unknown>(content: string, fallback: T): T {
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    console.warn(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    return fallback;
+  }
+}
+
+/**
  * Load commit history from file
  */
 export function loadHistory(): HistoryData {
   try {
     if (fs.existsSync(HISTORY_FILE)) {
       const content = fs.readFileSync(HISTORY_FILE, 'utf-8');
-      return JSON.parse(content);
+      return safeJSONParse<HistoryData>(content, { commits: [], maxSize: 50 });
     }
   } catch (error) {
     console.warn('Failed to load history:', error);

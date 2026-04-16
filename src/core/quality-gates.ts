@@ -1,4 +1,6 @@
 import { GitOperations } from './git.js';
+import { loadProjectConfig, type GitPulseProjectConfig } from './gitpulse-config.js';
+import { loadCustomGates } from './custom-gate.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -46,6 +48,15 @@ export interface QualityReport {
   mediumIssues: number;
   lowIssues: number;
   duration: number;
+}
+
+// Helper function to check if file is a test file
+function isTestFile(filePath: string): boolean {
+  return /\.(test|spec)\.(ts|js|tsx|jsx)$/.test(filePath) ||
+         filePath.includes('/test/') ||
+         filePath.includes('/tests/') ||
+         filePath.includes('/__tests__/') ||
+         filePath.includes('/spec/');
 }
 
 // Security patterns to detect
@@ -117,6 +128,9 @@ export class SecurityScanGate implements QualityGate {
 
     for (const change of changes) {
       if (!change.content || change.status === 'deleted') continue;
+
+      // Skip security checks for test files
+      if (isTestFile(change.path)) continue;
 
       const lines = change.content.split('\n');
 
@@ -505,10 +519,12 @@ export class DocumentationGate implements QualityGate {
 export class QualityGatesEngine {
   private gates: QualityGate[] = [];
   private gitOps: GitOperations;
+  private projectConfig: GitPulseProjectConfig | null = null;
 
-  constructor() {
-    this.gitOps = new GitOperations();
+  constructor(repoRoot?: string) {
+    this.gitOps = new GitOperations(repoRoot);
     this.registerDefaultGates();
+    this.loadCustomGatesFromConfig(repoRoot);
   }
 
   private registerDefaultGates() {
@@ -516,6 +532,31 @@ export class QualityGatesEngine {
     this.gates.push(new CodeSmellsGate());
     this.gates.push(new TestCoverageGate());
     this.gates.push(new DocumentationGate());
+  }
+
+  private loadCustomGatesFromConfig(repoRoot?: string) {
+    try {
+      this.projectConfig = loadProjectConfig(repoRoot);
+      if (this.projectConfig.custom_gates && this.projectConfig.custom_gates.length > 0) {
+        const customGates = loadCustomGates(this.projectConfig.custom_gates);
+        for (const gate of customGates) {
+          // Check if custom gate is enabled in config
+          const gateConfig = this.projectConfig.quality_gates[gate.name];
+          if (gateConfig?.enabled !== false) { // Enabled by default if not explicitly disabled
+            this.gates.push(gate);
+          }
+        }
+      }
+    } catch {
+      // No project config or invalid - continue with default gates only
+    }
+  }
+
+  /**
+   * Get the loaded project config (for access to conventions, etc.)
+   */
+  getProjectConfig(): GitPulseProjectConfig | null {
+    return this.projectConfig;
   }
 
   addGate(gate: QualityGate) {

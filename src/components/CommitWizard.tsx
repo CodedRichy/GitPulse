@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useInput, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useInput, useApp   } from "ink";
 import { GitOperations } from '../core/git.js';
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
@@ -356,7 +356,7 @@ Respond with a JSON object:
               <CodeBlock code={editedMessage} language="commit" />
               <Box marginTop={1}>
                 <Text dimColor>Confidence: </Text>
-                <Text color="#D4A5FF">{Math.round(suggestion.confidence * 100)}%</Text>
+                <Text color="#10B981">{Math.round(suggestion.confidence * 100)}%</Text>
               </Box>
               {suggestion.reasoning.length > 0 && (
                 <Box flexDirection="column" marginTop={1}>

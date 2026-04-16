@@ -238,22 +238,29 @@ Respond with a JSON array of issues:
   try {
     const response = await ai.generate(prompt);
     const match = response.match(/\[[\s\S]*\]/);
-    
+
     if (match) {
-      const parsed = JSON.parse(match[0]);
-      return parsed.map((issue: any) => ({
-        file: filePath,
-        line: issue.line,
-        severity: issue.severity,
-        type: issue.type,
-        message: issue.message,
-        suggestion: issue.suggestion,
-      }));
+      try {
+        const parsed = JSON.parse(match[0]);
+        if (!Array.isArray(parsed)) {
+          throw new Error('AI response is not an array');
+        }
+        return parsed.map((issue: any) => ({
+          file: filePath,
+          line: typeof issue.line === 'number' ? issue.line : undefined,
+          severity: issue.severity || 'medium',
+          type: issue.type || 'best-practice',
+          message: issue.message || 'No message provided',
+          suggestion: issue.suggestion,
+        })).filter((issue: ReviewIssue) => issue.message);
+      } catch (error) {
+        console.warn('Failed to parse AI response:', error);
+      }
     }
-  } catch {
-    // AI review failed
+  } catch (error) {
+    console.warn('AI review failed:', error);
   }
-  
+
   return [];
 }
 

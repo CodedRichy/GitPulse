@@ -18,6 +18,7 @@ import { IssuesCommand } from './IssuesCommand.js';
 import { Header } from './ui.js';
 import { loadConfig, getAIProviderConfig, CONFIG_FILE } from '../utils/config.js';
 import { initializeCommands, hasCommand, executeCommand, CommandResult } from '../commands/index.js';
+import { AccountService } from '../core/auth.js';
 
 interface AppProps {
   command: string;
@@ -68,23 +69,14 @@ export function App({ command, args, flags }: AppProps) {
     initializeCommands();
   }, []);
 
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+  const [isConfigured, setIsConfigured] = useState<boolean>(() => {
     const config = loadConfig();
-    const aiConfig = getAIProviderConfig();
-    // Check if user has explicitly configured an AI provider
-    // (not just using defaults from the file)
-    const hasConfigFile = fs.existsSync(CONFIG_FILE);
-
-    if (!hasConfigFile) {
-      return false; // No config file = not authenticated
-    }
-
-    // Check if provider has valid credentials
-    if (config.aiProvider === 'openrouter' && aiConfig.openrouterApiKey) {
-      return true;
-    }
+    // Check if AI provider is configured
     if (config.aiProvider === 'ollama') {
-      return true; // Ollama is explicitly configured
+      return !!(config.ollamaHost && config.ollamaModel);
+    }
+    if (config.aiProvider === 'openrouter') {
+      return !!config.openrouterApiKey;
     }
     return false;
   });
@@ -123,15 +115,21 @@ export function App({ command, args, flags }: AppProps) {
     }
   };
 
-  const handleLoginComplete = () => {
-    setIsAuthenticated(true);
+  const handleSetupComplete = () => {
+    setIsConfigured(true);
   };
 
-  // Show login if not authenticated
-  if (!isAuthenticated) {
+  const handleLogout = async () => {
+    const accountService = new AccountService();
+    await accountService.logout();
+    setIsConfigured(false);
+  };
+
+  // Show setup if not configured
+  if (!isConfigured) {
     return (
       <Box flexDirection="column" padding={1}>
-        <Login onLoginComplete={handleLoginComplete} />
+        <Login onLoginComplete={handleSetupComplete} />
       </Box>
     );
   }
@@ -182,10 +180,8 @@ export function App({ command, args, flags }: AppProps) {
   const isNewCommand = hasCommand(activeCommand);
 
   return (
-    <GitPulseContext.Provider value={{ returnToMenu, exitApp: () => process.exit(0) }}>
+    <GitPulseContext.Provider value={{ returnToMenu, exitApp: () => process.exit(0), showExitWarning }}>
     <Box flexDirection="column" padding={1}>
-      <Header />
-
       {isNewCommand ? (
         renderCommandResult()
       ) : (

@@ -11,13 +11,10 @@ import { FileAnalysis, FunctionInfo, ClassInfo } from './models.js';
  * Analyze a source file for documentation coverage
  */
 export function analyzeFile(filePath: string): FileAnalysis {
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const ext = path.extname(filePath);
-
   let analysis: FileAnalysis = {
     path: filePath,
-    language: getLanguage(ext),
-    totalLines: content.split('\n').length,
+    language: getLanguage(filePath),
+    totalLines: 0,
     functions: [],
     classes: [],
     exports: [],
@@ -26,6 +23,16 @@ export function analyzeFile(filePath: string): FileAnalysis {
     undocumentedFunctions: [],
     documentationCoverage: 0
   };
+
+  if (!fs.existsSync(filePath)) {
+    console.warn(`File not found: ${filePath}`);
+    return analysis;
+  }
+
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const ext = path.extname(filePath);
+
+  analysis.totalLines = content.split('\n').length;
 
   if (analysis.language === 'typescript' || analysis.language === 'javascript') {
     analysis = analyzeTypeScript(content, analysis);

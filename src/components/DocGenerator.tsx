@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useApp   } from "ink";
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
 import { ChatMessage, StatusBar, Spinner, SuccessCheck, SectionDivider, CodeBlock } from './ui.js';
@@ -140,7 +140,7 @@ Format the response as JSON with these fields:
       <ChatMessage role="assistant">
         <Box flexDirection="column">
           <Text>Documentation for </Text>
-          <Text bold color="#D4A5FF">{filePath}</Text>
+          <Text bold color="#10B981">{filePath}</Text>
           <SectionDivider />
           
           <Box marginTop={1}>
@@ -163,7 +163,7 @@ Format the response as JSON with these fields:
               <Box flexDirection="column" marginLeft={2}>
                 {doc.parameters.map((param, i) => (
                   <Box key={i}>
-                    <Text color="#D4A5FF">{param.name}</Text>
+                    <Text color="#10B981">{param.name}</Text>
                     <Text>: {param.description}</Text>
                   </Box>
                 ))}
