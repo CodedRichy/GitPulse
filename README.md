@@ -1,20 +1,20 @@
 # GitPulse
 
-**Grammarly for Code** — AI writes your commit messages, PR descriptions, and code documentation automatically.
+**Guardrails for AI-Assisted Development** — Quality gates, convention enforcement, and intelligent commit automation for teams using Copilot, Cursor, Windsurf, or Claude Code.
 
-**v3.1.0 — Now with MCP Integration, Quality Gates, and Context-Aware Intelligence**
+**v3.1.0 — Quality Gates · Convention Learning · MCP Integration**
 
-## Features
+[![CI](https://github.com/CodedRichy/GitPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/CodedRichy/GitPulse/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- ✅ **AI Commit Messages** — Smart commit message generation with context
-- ✅ **Quality Gates** — Prevents tech debt (security, code smells, test coverage)
-- ✅ **Context-Aware AI** — Learns your team's conventions and patterns
-- ✅ **MCP Server** — Expose git intelligence to other AI agents (Claude, Windsurf, etc.)
-- ✅ **PR Descriptions** — Generate pull request descriptions automatically
-- ✅ **Code Documentation** — Generate docs from code
-- ✅ **Branch Intelligence** — AI-powered branch management
-- ✅ **Conflict Resolution** — AI assistance for merge conflicts
-- ✅ **Code Review** — Automated quality review with AI
+## Why GitPulse?
+
+AI coding tools generate code fast — but they also generate inconsistent commits, skip tests, leak secrets, and ignore your team's conventions. GitPulse sits between your AI tools and your git history, ensuring every commit meets your standards.
+
+- **Quality Gates** — Block commits with hardcoded secrets, SQL injection, XSS, and code smells
+- **Convention Enforcement** — Learns your team's commit patterns and enforces them via git hooks
+- **MCP Server** — Expose git intelligence to Claude, Windsurf, Cursor, and other AI agents
+- **Multi-model AI** — Works with Ollama (local), OpenRouter, Google, Groq, OpenAI
 
 ## Quick Start
 
@@ -22,31 +22,93 @@
 # Install dependencies
 npm install
 
-# Build
-npm run build
+# Initialize in your repo (installs hooks automatically)
+npm start -- init
 
-# Smart commit with AI-generated message
+# Smart commit with quality gates
 npm start -- commit
 
-# Commit with quality gates (strict mode)
+# Strict mode — blocks on any quality issue
 npm start -- commit --strict
-
-# Commit without quality warnings
-npm start -- commit --lax
 
 # Show repository status
 npm start -- status
 
 # Generate PR description
 npm start -- pr
-
-# Analyze code
-npm start -- analyze
 ```
+
+## Quality Gates
+
+GitPulse automatically checks your code before committing:
+
+| Gate | What It Catches | Severity |
+|------|----------------|----------|
+| **Security Scan** | Hardcoded secrets, SQL injection, XSS, path traversal | Critical |
+| **Code Smells** | Long functions, TODO/FIXME, console.log, debugger | High |
+| **Test Coverage** | Missing test files for changed code | Medium |
+| **Documentation** | Missing JSDoc on exported functions | Low |
+
+```bash
+# Normal mode (shows warnings)
+pulse commit
+
+# Strict mode (blocks commit on failures)
+pulse commit --strict
+
+# Lax mode (hides warnings)
+pulse commit --lax
+```
+
+### Configuration
+
+Quality gates and conventions are configured in `.gitpulse/config.json`:
+
+```json
+{
+  "version": 1,
+  "quality_gates": {
+    "security-scan": { "enabled": true, "severity": "critical" },
+    "code-smells": { "enabled": true, "severity": "high" },
+    "test-coverage": { "enabled": true, "severity": "medium" },
+    "documentation": { "enabled": true, "severity": "low" }
+  },
+  "conventions": {
+    "commit_style": "conventional",
+    "enforce_scope": false,
+    "allowed_types": ["feat", "fix", "docs", "style", "refactor", "test", "chore", "ci", "perf", "build", "revert"],
+    "auto_learn": true
+  },
+  "hooks": {
+    "pre_commit": true,
+    "commit_msg": true
+  }
+}
+```
+
+## Git Hooks
+
+`gitpulse init` installs two hooks:
+
+- **pre-commit** — Runs quality gates; exits non-zero to block commits with critical issues
+- **commit-msg** — Validates commit message format against configured conventions
+
+Skip hooks when needed: `git commit --no-verify`
+
+## Context-Aware Intelligence
+
+GitPulse learns your team's conventions:
+
+- Analyzes commit history for patterns
+- Detects naming conventions (camelCase, PascalCase, etc.)
+- Identifies architectural boundaries
+- Finds file relationships (co-changes)
+- Saves to `.gitpulse/conventions.json`
+- Injects context into AI prompts
 
 ## MCP Integration
 
-GitPulse is now an MCP (Model Context Protocol) server. Configure it in Windsurf, Claude Desktop, or other MCP-compatible tools:
+GitPulse is an MCP (Model Context Protocol) server. Configure it in Windsurf, Claude Desktop, or other MCP-compatible tools:
 
 ```json
 {
@@ -64,49 +126,25 @@ GitPulse is now an MCP (Model Context Protocol) server. Configure it in Windsurf
 - `suggest_commit` — AI commit message generation
 - `review_changes` — Quality review of staged changes
 
-## Quality Gates
+## All Commands
 
-GitPulse automatically checks your code before committing:
-
-- **Security Scan** — Hardcoded secrets, SQL injection, XSS, path traversal
-- **Code Smells** — Long functions, TODO/FIXME, console.log, debugger
-- **Test Coverage** — Missing tests for changed files
-- **Documentation** — Missing JSDoc on exports
-
-```bash
-# Normal mode (shows warnings)
-pulse commit
-
-# Strict mode (blocks commit on failures)
-pulse commit --strict
-
-# Lax mode (hides warnings)
-pulse commit --lax
+```
+gitpulse              # Open interactive menu
+gitpulse commit       # AI-generated commit with quality gates
+gitpulse status       # Repository status
+gitpulse pr           # Generate PR description
+gitpulse doc <file>   # Generate code documentation
+gitpulse analyze      # Analyze documentation coverage
+gitpulse explain <f>  # Explain file history
+gitpulse review       # Code review with AI
+gitpulse branch       # Branch management
+gitpulse resolve      # AI conflict resolution
+gitpulse init         # Initialize GitPulse + hooks
+gitpulse config       # Manage settings
+gitpulse mcp          # Start MCP server
 ```
 
-## Context-Aware Intelligence
-
-GitPulse learns your team's conventions:
-
-- Analyzes commit history for patterns
-- Detects naming conventions (camelCase, PascalCase, etc.)
-- Identifies architectural boundaries
-- Finds file relationships (co-changes)
-- Saves to `.gitpulse/conventions.json`
-- Injects context into AI prompts
-
-## Documentation
-
-All project documentation is consolidated in `/docs/`:
-
-- **`docs/project_memory.md`** — Primary source of truth (read this first)
-- **`docs/architecture.md`** — System design and modules
-- **`docs/dev_log.md`** — Development history
-- **`docs/mcp-integration-complete-summary.md`** — MCP implementation details
-- **`docs/phase-b-quality-gates-summary.md`** — Quality gates documentation
-- **`docs/agent.md`** — AI usage instructions
-
-## Configuration
+## AI Provider Configuration
 
 ```bash
 # AI Provider (ollama, openrouter, openai, google, groq)
@@ -118,15 +156,25 @@ OLLAMA_MODEL=llama3.2
 COMMIT_STYLE=conventional
 ```
 
-## Vision
+## Development
 
-Stop context-switching to write docs. Let AI handle documentation while you code. GitPulse understands your codebase context, your team's conventions, and your project history to generate accurate, consistent documentation across your entire workflow.
-
-**Phase 5 Complete:** GitPulse is now an MCP server with quality gates and context-aware intelligence, preventing AI-generated tech debt and ensuring your commits follow team conventions.
+```bash
+npm install       # Install dependencies
+npm run dev       # Development with hot reload
+npm run build     # Compile to dist/
+npm run test      # Run tests
+npm run typecheck # Type check
+```
 
 ## Tech Stack
 
-- **TypeScript** — CLI with rich terminal UI
-- **Ink** — React-based terminal UI framework
+- **TypeScript** — CLI with Ink (React for terminal)
 - **MCP SDK** — Model Context Protocol server
-- **Multi-model AI** — OpenRouter, Ollama, OpenAI, Google, Groq support
+- **Vitest** — Unit testing
+- **Multi-model AI** — OpenRouter, Ollama, OpenAI, Google, Groq
+- **Next.js** — Web dashboard (in web/)
+- **Supabase** — Authentication
+
+## License
+
+MIT

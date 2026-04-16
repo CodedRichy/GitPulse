@@ -26,12 +26,24 @@ export const MODEL_ALIASES: Record<string, string> = {
  * Default configuration
  */
 const defaultConfig: Config = {
-  aiProvider: 'ollama' as const,
+  aiProvider: 'auto' as const,
   commitStyle: 'conventional',
   autoCommit: false,
   ollamaHost: 'http://localhost:11434',
   ollamaModel: 'llama3.2'
 };
+
+/**
+ * Safe JSON parse with error handling
+ */
+function safeJSONParse<T = unknown>(content: string, fallback: T): T {
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    console.warn(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    return fallback;
+  }
+}
 
 /**
  * Load configuration from file and environment
@@ -43,7 +55,7 @@ export function loadConfig(): Config {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
       const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
-      fileConfig = JSON.parse(content);
+      fileConfig = safeJSONParse<Partial<Config>>(content, {});
     } catch (error) {
       console.warn('Failed to load config file:', error);
     }
@@ -90,7 +102,10 @@ export function saveConfig(config: Partial<Config>): void {
   const currentConfig = loadConfig();
   const newConfig = { ...currentConfig, ...config };
   
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(newConfig, null, 2));
+  // Use atomic write pattern: write to temp file, then rename
+  const tempFile = `${CONFIG_FILE}.tmp`;
+  fs.writeFileSync(tempFile, JSON.stringify(newConfig, null, 2));
+  fs.renameSync(tempFile, CONFIG_FILE);
 }
 
 /**
@@ -132,6 +147,8 @@ export function getAIProviderConfig(): {
   ollamaHost?: string;
   ollamaModel?: string;
   openaiApiKey?: string;
+  googleApiKey?: string;
+  groqApiKey?: string;
   model?: string;
 } {
   const config = loadConfig();
@@ -140,6 +157,9 @@ export function getAIProviderConfig(): {
     openrouterApiKey: config.openrouterApiKey,
     ollamaHost: config.ollamaHost,
     ollamaModel: config.ollamaModel,
+    openaiApiKey: config.openaiApiKey,
+    googleApiKey: config.googleApiKey,
+    groqApiKey: config.groqApiKey,
     model: resolveModel(modelAlias)
   };
 }

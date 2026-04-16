@@ -11,16 +11,28 @@ interface Settings {
 }
 
 /**
+ * Safe JSON parse with error handling
+ */
+function safeJSONParse<T = unknown>(content: string, fallback: T): T {
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    console.warn(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+    return fallback;
+  }
+}
+
+/**
  * Load user settings from ~/.gitpulse/settings.json
  */
 export function loadSettings(): Settings {
   try {
     if (fs.existsSync(USER_SETTINGS_FILE)) {
       const content = fs.readFileSync(USER_SETTINGS_FILE, 'utf-8');
-      return JSON.parse(content);
+      return safeJSONParse<Settings>(content, {});
     }
   } catch (error) {
-    // Ignore errors, return empty settings
+    console.warn('Failed to load settings:', error);
   }
   return {};
 }

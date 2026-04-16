@@ -1,3 +1,4 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React from 'react';
 import { Box, Text, Spacer } from 'ink';
 
@@ -8,8 +9,8 @@ export function Header() {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box>
-        <Text color="#D4A5FF">◆</Text>
-        <Text bold color="#D4A5FF"> GitPulse</Text>
+        <Text color="#10B981">◆</Text>
+        <Text bold color="#10B981"> GitPulse</Text>
         <Text dimColor> v3.0</Text>
         <Spacer />
         <Text dimColor>AI-powered Git assistant</Text>
@@ -33,7 +34,7 @@ interface ChatMessageProps {
 export function ChatMessage({ role, children, loading }: ChatMessageProps) {
   const colors = {
     user: { bg: '#2D2D2D', border: '#4A4A4A', text: 'white' },
-    assistant: { bg: '#1A1A2E', border: '#D4A5FF', text: '#D4A5FF' },
+    assistant: { bg: '#1A1A2E', border: '#10B981', text: '#10B981' },
     system: { bg: '#1E1E1E', border: '#6B6B6B', text: 'gray' }
   };
   
@@ -59,7 +60,7 @@ export function ChatMessage({ role, children, loading }: ChatMessageProps) {
         </Text>
         {loading && (
           <Box marginLeft={1}>
-            <Text color="#D4A5FF">⏺</Text>
+            <Text color="#10B981">⏺</Text>
           </Box>
         )}
       </Box>
@@ -88,9 +89,9 @@ export function StatusBar({ branch, ahead, behind, dirty, mode }: StatusBarProps
   
   return (
     <Box marginTop={1}>
-      <Text color="#D4A5FF">◆</Text>
+      <Text color="#10B981">◆</Text>
       <Text> </Text>
-      <Text bold color="#D4A5FF">{branchText}</Text>
+      <Text bold color="#10B981">{branchText}</Text>
       {aheadText ? <Text color="green">{aheadText}</Text> : null}
       {behindText ? <Text color="yellow">{behindText}</Text> : null}
       {dirtyText ? <Text color="yellow">{dirtyText}</Text> : null}
@@ -144,7 +145,7 @@ interface ActionButtonProps {
   color?: string;
 }
 
-export function ActionButton({ actionKey, label, color = '#D4A5FF' }: ActionButtonProps) {
+export function ActionButton({ actionKey, label, color = '#10B981' }: ActionButtonProps) {
   return (
     <Box marginRight={2}>
       <Text color="#6272A4">[</Text>
@@ -159,7 +160,7 @@ export function ActionButton({ actionKey, label, color = '#D4A5FF' }: ActionButt
 export function Spinner({ text }: { text: string }) {
   return (
     <Box>
-      <Text color="#D4A5FF">⏺</Text>
+      <Text color="#10B981">⏺</Text>
       <Text> {text}</Text>
     </Box>
   );

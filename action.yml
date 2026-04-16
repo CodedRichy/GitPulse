@@ -1,0 +1,43 @@
+name: 'GitPulse Quality Gates'
+description: 'Run GitPulse quality gates on pull requests — catch security issues, code smells, missing tests, and convention violations before merge.'
+author: 'GitPulse Team'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  github-token:
+    description: 'GitHub token for posting PR comments'
+    required: true
+    default: ${{ github.token }}
+  strict:
+    description: 'Strict mode — fail on any quality issue (default: false)'
+    required: false
+    default: 'false'
+  comment:
+    description: 'Post results as a PR comment (default: true)'
+    required: false
+    default: 'true'
+  gates:
+    description: 'Comma-separated list of gates to run (default: all). Options: security-scan, code-smells, test-coverage, documentation'
+    required: false
+    default: 'all'
+  fail-on:
+    description: 'Minimum severity to fail the check. Options: critical, high, medium, low (default: critical)'
+    required: false
+    default: 'critical'
+
+outputs:
+  passed:
+    description: 'Whether all quality gates passed'
+  score:
+    description: 'Overall quality score (0-100)'
+  issues:
+    description: 'Total number of issues found'
+  report:
+    description: 'JSON quality report'
+
+runs:
+  using: 'node20'
+  main: 'action/dist/index.js'

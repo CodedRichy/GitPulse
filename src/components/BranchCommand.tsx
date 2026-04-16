@@ -1,7 +1,7 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
-import {  useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   useApp   } from "ink";
 import { branchCommand } from '../commands/branch.js';
 import type { CommandContext } from '../commands/types.js';
 

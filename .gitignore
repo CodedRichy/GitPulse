@@ -1,9 +1,9 @@
-# Rust
-/target/
-**/*.rs.bk
-Cargo.lock
-**/*.pdb
-**/*.exe
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
 
 # IDEs
 .vscode/
@@ -11,9 +11,6 @@ Cargo.lock
 *.swp
 *.swo
 *.sublime-*
-.vscode/settings.json
-.vscode/launch.json
-.vscode/extensions.json
 
 # OS
 .DS_Store
@@ -25,23 +22,23 @@ desktop.ini
 .directory
 .Trash-*
 
-# Development tools
-*.log
-*.tmp
-*.temp
+# Environment & secrets
+.env
 .env.local
 .env.development
 .env.test
+
+# Logs & temp
+*.log
+*.tmp
+*.temp
+
+# Test coverage
 coverage/
-*.profraw
 
 # Project-specific
 .gitpulse/
-.env
-node_modules/
-dist/
-build/
-comprehensive_test.py
 .gitpulse-analytics.json
 *.sqlite
 *.db
+comprehensive_test.py

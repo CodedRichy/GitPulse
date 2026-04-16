@@ -8,68 +8,67 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../core/git.js';
-import { getAIProvider } from '../ai/providers.js';
-import { reviewStagedChanges, formatReviewResult } from '../core/code-review.js';
+import { loadProjectConfig } from '../core/gitpulse-config.js';
 
-// Tool definitions
-const ANALYZE_REPO_TOOL: Tool = {
-  name: 'analyze_repo',
-  description: 'Analyze repository status, health, and metrics',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      path: {
-        type: 'string',
-        description: 'Path to repository (optional, defaults to current)',
-      },
-    },
-  },
-};
+// Import tool definitions and handlers
+import { analyzeRepoTool, handleAnalyzeRepo } from './tools/analyze-repo.js';
+import { suggestCommitTool, handleSuggestCommit } from './tools/suggest-commit.js';
+import { reviewChangesTool, handleReviewChanges } from './tools/review-changes.js';
+import { runQualityGatesTool, handleRunQualityGates } from './tools/quality-gates.js';
+import { validateCommitTool, handleValidateCommit } from './tools/validate-commit.js';
+import { getConventionsTool, handleGetConventions } from './tools/get-conventions.js';
+import { searchHistoryTool, handleSearchHistory } from './tools/search-history.js';
+import { branchInfoTool, handleBranchInfo } from './tools/branch-info.js';
+import { getConfigTool, handleGetConfig } from './tools/get-config.js';
+import { analyzeFileTool, handleAnalyzeFile } from './tools/analyze-file.js';
 
-const SUGGEST_COMMIT_TOOL: Tool = {
-  name: 'suggest_commit',
-  description: 'Generate AI-powered commit message for staged changes',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      path: {
-        type: 'string',
-        description: 'Path to repository (optional, defaults to current)',
-      },
-      context: {
-        type: 'string',
-        description: 'Additional context about the changes',
-      },
-    },
-  },
-};
+/**
+ * Tool registry entry — maps a tool definition to its handler.
+ */
+interface ToolEntry {
+  definition: Tool;
+  handler: (args: Record<string, unknown>) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
+}
 
-const REVIEW_CHANGES_TOOL: Tool = {
-  name: 'review_changes',
-  description: 'Perform quality review on staged or unstaged changes',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      path: {
-        type: 'string',
-        description: 'Path to repository (optional, defaults to current)',
-      },
-      target: {
-        type: 'string',
-        enum: ['staged', 'unstaged', 'last-commit'],
-        description: 'Which changes to review',
-      },
-    },
-    required: ['target'],
-  },
-};
+/**
+ * All registered MCP tools.
+ * Add new tools here — they'll be auto-registered in the server.
+ */
+const TOOL_REGISTRY: ToolEntry[] = [
+  // ─── Core (existing) ─────────────────────
+  { definition: analyzeRepoTool, handler: handleAnalyzeRepo },
+  { definition: suggestCommitTool, handler: handleSuggestCommit },
+  { definition: reviewChangesTool, handler: handleReviewChanges },
+
+  // ─── Quality & Conventions (new) ─────────
+  { definition: runQualityGatesTool, handler: handleRunQualityGates },
+  { definition: validateCommitTool, handler: handleValidateCommit },
+  { definition: getConventionsTool, handler: handleGetConventions },
+
+  // ─── Git Intelligence (new) ──────────────
+  { definition: searchHistoryTool, handler: handleSearchHistory },
+  { definition: branchInfoTool, handler: handleBranchInfo },
+  { definition: getConfigTool, handler: handleGetConfig },
+  { definition: analyzeFileTool, handler: handleAnalyzeFile },
+];
 
 export class GitPulseMCPServer {
   private server: Server;
   private gitOps: GitOperations;
+  private toolMap: Map<string, ToolEntry>;
 
   constructor() {
     this.gitOps = new GitOperations();
+    this.toolMap = new Map();
+
+    // Build lookup map
+    for (const entry of TOOL_REGISTRY) {
+      this.toolMap.set(entry.definition.name, entry);
+    }
+
     this.server = new Server(
       {
         name: 'gitpulse',
@@ -87,239 +86,76 @@ export class GitPulseMCPServer {
   }
 
   private registerHandlers() {
-    // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return {
-        tools: [ANALYZE_REPO_TOOL, SUGGEST_COMMIT_TOOL, REVIEW_CHANGES_TOOL],
-      };
-    });
+    // List all tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: TOOL_REGISTRY.map(entry => entry.definition),
+    }));
 
-    // Execute tools
+    // Execute a tool
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      const entry = this.toolMap.get(name);
+
+      if (!entry) {
+        return {
+          content: [{ type: 'text', text: `Error: Unknown tool "${name}"` }],
+          isError: true,
+        };
+      }
 
       try {
-        switch (name) {
-          case 'analyze_repo':
-            return await this.handleAnalyzeRepo(args);
-          case 'suggest_commit':
-            return await this.handleSuggestCommit(args);
-          case 'review_changes':
-            return await this.handleReviewChanges(args);
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
+        return await entry.handler((args as Record<string, unknown>) || {});
       } catch (error) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
+          content: [{
+            type: 'text',
+            text: `Error in ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          }],
           isError: true,
         };
       }
     });
 
     // List resources
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
-      return {
-        resources: [
-          {
-            uri: 'repo://status',
-            name: 'Repository Status',
-            mimeType: 'application/json',
-          },
-          {
-            uri: 'repo://config',
-            name: 'Repository Configuration',
-            mimeType: 'application/json',
-          },
-        ],
-      };
-    });
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: [
+        { uri: 'repo://status', name: 'Repository Status', mimeType: 'application/json' },
+        { uri: 'repo://config', name: 'GitPulse Configuration', mimeType: 'application/json' },
+      ],
+    }));
 
     // Read resources
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const { uri } = request.params;
 
-      try {
-        if (uri === 'repo://status') {
-          const status = await this.gitOps.getStatus();
-          return {
-            contents: [
-              {
-                uri,
-                mimeType: 'application/json',
-                text: JSON.stringify(status, null, 2),
-              },
-            ],
-          };
-        }
-
-        throw new Error(`Unknown resource: ${uri}`);
-      } catch (error) {
-        throw new Error(`Failed to read resource: ${error instanceof Error ? error.message : String(error)}`);
+      if (uri === 'repo://status') {
+        const status = await this.gitOps.getStatus();
+        return {
+          contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(status, null, 2) }],
+        };
       }
+
+      if (uri === 'repo://config') {
+        const config = loadProjectConfig();
+        return {
+          contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(config, null, 2) }],
+        };
+      }
+
+      throw new Error(`Unknown resource: ${uri}`);
     });
   }
 
-  private async handleAnalyzeRepo(args: any) {
-    const repoPath = args?.path || '.';
-    const gitOps = new GitOperations(repoPath);
-    const status = await gitOps.getStatus();
-    const isRepo = await gitOps.isRepo();
-
-    const analysis = {
-      isRepository: isRepo,
-      branch: status.branch,
-      status: {
-        staged: status.staged.length,
-        unstaged: status.unstaged.length,
-        untracked: status.untracked.length,
-        isClean: status.isClean,
-      },
-      sync: {
-        ahead: status.ahead,
-        behind: status.behind,
-      },
-      health: this.calculateHealthScore(status),
-    };
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify(analysis, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleSuggestCommit(args: any) {
-    const repoPath = args?.path || '.';
-    const gitOps = new GitOperations(repoPath);
-    const status = await gitOps.getStatus();
-
-    if (status.staged.length === 0) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'No staged changes found',
-              suggestion: null,
-              confidence: 0,
-            }),
-          },
-        ],
-      };
-    }
-
-    const diff = await gitOps.getStagedDiff();
-    const ai = getAIProvider();
-
-    if (!ai) {
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'No AI provider configured',
-              suggestion: null,
-              confidence: 0,
-            }),
-          },
-        ],
-      };
-    }
-
-    const prompt = `
-Generate a commit message for these changes:
-
-${diff}
-
-${args?.context ? `Additional context: ${args.context}` : ''}
-
-Requirements:
-- Use conventional commits format (type: description)
-- Be specific about what changed
-- Keep it under 72 characters for the first line
-- Add body if needed for complex changes
-
-Respond with ONLY the commit message, nothing else.`;
-
-    const suggestion = await ai.generate(prompt);
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            suggestion: suggestion.trim(),
-            confidence: 0.85,
-            filesChanged: status.staged,
-          }, null, 2),
-        },
-      ],
-    };
-  }
-
-  private async handleReviewChanges(args: any) {
-    const repoPath = args?.path || '.';
-    const target = args?.target || 'staged';
-
-    if (target === 'staged') {
-      const result = await reviewStagedChanges(repoPath);
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              filesReviewed: result.filesReviewed,
-              summary: result.summary,
-              issues: result.issues,
-              formatted: formatReviewResult(result),
-            }, null, 2),
-          },
-        ],
-      };
-    }
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            error: `Review target '${target}' not yet implemented`,
-          }),
-        },
-      ],
-    };
-  }
-
-  private calculateHealthScore(status: any): number {
-    let score = 100;
-    
-    // Deduct for uncommitted changes
-    if (status.unstaged.length > 0) score -= 10;
-    if (status.untracked.length > 0) score -= 5;
-    
-    // Deduct for being behind remote
-    if (status.behind > 0) score -= 15;
-    
-    // Deduct for being too far ahead (risk of merge conflicts)
-    if (status.ahead > 10) score -= 10;
-    
-    return Math.max(0, score);
+  /** Get list of registered tool names (useful for testing). */
+  getRegisteredTools(): string[] {
+    return [...this.toolMap.keys()];
   }
 
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('GitPulse MCP Server running on stdio');
+    console.error(`Registered tools: ${this.getRegisteredTools().join(', ')}`);
   }
 }
 

@@ -101,9 +101,11 @@ const CONVENTIONS_FILE = '.gitpulse/conventions.json';
 export class ConventionLearner {
   private gitOps: GitOperations;
   private conventions: TeamConventions | null = null;
+  private repoPath: string;
 
-  constructor() {
-    this.gitOps = new GitOperations();
+  constructor(repoPath: string = '.') {
+    this.repoPath = repoPath;
+    this.gitOps = new GitOperations(repoPath);
   }
 
   /**
@@ -713,14 +715,18 @@ export class ConventionLearner {
 // Utility function to get singleton instance
 let learnerInstance: ConventionLearner | null = null;
 
-export function getConventionLearner(): ConventionLearner {
+export function getConventionLearner(repoPath: string = '.'): ConventionLearner {
   if (!learnerInstance) {
-    learnerInstance = new ConventionLearner();
+    learnerInstance = new ConventionLearner(repoPath);
   }
   return learnerInstance;
 }
 
-export async function loadOrRefreshConventions(): Promise<TeamConventions> {
-  const learner = getConventionLearner();
+export function resetConventionLearner(): void {
+  learnerInstance = null;
+}
+
+export async function loadOrRefreshConventions(repoPath: string = '.'): Promise<TeamConventions> {
+  const learner = getConventionLearner(repoPath);
   return await learner.loadOrAnalyzeConventions();
 }

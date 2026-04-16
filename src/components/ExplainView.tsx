@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useApp   } from "ink";
 import { GitOperations } from '../core/git.js';
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
@@ -142,7 +142,7 @@ Respond with a JSON object:
       <ChatMessage role="assistant">
         <Box flexDirection="column">
           <Text>File analysis for </Text>
-          <Text bold color="#D4A5FF">{filePath}</Text>
+          <Text bold color="#10B981">{filePath}</Text>
           <SectionDivider />
           
           <Box marginTop={1}>

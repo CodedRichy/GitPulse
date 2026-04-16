@@ -33,6 +33,37 @@ GitPulse v3.1.0 (TypeScript + Ink + MCP)
 │   ├── commands/             # CLI commands
 │   └── utils/                # Configuration & helpers
 ├── web/                      # Next.js web dashboard
+│   ├── app/                  # Next.js app router
+│   │   ├── api/              # API routes
+│   │   │   ├── auth/github/  # GitHub OAuth
+│   │   │   ├── session/      # Session management (JWT)
+│   │   │   ├── settings/     # User settings
+│   │   │   ├── health/       # Health check endpoint
+│   │   │   ├── analytics/    # Local CLI analytics
+│   │   │   ├── telemetry/    # Cloud telemetry sync (CLI→Cloud)
+│   │   │   ├── stats/        # Productivity stats aggregation
+│   │   │   ├── keys/         # API key management
+│   │   │   └── support/      # Support tickets
+│   │   ├── dashboard/        # Dashboard page
+│   │   ├── profile/          # User profile
+│   │   ├── settings/         # Settings page
+│   │   └── login/            # Login page
+│   ├── components/           # React components
+│   │   ├── navbar.tsx         # Navigation
+│   │   ├── footer.tsx         # Footer
+│   │   ├── error-boundary.tsx # React error boundary
+│   │   ├── charts.tsx         # Analytics charts
+│   │   └── activity-heatmap.tsx # GitHub-style contribution graph
+│   ├── lib/                  # Utility libraries
+│   │   ├── jwt.ts            # JWT token handling
+│   │   ├── rate-limit.ts     # API rate limiting
+│   │   ├── csrf.ts           # CSRF protection
+│   │   ├── validation.ts     # Input validation
+│   │   ├── realtime.ts       # Supabase Realtime client
+│   │   ├── supabase.ts        # Supabase client
+│   │   └── tier.ts           # Tier/access control
+│   └── hooks/                # React hooks
+│       └── useRealtimeUser.ts # Real-time user data
 ├── dist/                     # Compiled output
 └── docs/                     # Documentation
 ```
@@ -73,6 +104,11 @@ Core business logic:
 - **branch-intelligence.ts**: AI-powered branch management
 - **code-review.ts**: Code review automation with static analysis + AI
 - **issue-tracker.ts**: Issue tracker integration (GitHub/Linear/Jira)
+- **telemetry.ts**: Local telemetry tracking (JSONL storage)
+- **cloud-sync.ts**: Cloud sync to web dashboard
+  - Auto-syncs quality gate runs to Supabase
+  - API key authentication
+  - Offline-fallback (local-first)
 
 ### `src/ai/`
 AI provider integrations:
@@ -81,10 +117,28 @@ AI provider integrations:
 - **learning.ts**: Real-time learning from user corrections
 - **prompts.ts**: Prompt templates (planned)
 
-### `src/auth/`
+### `src/core/auth.ts`
 Authentication and database:
 
-- **database.ts**: User data and configuration storage
+- **TokenStorage**: Supabase-based token storage with RLS
+- **AccountService**: Supabase Auth for email/password login, token refresh, logout
+
+### `web/lib/` (Security Infrastructure)
+Web dashboard security and utilities:
+
+- **jwt.ts**: JWT token generation and verification for secure sessions
+- **rate-limit.ts**: In-memory rate limiting for API endpoints (10 req/15min per IP)
+- **csrf.ts**: CSRF protection utilities for state-changing requests
+- **validation.ts**: Input validation helpers (email, UUID, GitHub username, etc.)
+- **env-validation.ts**: Environment variable validation at startup
+- **realtime.ts**: Supabase Realtime client for live data sync
+- **supabase.ts**: Supabase client configuration
+- **tier.ts**: Tier-based access control and feature flags
+
+### `web/hooks/`
+React hooks for state management:
+
+- **useRealtimeUser.ts**: Real-time user data subscription with WebSocket sync
 
 ### `src/mcp/`
 MCP (Model Context Protocol) server:

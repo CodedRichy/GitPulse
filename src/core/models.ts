@@ -70,12 +70,13 @@ export interface AIProvider {
  * GitPulse configuration
  */
 export interface Config {
-  aiProvider: 'ollama' | 'openrouter' | 'openai' | 'anthropic' | 'groq' | 'google';
+  aiProvider: 'ollama' | 'openrouter' | 'openai' | 'anthropic' | 'groq' | 'google' | 'auto';
   commitStyle: 'conventional' | 'semantic' | 'simple';
   autoCommit: boolean;
   openrouterApiKey?: string;
   ollamaHost?: string;
   ollamaModel?: string;
+  openaiApiKey?: string;
   groqApiKey?: string;
   googleApiKey?: string;
   // Issue tracker configuration

@@ -269,7 +269,7 @@ export class JiraTracker {
 
   constructor(config: IssueTrackerConfig['jira']) {
     this.config = config;
-    this.baseURL = config ? `https://${config.domain}/rest/api/3` : '';
+    this.baseURL = config && config.domain ? `https://${config.domain}/rest/api/3` : '';
   }
 
   async getIssues(): Promise<Issue[]> {

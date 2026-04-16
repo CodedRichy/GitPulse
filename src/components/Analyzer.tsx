@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useApp, useInput  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useApp, useInput   } from "ink";
 import { analyzeDirectory, analyzeFile } from '../core/analyzer.js';
 import { FileAnalysis, FunctionInfo } from '../core/models.js';
 import { ChatMessage, StatusBar, Spinner, SectionDivider, SuccessCheck } from './ui.js';
@@ -144,7 +144,7 @@ export function Analyzer({ targetPath }: AnalyzerProps) {
           {viewMode === 'summary' && (
             <>
               <Box marginTop={1}>
-                <Text bold color="#D4A5FF">Coverage Overview</Text>
+                <Text bold color="#10B981">Coverage Overview</Text>
                 <Box marginLeft={2} flexDirection="column">
                   <Text>Files analyzed: <Text bold>{totalFiles}</Text></Text>
                   <Text>Total functions: <Text bold>{totalFunctions}</Text></Text>
@@ -171,7 +171,7 @@ export function Analyzer({ targetPath }: AnalyzerProps) {
               <SectionDivider />
               
               <Box marginTop={1}>
-                <Text dimColor>Press <Text bold color="#D4A5FF">F</Text> to view files, <Text bold color="#D4A5FF">U</Text> for undocumented functions, <Text bold color="#D4A5FF">Q</Text> to quit</Text>
+                <Text dimColor>Press <Text bold color="#10B981">F</Text> to view files, <Text bold color="#10B981">U</Text> for undocumented functions, <Text bold color="#10B981">Q</Text> to quit</Text>
               </Box>
             </>
           )}
@@ -179,11 +179,11 @@ export function Analyzer({ targetPath }: AnalyzerProps) {
           {viewMode === 'files' && (
             <>
               <Box marginTop={1}>
-                <Text bold color="#D4A5FF">File Coverage</Text>
+                <Text bold color="#10B981">File Coverage</Text>
                 <Box marginTop={1} flexDirection="column">
                   {results.files.slice(0, 15).map((file, i) => (
                     <Box key={i}>
-                      <Text color={i === selectedFile ? '#D4A5FF' : undefined}>{i === selectedFile ? '>' : ' '}</Text>
+                      <Text color={i === selectedFile ? '#10B981' : undefined}>{i === selectedFile ? '>' : ' '}</Text>
                       <Text 
                         color={
                           file.documentationCoverage >= 80 ? '#50FA7B' : 
@@ -213,7 +213,7 @@ export function Analyzer({ targetPath }: AnalyzerProps) {
                 <Box marginTop={1} flexDirection="column">
                   {undocumentedList.slice(0, 20).map((item, i) => (
                     <Box key={i}>
-                      <Text color={i === selectedFile ? '#D4A5FF' : undefined}>{i === selectedFile ? '>' : ' '}</Text>
+                      <Text color={i === selectedFile ? '#10B981' : undefined}>{i === selectedFile ? '>' : ' '}</Text>
                       <Text color="#A0A0A0">{item.file.path}:{item.func.line}</Text>
                       <Text> {item.func.name}({item.func.params.join(', ')})</Text>
                     </Box>

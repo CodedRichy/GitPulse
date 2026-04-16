@@ -293,7 +293,7 @@ export class GroqProvider implements AIProvider {
  */
 export class AIProviderFactory {
   static create(
-    provider: 'openrouter' | 'ollama' | 'openai' | 'google' | 'groq' | 'anthropic',
+    provider: 'openrouter' | 'ollama' | 'openai' | 'google' | 'groq' | 'anthropic' | 'auto',
     config: {
       openrouterApiKey?: string;
       ollamaHost?: string;
@@ -304,6 +304,23 @@ export class AIProviderFactory {
       model?: string;
     }
   ): AIProvider {
+    // Handle 'auto' by selecting first available provider
+    if (provider === 'auto') {
+      // Try providers in order of preference
+      if (config.openrouterApiKey) {
+        provider = 'openrouter';
+      } else if (config.ollamaHost) {
+        provider = 'ollama';
+      } else if (config.googleApiKey) {
+        provider = 'google';
+      } else if (config.groqApiKey) {
+        provider = 'groq';
+      } else {
+        // Default to ollama if no API keys available
+        provider = 'ollama';
+      }
+    }
+
     switch (provider) {
       case 'openrouter':
         if (!config.openrouterApiKey) {
@@ -385,20 +402,22 @@ export function getAIProvider(): AIProvider | null {
   const providerConfig = getAIProviderConfig();
 
   try {
-    return AIProviderFactory.create(config.aiProvider, {
+    return AIProviderFactory.create(config.aiProvider as 'ollama' | 'openrouter' | 'openai' | 'google' | 'groq', {
       openrouterApiKey: providerConfig.openrouterApiKey,
       ollamaHost: providerConfig.ollamaHost,
       ollamaModel: providerConfig.ollamaModel,
       openaiApiKey: providerConfig.openaiApiKey,
+      googleApiKey: providerConfig.googleApiKey,
+      groqApiKey: providerConfig.groqApiKey,
       model: providerConfig.model,
     });
-  } catch {
+  } catch (error) {
+    // Silently return null if provider creation fails
     return null;
   }
 }
 
 /**
- * Get AI provider with auto-selection
  * Uses AI to pick the best model based on task context
  */
 export async function getAIProviderWithAutoSelection(taskContext: {
@@ -424,13 +443,13 @@ export async function getAIProviderWithAutoSelection(taskContext: {
       providerConfig.model = selection.model;
       
       // Determine provider from selection
-      let provider = config.aiProvider;
+      let provider = config.aiProvider === 'auto' ? 'ollama' : config.aiProvider;
       if (selection.provider === 'groq') provider = 'groq' as const;
       else if (selection.provider === 'google') provider = 'google' as const;
       else if (selection.provider === 'openrouter') provider = 'openrouter' as const;
       else if (selection.provider === 'ollama') provider = 'ollama' as const;
 
-      return AIProviderFactory.create(provider, {
+      return AIProviderFactory.create(provider as 'ollama' | 'openrouter' | 'openai' | 'google' | 'groq', {
         openrouterApiKey: providerConfig.openrouterApiKey,
         ollamaHost: providerConfig.ollamaHost,
         ollamaModel: selection.provider === 'ollama' ? selection.model : providerConfig.ollamaModel,

@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useInput, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useInput, useApp   } from "ink";
 import TextInput from 'ink-text-input';
 import { ChatMessage, StatusBar, SectionDivider } from './ui.js';
 import * as fs from 'fs';
@@ -46,7 +46,7 @@ const MODEL_OPTIONS = [
 ];
 
 export function Welcome({ onCommandSelect }: WelcomeProps) {
-  const { exit } = useApp();
+  const { exit, showExitWarning } = useGitPulseApp();
   const [input, setInput] = useState('');
   const [showCommands, setShowCommands] = useState(false);
   const [showModelSelector, setShowModelSelector] = useState(false);
@@ -207,18 +207,30 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
   const randomTip = tips[Math.floor(Math.random() * tips.length)];
 
   return (
-    <Box flexDirection="column" paddingLeft={1}>
-      {/* Header Info */}
-      {!showCommands && !showModelSelector && input.length === 0 && (
-        <Box marginBottom={1} flexDirection="column">
-          <Text dimColor>
-            GitPulse <Text color="gray">v3.0</Text> • Repository: {repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'None'} • AI: {currentModel.split('/').pop() || currentModel}
-          </Text>
+    <Box flexDirection="column">
+      {/* Header Info (Claude Code style) */}
+      <Box marginBottom={0} flexDirection="row">
+        <Box flexDirection="column" marginRight={2}>
+            <Text color="#10B981" bold>▛▀▀▜</Text>
+            <Text color="#10B981" bold>▌GP▐</Text>
+            <Text color="#10B981" bold>▙▄▄▟</Text>
         </Box>
-      )}
+        <Box flexDirection="column">
+            <Text bold>GitPulse <Text color="gray">v3.0</Text></Text>
+            <Text dimColor>{currentModel.split('/').pop() || currentModel} • {repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'No Repo'}</Text>
+            <Text dimColor>{process.cwd()}</Text>
+        </Box>
+      </Box>
 
       {/* Main REPL Area */}
-      <Box flexDirection="column">
+      <Box flexDirection="column" marginTop={1}>
+        
+        {/* Horizontal Divider */}
+        {!showModelSelector && (
+          <Box marginBottom={1}>
+             <Text dimColor>──────────────────────────────────────────────────────────────────────────────────</Text>
+          </Box>
+        )}
         
         {/* Model Selector */}
         {showModelSelector ? (
@@ -237,18 +249,38 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
           <Box flexDirection="column">
             {/* Input Prompt */}
             <Box flexDirection="row" alignItems="center">
-              <Text color={showCommands ? "cyan" : "gray"} bold>◆ </Text>
-              {!showCommands && input.length === 0 ? (
-                 <Text dimColor>Type / for commands, or type normally...</Text>
-              ) : (
-                 <TextInput 
-                   value={input} 
-                   onChange={setInput}
-                   showCursor={true}
-                   focus={true}
-                 />
-              )}
+              <Text color="white" bold>❯ </Text>
+              <TextInput 
+                value={input} 
+                onChange={(newVal) => {
+                  setInput(newVal);
+                  if (newVal === '') {
+                    setShowCommands(false);
+                  } else if (newVal.startsWith('/')) {
+                    setShowCommands(true);
+                  }
+                }}
+                placeholder=" "
+                showCursor={true}
+                focus={true}
+              />
             </Box>
+            
+            {/* Horizontal Divider Below Prompt */}
+            {!showCommands && (
+               <Box marginTop={1} flexDirection="row" justifyContent="space-between">
+                 <Text dimColor>──────────────────────────────────────────────────────────────────────────────────</Text>
+               </Box>
+            )}
+
+            {!showCommands && (
+               <Box marginTop={0} flexDirection="row" justifyContent="space-between">
+                 <Text dimColor={!showExitWarning} color={showExitWarning ? "yellow" : undefined}>
+                    {showExitWarning ? "(Press Ctrl+C again to quit)" : "Type / for commands or ? for shortcuts"}
+                 </Text>
+                 <Text dimColor>• {currentModel.split('/').pop() || currentModel} • /model</Text>
+               </Box>
+            )}
             
             {/* Suggestions */}
             {showCommands && filteredCommands.length > 0 && (
@@ -272,8 +304,6 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
           </Box>
         )}
       </Box>
-
-      {/* Hidden status bar logic could remain if needed, but we wanted a clean UI */}
     </Box>
   );
 }

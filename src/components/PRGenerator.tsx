@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import {  Box, Text, useInput, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useInput, useApp   } from "ink";
 import { GitOperations } from '../core/git.js';
 import { AIProviderFactory } from '../ai/providers.js';
 import { loadConfig, getAIProviderConfig } from '../utils/config.js';
@@ -202,13 +202,13 @@ Respond with a JSON object:
               <SectionDivider />
               
               <Box marginTop={1}>
-                <Text bold color="#D4A5FF">Title</Text>
+                <Text bold color="#10B981">Title</Text>
                 <CodeBlock code={pr.title} />
               </Box>
 
               {pr.summary && (
                 <Box marginTop={1}>
-                  <Text bold color="#D4A5FF">Summary</Text>
+                  <Text bold color="#10B981">Summary</Text>
                   <Box marginLeft={2}>
                     <Text>{pr.summary}</Text>
                   </Box>
@@ -217,7 +217,7 @@ Respond with a JSON object:
 
               {pr.description && (
                 <Box marginTop={1}>
-                  <Text bold color="#D4A5FF">Description</Text>
+                  <Text bold color="#10B981">Description</Text>
                   <Box marginLeft={2}>
                     <Text>{pr.description}</Text>
                   </Box>
@@ -226,7 +226,7 @@ Respond with a JSON object:
 
               {pr.changes.length > 0 && (
                 <Box marginTop={1}>
-                  <Text bold color="#D4A5FF">Changes</Text>
+                  <Text bold color="#10B981">Changes</Text>
                   <Box flexDirection="column" marginLeft={2}>
                     {pr.changes.map((change: string, i: number) => (
                       <Text key={i} color="#A0A0A0">• {change}</Text>
@@ -248,7 +248,7 @@ Respond with a JSON object:
 
               {pr.relatedIssues && pr.relatedIssues.length > 0 && (
                 <Box marginTop={1}>
-                  <Text bold color="#D4A5FF">Related Issues</Text>
+                  <Text bold color="#10B981">Related Issues</Text>
                   <Box flexDirection="column" marginLeft={2}>
                     {pr.relatedIssues.map((issue: string, i: number) => (
                       <Text key={i} color="#6272A4">• {issue}</Text>

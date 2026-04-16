@@ -1,6 +1,6 @@
+import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState } from 'react';
-import {  Box, Text, useInput, useApp  } from "ink";
-import { useGitPulseApp } from "./useGitPulseApp.js";;
+import {   Box, Text, useInput, useApp   } from "ink";
 import { loadConfig, saveConfig, resetConfig } from '../utils/config.js';
 import { Config } from '../core/models.js';
 import { ChatMessage, StatusBar, SuccessCheck, SectionDivider } from './ui.js';
@@ -36,17 +36,17 @@ export function ConfigPanel({ args }: ConfigPanelProps) {
             <Text bold>Current Configuration</Text>
             <SectionDivider />
             <Box flexDirection="column" marginLeft={2}>
-              <Text><Text bold color="#D4A5FF">AI Provider:</Text> {config.aiProvider}</Text>
-              <Text><Text bold color="#D4A5FF">Commit Style:</Text> {config.commitStyle}</Text>
-              <Text><Text bold color="#D4A5FF">Auto Commit:</Text> {config.autoCommit ? 'enabled' : 'disabled'}</Text>
+              <Text><Text bold color="#10B981">AI Provider:</Text> {config.aiProvider}</Text>
+              <Text><Text bold color="#10B981">Commit Style:</Text> {config.commitStyle}</Text>
+              <Text><Text bold color="#10B981">Auto Commit:</Text> {config.autoCommit ? 'enabled' : 'disabled'}</Text>
               {config.ollamaHost && (
-                <Text><Text bold color="#D4A5FF">Ollama Host:</Text> {config.ollamaHost}</Text>
+                <Text><Text bold color="#10B981">Ollama Host:</Text> {config.ollamaHost}</Text>
               )}
               {config.ollamaModel && (
-                <Text><Text bold color="#D4A5FF">Ollama Model:</Text> {config.ollamaModel}</Text>
+                <Text><Text bold color="#10B981">Ollama Model:</Text> {config.ollamaModel}</Text>
               )}
               {config.openrouterApiKey && (
-                <Text><Text bold color="#D4A5FF">OpenRouter Key:</Text> {config.openrouterApiKey.substring(0, 8)}...</Text>
+                <Text><Text bold color="#10B981">OpenRouter Key:</Text> {config.openrouterApiKey.substring(0, 8)}...</Text>
               )}
             </Box>
           </Box>
@@ -111,9 +111,9 @@ export function ConfigPanel({ args }: ConfigPanelProps) {
           <Text bold>Configuration Commands</Text>
           <SectionDivider />
           <Box marginLeft={2} flexDirection="column">
-            <Text><Text color="#D4A5FF">show</Text> - Display current configuration</Text>
-            <Text><Text color="#D4A5FF">set &lt;key&gt; &lt;value&gt;</Text> - Update a setting</Text>
-            <Text><Text color="#D4A5FF">reset</Text> - Reset to defaults</Text>
+            <Text><Text color="#10B981">show</Text> - Display current configuration</Text>
+            <Text><Text color="#10B981">set &lt;key&gt; &lt;value&gt;</Text> - Update a setting</Text>
+            <Text><Text color="#10B981">reset</Text> - Reset to defaults</Text>
           </Box>
           <SectionDivider />
           <Text dimColor>Valid keys: aiProvider, commitStyle, autoCommit, ollamaHost, ollamaModel</Text>

@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Newsreader } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { ErrorBoundary } from "@/components/error-boundary";
+import "@/lib/env-validation";
+import { SessionProvider } from "@/lib/session";
 
-const inter = Inter({
-  variable: "--font-inter",
+const sans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
-  style: ['normal', 'italic'],
 });
 
 export const metadata: Metadata = {
@@ -26,10 +28,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans transition-colors duration-300 ease-in-out selection:bg-stone-200/60 dark:selection:bg-stone-700/60">
-        {children}
+      <body className="min-h-full flex flex-col font-sans transition-colors duration-300 ease-in-out selection:bg-emerald-500/30">
+        <ErrorBoundary>
+          <SessionProvider>
+            {children}
+          </SessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -110,20 +110,28 @@ Respond with a JSON array:
     
     const response = await ai.generate(prompt);
     const match = response.match(/\[[\s\S]*\]/);
-    
+
     if (match) {
-      const parsed = JSON.parse(match[0]);
-      return parsed.map((s: any) => ({
-        name: s.name,
-        type: s.type,
-        description: s.description,
-        confidence: s.confidence || 0.8,
-      }));
+      try {
+        const parsed = JSON.parse(match[0]);
+        if (!Array.isArray(parsed)) {
+          throw new Error('AI response is not an array');
+        }
+        return parsed.map((s: any) => ({
+          name: s.name || 'unknown',
+          type: s.type || 'feature',
+          description: s.description || '',
+          confidence: typeof s.confidence === 'number' ? s.confidence : 0.8,
+        })).filter((s: BranchSuggestion) => s.name && s.type);
+      } catch (error) {
+        console.warn('Failed to parse AI response:', error);
+      }
     }
-  } catch {
+  } catch (error) {
+    console.warn('AI generation failed:', error);
     // Fallback to pattern-based suggestions
   }
-  
+
   return generateBranchSuggestion(context);
 }
 
