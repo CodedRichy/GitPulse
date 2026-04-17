@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { validateEmail, validateUUID } from '@/lib/validation';
+import { logSettingsUpdated } from '@/lib/audit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -72,6 +73,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Log settings update
+    await logSettingsUpdated(request, userId, { email });
 
     return NextResponse.json({
       success: true,

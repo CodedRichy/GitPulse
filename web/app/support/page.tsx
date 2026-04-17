@@ -5,6 +5,8 @@ import useSWR from 'swr';
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { useSession } from "@/lib/session";
+import { useCsrf } from "@/lib/csrf-context";
+import { GoogleReCaptchaProvider, useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 interface SupportTicket {
   id: string;
@@ -18,37 +20,51 @@ interface SupportTicket {
 
 const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then(r => r.json());
 
-export default function SupportPage() {
-  const { isAuthenticated, user } = useSession();
+// Form component that uses reCAPTCHA v3 and CSRF
+function SupportForm({ isAuthenticated, user, ticketsData }: { 
+  isAuthenticated: boolean; 
+  user: { name?: string | null; email?: string | null } | null;
+  ticketsData?: { tickets: SupportTicket[] };
+}) {
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
-  
-  // Fetch ticket history for authenticated users
-  const { data: ticketsData } = useSWR<{ tickets: SupportTicket[] }>(
-    isAuthenticated ? '/api/support' : null,
-    fetcher,
-    { refreshInterval: 30000 }
-  );
+  const { executeRecaptcha } = useGoogleReCaptcha();
+  const { csrfToken } = useCsrf();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!executeRecaptcha) {
+      setMessage({ text: 'reCAPTCHA not ready. Please try again.', type: 'error' });
+      return;
+    }
+    
     setLoading(true);
     setMessage(null);
 
     try {
+      // Execute reCAPTCHA v3 (invisible)
+      const recaptchaToken = await executeRecaptcha('support_form');
+      
       const response = await fetch('/api/support', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+        },
+        body: JSON.stringify({ ...formData, recaptchaToken }),
       });
 
-      if (!response.ok) throw new Error('Failed to submit');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit');
+      }
 
       setMessage({ text: 'Support ticket submitted successfully. We will respond within 12 hours.', type: 'success' });
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (err) {
-      setMessage({ text: 'Failed to submit ticket. Please try again or contact us directly.', type: 'error' });
+      setMessage({ text: err instanceof Error ? err.message : 'Failed to submit ticket. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -176,6 +192,10 @@ export default function SupportPage() {
               >
                  {loading ? 'Transmitting...' : 'Transmit Ticket'}
               </button>
+              
+              <p className="mt-4 text-center text-[9px] text-stone-600 font-light">
+                Protected by reCAPTCHA v3
+              </p>
            </form>
         </div>
 
@@ -205,5 +225,35 @@ function SupportCard({ title, desc, link, linkText }: { title: string, desc: str
          {linkText}
        </a>
     </div>
+  );
+}
+
+// Main page component wrapped with reCAPTCHA provider
+export default function SupportPage() {
+  const { isAuthenticated, user } = useSession();
+  
+  // Fetch ticket history for authenticated users
+  const { data: ticketsData } = useSWR<{ tickets: SupportTicket[] }>(
+    isAuthenticated ? '/api/support' : null,
+    fetcher,
+    { refreshInterval: 30000 }
+  );
+
+  return (
+    <GoogleReCaptchaProvider
+      reCaptchaKey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''}
+      scriptProps={{
+        async: false,
+        defer: false,
+        appendTo: 'head',
+        nonce: undefined,
+      }}
+    >
+      <SupportForm 
+        isAuthenticated={isAuthenticated} 
+        user={user} 
+        ticketsData={ticketsData}
+      />
+    </GoogleReCaptchaProvider>
   );
 }

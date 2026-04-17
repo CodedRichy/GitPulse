@@ -30,7 +30,7 @@ This document outlines the implementation priorities for GitPulse based on curre
 **Priority:** High
 **Effort:** Low (15 minutes)
 
-### 1.3 Login Page Logo
+### 1.3 Login Page Logo (Temporary)
 **File:** `web/app/login/page.tsx`
 **Asset:** `assets/GitPulseLogo.png` (white background for contrast)
 
@@ -39,6 +39,7 @@ This document outlines the implementation priorities for GitPulse based on curre
 2. Ensure proper sizing and spacing
 3. Maintain brand consistency
 
+**Status:** Temporary - may be removed based on feedback
 **Priority:** Medium
 **Effort:** Low (10 minutes)
 
@@ -46,34 +47,19 @@ This document outlines the implementation priorities for GitPulse based on curre
 
 ## Phase 2: Data Architecture (Short-term)
 
-### 2.1 Config Persistence
+### 2.1 Config Persistence ✅ COMPLETED
 **Files:**
 - `web/app/api/config/route.ts`
 - `web/lib/telemetry-client.ts`
+- `web/supabase/migrations/20240417_create_user_configs.sql`
 
-**Current State:**
-- `/api/config` returns mock data
-- `updateConfig()` only logs to console
-- No actual persistence
+**Implementation:**
+- Created Supabase table `user_configs` with RLS policies
+- Updated `/api/config` GET to fetch from database with fallback to default
+- Updated `/api/config` POST to save to database with tier checking
+- Updated `telemetry-client.ts` to use real config from API
 
-**Implementation Options:**
-
-**Option A: Supabase Table (Recommended)**
-```sql
-CREATE TABLE user_configs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  config JSONB NOT NULL DEFAULT '{}',
-  updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id)
-);
-```
-
-**Option B: CLI Config File Sync**
-- Read/write to `.gitpulse/config.json`
-- Sync between CLI and web dashboard
-- More complex but keeps config local
-
+**Status:** Completed
 **Priority:** High (blocking feature)
 **Effort:** Medium (2-3 hours)
 
@@ -90,53 +76,85 @@ CREATE TABLE user_configs (
 
 ## Phase 3: Security Improvements (Medium-term)
 
-### 3.1 reCAPTCHA Integration
+### 3.1 reCAPTCHA v3 Integration ✅ COMPLETED
 **Target Forms:** Support page (`web/app/support/page.tsx`)
 
 **Implementation:**
-1. Sign up for Google reCAPTCHA v2
+1. Sign up for Google reCAPTCHA v3
 2. Add to environment variables:
    ```env
    NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_site_key
    RECAPTCHA_SECRET_KEY=your_secret_key
    ```
-3. Add reCAPTCHA component to form
-4. Validate token in `/api/support/route.ts`
+3. Install `react-google-recaptcha-v3` package
+4. Wrap form with `GoogleReCaptchaProvider`
+5. Use `useGoogleReCaptcha` hook to execute invisible verification
+6. Validate token with Google API in `/api/support/route.ts`
+7. Check score (0.0-1.0, reject if < 0.5)
 
+**Status:** Completed
 **Priority:** Medium
 **Effort:** Medium (1-2 hours)
 
-### 3.2 CSRF Protection
+### 3.2 CSRF Protection ✅ COMPLETED
 **Implementation:**
-1. Install CSRF library (e.g., `csurf` or custom implementation)
-2. Generate CSRF tokens on session creation
-3. Validate on POST/PUT/DELETE requests
-4. Add tokens to forms
+1. Created custom CSRF utilities (`web/lib/csrf.ts`)
+2. Generate CSRF tokens on session creation (`/api/auth/github/route.ts`)
+3. Created CSRF context/provider (`web/lib/csrf-context.tsx`)
+4. Added CSRF validation to support API (`/api/support/route.ts`)
+5. Added CSRF token to form headers (support page)
 
+**Files Created:**
+- `web/lib/csrf.ts` - CSRF token generation and verification
+- `web/lib/csrf-context.tsx` - React context for accessing token
+
+**Files Modified:**
+- `web/app/layout.tsx` - Added CsrfProvider wrapper
+- `web/app/api/auth/github/route.ts` - Generate and set CSRF cookie on auth
+- `web/app/support/page.tsx` - Include CSRF token in form submission
+- `web/app/api/support/route.ts` - Validate CSRF token
+
+**Status:** Completed
 **Priority:** Medium
 **Effort:** Medium (2-3 hours)
 
-### 3.3 Audit Logging
+### 3.3 Audit Logging ✅ COMPLETED
 **Target Operations:**
-- API key creation/revocation
-- Config changes
-- User settings updates
-- Support ticket submissions
+- API key creation/revocation ✅
+- Config changes ✅
+- User settings updates ✅
+- Support ticket submissions ✅
 
 **Implementation:**
+- Created SQL migration for `audit_logs` table with RLS policies
+- Created `web/lib/audit.ts` with logging utilities
+- Added logging to:
+  - `/api/keys/route.ts` - API key create/revoke
+  - `/api/config/route.ts` - Config updates
+  - `/api/settings/route.ts` - Settings updates
+  - `/api/support/route.ts` - Support ticket creation
+
+**Files Created:**
+- `web/supabase/migrations/20240417_create_audit_logs.sql`
+- `web/lib/audit.ts`
+
+**Audit Log Schema:**
 ```sql
 CREATE TABLE audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   user_id UUID REFERENCES users(id),
-  action VARCHAR(50) NOT NULL,
-  resource_type VARCHAR(50),
+  action VARCHAR(50) NOT NULL,  -- e.g., 'api_key.create'
+  resource_type VARCHAR(50),     -- e.g., 'api_key'
   resource_id UUID,
-  details JSONB,
+  details JSONB,                 -- Additional context
   ip_address INET,
-  created_at TIMESTAMP DEFAULT NOW()
+  user_agent TEXT,
+  timestamp TIMESTAMP,
+  success BOOLEAN
 );
 ```
 
+**Status:** Completed
 **Priority:** Medium
 **Effort:** Medium (3-4 hours)
 
@@ -144,19 +162,42 @@ CREATE TABLE audit_logs (
 
 ## Phase 4: Data Governance (Long-term)
 
-### 4.1 Data Retention Policy
+### 4.1 Data Retention Policy ✅ COMPLETED
 **Retention Rules:**
-- Telemetry runs: 90 days
-- Support tickets: 365 days (after resolution)
-- API keys: No expiration (add feature)
-- Audit logs: 180 days
+- Telemetry runs: 90 days ✅
+- Support tickets: 365 days (after resolution) ✅
+- Audit logs: 180 days ✅
 
 **Implementation:**
-1. Add retention columns to tables
-2. Create scheduled cleanup job (Supabase Edge Function or cron)
-3. Add user-facing data export (GDPR)
-4. Add user account deletion with data wipe
+1. Created SQL migration (`20240417_data_retention.sql`):
+   - Added `retention_until` columns to telemetry_runs, support_tickets, audit_logs
+   - Created cleanup function `cleanup_expired_data()`
+   - Added trigger for auto-setting retention on ticket resolution
 
+2. Created Supabase Edge Function (`supabase/functions/data-cleanup/`):
+   - Scheduled cleanup job
+   - Runs `cleanup_expired_data()` function
+   - Requires CRON_SECRET for authorization
+
+3. GDPR Data Export (`/api/user/export`):
+   - Exports all user data as JSON
+   - Includes profile, API keys, configs, telemetry, tickets, audit logs
+   - Rate limited: 3 exports/hour
+
+4. Account Deletion (`/api/user/delete`):
+   - Full data wipe (Right to be Forgotten)
+   - Requires confirmation flag
+   - Deletes all tables in correct order
+   - Clears session cookies
+   - Rate limited: 1 attempt/hour
+
+**Files Created:**
+- `web/supabase/migrations/20240417_data_retention.sql`
+- `web/supabase/functions/data-cleanup/index.ts`
+- `web/app/api/user/export/route.ts`
+- `web/app/api/user/delete/route.ts`
+
+**Status:** Completed
 **Priority:** Low
 **Effort:** High (1-2 days)
 

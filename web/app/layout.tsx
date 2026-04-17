@@ -4,6 +4,7 @@ import "./globals.css";
 import { ErrorBoundary } from "@/components/error-boundary";
 import "@/lib/env-validation";
 import { SessionProvider } from "@/lib/session";
+import { CsrfProvider } from "@/lib/csrf-context";
 
 const sans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -37,7 +38,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans transition-colors duration-300 ease-in-out selection:bg-emerald-500/30">
         <ErrorBoundary>
           <SessionProvider>
-            {children}
+            <CsrfProvider>
+              {children}
+            </CsrfProvider>
           </SessionProvider>
         </ErrorBoundary>
       </body>

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { generateToken } from '@/lib/jwt';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateCode } from '@/lib/validation';
+import { generateCsrfToken, getCsrfCookieOptions } from '@/lib/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // Use service role key for server-side auth operations to bypass RLS
@@ -115,22 +116,13 @@ async function handleAuth(request: NextRequest, code: string) {
       githubToken: tokenData.access_token,
     });
 
-    // Set HTTP-only cookie
-    const response = NextResponse.json({
-      user: {
-        id: userRecord.id,
-        github_id: userData.id,
-        login: userData.login,
-        name: userData.name,
-        email: userData.email,
-        avatar_url: userData.avatar_url,
-        tier: userRecord.tier,
-        created_at: userRecord.created_at,
-      },
-    });
+    // Generate CSRF token
+    const csrfToken = generateCsrfToken();
 
-    // Create redirect response and set cookie on it
+    // Create redirect response and set cookies on it
     const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url), 307);
+    
+    // Set auth cookie
     redirectResponse.cookies.set('gitpulse_auth', sessionToken, {
       httpOnly: true,
       secure: false, // Disable secure for localhost development
@@ -138,6 +130,16 @@ async function handleAuth(request: NextRequest, code: string) {
       maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
       path: '/',
     });
+    
+    // Set CSRF cookie (not httpOnly so JS can read it)
+    redirectResponse.cookies.set('csrf_token', csrfToken, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60, // 24 hours
+      path: '/',
+    });
+    
     redirectResponse.headers.set('X-RateLimit-Limit', '10');
     redirectResponse.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
     redirectResponse.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());
