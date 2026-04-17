@@ -1,6 +1,8 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { QualityGatesEngine, formatQualityReportJson } from '../../core/quality-gates.js';
 import { loadProjectConfig, isGateEnabled } from '../../core/gitpulse-config.js';
+import { GitOperations } from '../../core/git.js';
+import * as path from 'path';
 
 export const runQualityGatesTool: Tool = {
   name: 'run_quality_gates',
@@ -30,8 +32,11 @@ export async function handleRunQualityGates(args: Record<string, unknown>) {
   const strict = (args?.strict as boolean) ?? false;
   const gateFilter = args?.gates as string[] | undefined;
 
-  const engine = new QualityGatesEngine();
-  const config = loadProjectConfig(repoPath);
+  // Normalize path to use forward slashes and ensure it's absolute
+  const normalizedPath = path.resolve(repoPath).replace(/\\/g, '/');
+  const gitOps = new GitOperations(normalizedPath);
+  const engine = new QualityGatesEngine(normalizedPath, gitOps);
+  const config = loadProjectConfig(normalizedPath);
 
   // If specific gates requested, run only those
   if (gateFilter && gateFilter.length > 0) {

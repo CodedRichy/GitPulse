@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GitOperations } from '../git.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { execSync } from 'child_process';
 
 // ─── GitOperations — Unit Tests ──────────────────────────
 // These tests run against the actual GitPulse repo (which IS a git repo).
@@ -46,6 +50,182 @@ describe('GitOperations — getStatus', () => {
     const git = new GitOperations('.');
     const status = await git.getStatus();
     expect(status.branch.length).toBeGreaterThan(0);
+  });
+});
+
+// ─── Isolated Tests with Temporary Repo ─────────────────
+
+describe('GitOperations — Integration with Temp Repo', () => {
+  let tempDir: string;
+  let gitOps: GitOperations;
+
+  beforeEach(() => {
+    // Create temporary directory
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitpulse-test-'));
+
+    // Initialize git repo
+    execSync('git init', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git config user.email "test@example.com"', { cwd: tempDir, stdio: 'ignore' });
+    execSync('git config user.name "Test User"', { cwd: tempDir, stdio: 'ignore' });
+
+    gitOps = new GitOperations(tempDir);
+  });
+
+  afterEach(() => {
+    // Clean up temporary directory
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  describe('getStatus() — edge cases', () => {
+    it('detects untracked files', async () => {
+      fs.writeFileSync(path.join(tempDir, 'untracked.txt'), 'content');
+
+      const status = await gitOps.getStatus();
+      expect(status.untracked).toContain('untracked.txt');
+      expect(status.isClean).toBe(false);
+    });
+
+    it('detects staged files', async () => {
+      fs.writeFileSync(path.join(tempDir, 'staged.txt'), 'content');
+      execSync('git add staged.txt', { cwd: tempDir, stdio: 'ignore' });
+
+      const status = await gitOps.getStatus();
+      expect(status.staged).toContain('staged.txt');
+    });
+
+    it('detects unstaged changes', async () => {
+      fs.writeFileSync(path.join(tempDir, 'modified.txt'), 'initial');
+      execSync('git add modified.txt', { cwd: tempDir, stdio: 'ignore' });
+      execSync('git commit -m "initial"', { cwd: tempDir, stdio: 'ignore' });
+
+      fs.writeFileSync(path.join(tempDir, 'modified.txt'), 'changed');
+
+      const status = await gitOps.getStatus();
+      expect(status.unstaged.some(f => f.includes('modified.txt'))).toBe(true);
+    });
+  });
+
+  describe('getStagedDiff()', () => {
+    it('returns empty string for clean repo', async () => {
+      const diff = await gitOps.getStagedDiff();
+      expect(diff).toBe('');
+    });
+
+    it('returns diff for staged changes', async () => {
+      fs.writeFileSync(path.join(tempDir, 'file.ts'), 'const x = 1;');
+      execSync('git add file.ts', { cwd: tempDir, stdio: 'ignore' });
+      execSync('git commit -m "initial"', { cwd: tempDir, stdio: 'ignore' });
+
+      fs.writeFileSync(path.join(tempDir, 'file.ts'), 'const x = 2;');
+      execSync('git add file.ts', { cwd: tempDir, stdio: 'ignore' });
+
+      const diff = await gitOps.getStagedDiff();
+      expect(diff).toContain('x = 1');
+      expect(diff).toContain('x = 2');
+    });
+  });
+
+  describe('getStagedDiffForFile()', () => {
+    beforeEach(() => {
+      fs.writeFileSync(path.join(tempDir, 'target.ts'), 'original');
+      execSync('git add target.ts', { cwd: tempDir, stdio: 'ignore' });
+      execSync('git commit -m "initial"', { cwd: tempDir, stdio: 'ignore' });
+    });
+
+    it('returns diff for modified staged file', async () => {
+      fs.writeFileSync(path.join(tempDir, 'target.ts'), 'modified');
+      execSync('git add target.ts', { cwd: tempDir, stdio: 'ignore' });
+
+      const diff = await gitOps.getStagedDiffForFile('target.ts');
+      expect(diff.length).toBeGreaterThan(0);
+      expect(diff).toContain('original');
+    });
+
+    it('returns empty string if file not staged', async () => {
+      fs.writeFileSync(path.join(tempDir, 'target.ts'), 'unstaged change');
+
+      const diff = await gitOps.getStagedDiffForFile('target.ts');
+      expect(diff).toBe('');
+    });
+
+    it('handles file paths with special characters', async () => {
+      const specialFile = path.join(tempDir, 'file with spaces.ts');
+      fs.writeFileSync(specialFile, 'content');
+      execSync('git add "file with spaces.ts"', { cwd: tempDir, stdio: 'ignore' });
+
+      const diff = await gitOps.getStagedDiffForFile('file with spaces.ts');
+      expect(typeof diff).toBe('string');
+    });
+  });
+
+  describe('getFileChanges()', () => {
+    it('includes staged files', async () => {
+      fs.writeFileSync(path.join(tempDir, 'new.ts'), 'content');
+      execSync('git add new.ts', { cwd: tempDir, stdio: 'ignore' });
+
+      const changes = await gitOps.getFileChanges();
+      expect(changes.some(c => c.path === 'new.ts')).toBe(true);
+    });
+
+    it('marks files with correct status', async () => {
+      fs.writeFileSync(path.join(tempDir, 'file.ts'), 'initial');
+      execSync('git add file.ts', { cwd: tempDir, stdio: 'ignore' });
+      execSync('git commit -m "initial"', { cwd: tempDir, stdio: 'ignore' });
+
+      fs.writeFileSync(path.join(tempDir, 'file.ts'), 'modified');
+      execSync('git add file.ts', { cwd: tempDir, stdio: 'ignore' });
+
+      const changes = await gitOps.getFileChanges();
+      const fileChange = changes.find(c => c.path === 'file.ts');
+      expect(fileChange?.status).toBe('modified');
+    });
+  });
+
+  describe('getCommitHistory()', () => {
+    beforeEach(() => {
+      for (let i = 1; i <= 2; i++) {
+        fs.writeFileSync(path.join(tempDir, `file${i}.ts`), `content ${i}`);
+        execSync(`git add file${i}.ts`, { cwd: tempDir, stdio: 'ignore' });
+        execSync(`git commit -m "commit ${i}"`, { cwd: tempDir, stdio: 'ignore' });
+      }
+    });
+
+    it('returns commit history', async () => {
+      const history = await gitOps.getCommitHistory(10);
+      expect(history.length).toBe(2);
+    });
+
+    it('respects limit parameter', async () => {
+      const history = await gitOps.getCommitHistory(1);
+      expect(history.length).toBe(1);
+    });
+
+    it('returns commits with required properties', async () => {
+      const history = await gitOps.getCommitHistory(1);
+      expect(history[0]).toHaveProperty('hash');
+      expect(history[0]).toHaveProperty('message');
+      expect(history[0]).toHaveProperty('author');
+    });
+  });
+
+  describe('getRepoRoot()', () => {
+    it('returns repository root path', async () => {
+      const root = await gitOps.getRepoRoot();
+      expect(root).toBe(tempDir);
+    });
+
+    it('works from subdirectories', async () => {
+      const subdir = path.join(tempDir, 'src', 'core');
+      fs.mkdirSync(subdir, { recursive: true });
+
+      const ops = new GitOperations(subdir);
+      const root = await ops.getRepoRoot();
+      expect(root).toBe(tempDir);
+    });
   });
 });
 

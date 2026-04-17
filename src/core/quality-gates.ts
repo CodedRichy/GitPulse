@@ -1,6 +1,7 @@
 import { GitOperations } from './git.js';
 import { loadProjectConfig, type GitPulseProjectConfig } from './gitpulse-config.js';
 import { loadCustomGates } from './custom-gate.js';
+import { GitleaksBridge } from './gitleaks-bridge.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -121,11 +122,74 @@ const CODE_SMELL_PATTERNS = {
 export class SecurityScanGate implements QualityGate {
   name = 'security-scan';
   description = 'Scan for security vulnerabilities and hardcoded secrets';
+  private gitleaks: GitleaksBridge;
+  private useGitleaks: boolean;
+
+  constructor(repoPath?: string) {
+    // Don't initialize gitleaks here - it needs to be set by the engine
+    // We'll lazy-initialize in the check method
+    this.gitleaks = new GitleaksBridge('.');
+    this.useGitleaks = false; // Will be set by the engine with proper path
+  }
+
+  setRepoPath(repoPath: string) {
+    this.gitleaks = new GitleaksBridge(repoPath);
+    this.useGitleaks = true;
+  }
 
   async check(changes: FileChange[]): Promise<GateResult> {
     const startTime = Date.now();
     const issues: QualityIssue[] = [];
 
+    // Try to use Gitleaks for secret detection
+    let gitleaksAvailable = false;
+    if (this.useGitleaks) {
+      try {
+        gitleaksAvailable = await this.gitleaks.isAvailable();
+        if (gitleaksAvailable) {
+          // Use Gitleaks for staged files (fast and accurate)
+          const findings = await this.gitleaks.detect({ staged: true });
+          const gitleaksIssues = this.gitleaks.mapFindingsToIssues(findings);
+          issues.push(...gitleaksIssues);
+        }
+      } catch (error) {
+        // Gitleaks failed, fall back to regex
+        gitleaksAvailable = false;
+      }
+    }
+
+    // Fall back to regex-based checks if Gitleaks not available
+    if (!gitleaksAvailable) {
+      for (const change of changes) {
+        if (!change.content || change.status === 'deleted') continue;
+
+        // Skip security checks for test files
+        if (isTestFile(change.path)) continue;
+
+        const lines = change.content.split('\n');
+
+        // Check for hardcoded secrets (regex fallback)
+        for (const { pattern, message } of SECURITY_PATTERNS.hardcodedSecrets) {
+          pattern.lastIndex = 0;
+          let match;
+          while ((match = pattern.exec(change.content)) !== null) {
+            const lineNum = this.getLineNumber(change.content, match.index);
+            issues.push({
+              severity: 'critical',
+              category: 'security',
+              file: change.path,
+              line: lineNum,
+              message,
+              code: this.extractCodeSnippet(lines, lineNum),
+              fix: 'Use environment variables or a secrets manager',
+            });
+          }
+        }
+      }
+    }
+
+    // Always run regex-based checks for SQL injection, XSS, and path traversal
+    // (Gitleaks focuses on secrets, not these patterns)
     for (const change of changes) {
       if (!change.content || change.status === 'deleted') continue;
 
@@ -133,24 +197,6 @@ export class SecurityScanGate implements QualityGate {
       if (isTestFile(change.path)) continue;
 
       const lines = change.content.split('\n');
-
-      // Check for hardcoded secrets
-      for (const { pattern, message } of SECURITY_PATTERNS.hardcodedSecrets) {
-        pattern.lastIndex = 0;
-        let match;
-        while ((match = pattern.exec(change.content)) !== null) {
-          const lineNum = this.getLineNumber(change.content, match.index);
-          issues.push({
-            severity: 'critical',
-            category: 'security',
-            file: change.path,
-            line: lineNum,
-            message,
-            code: this.extractCodeSnippet(lines, lineNum),
-            fix: 'Use environment variables or a secrets manager',
-          });
-        }
-      }
 
       // Check for SQL injection
       for (const { pattern, message } of SECURITY_PATTERNS.sqlInjection) {
@@ -217,7 +263,7 @@ export class SecurityScanGate implements QualityGate {
       severity: 'critical',
       issues,
       suggestions: issues.length > 0 
-        ? ['Review all security issues before committing', 'Use environment variables for secrets', 'Consider using a secrets scanning tool like git-secrets']
+        ? ['Review all security issues before committing', 'Use environment variables for secrets', gitleaksAvailable ? 'Gitleaks detected secrets accurately' : 'Install Gitleaks for better secret detection: https://github.com/gitleaks/gitleaks']
         : ['No security issues detected'],
       duration: Date.now() - startTime,
     };
@@ -520,15 +566,20 @@ export class QualityGatesEngine {
   private gates: QualityGate[] = [];
   private gitOps: GitOperations;
   private projectConfig: GitPulseProjectConfig | null = null;
+  private repoRoot: string;
 
-  constructor(repoRoot?: string) {
-    this.gitOps = new GitOperations(repoRoot);
+  constructor(repoRoot?: string, gitOps?: GitOperations) {
+    this.repoRoot = repoRoot ? path.resolve(repoRoot) : process.cwd();
+    this.gitOps = gitOps || new GitOperations(repoRoot);
     this.registerDefaultGates();
     this.loadCustomGatesFromConfig(repoRoot);
   }
 
   private registerDefaultGates() {
-    this.gates.push(new SecurityScanGate());
+    // Security scan gate needs repo path for gitleaks
+    const securityGate = new SecurityScanGate();
+    securityGate.setRepoPath(this.repoRoot);
+    this.gates.push(securityGate);
     this.gates.push(new CodeSmellsGate());
     this.gates.push(new TestCoverageGate());
     this.gates.push(new DocumentationGate());
@@ -575,7 +626,8 @@ export class QualityGatesEngine {
       let content: string | undefined;
 
       try {
-        content = await fs.promises.readFile(file, 'utf-8');
+        const filePath = path.resolve(this.repoRoot, file);
+        content = await fs.promises.readFile(filePath, 'utf-8');
       } catch {
         // File might be deleted
       }
@@ -637,7 +689,8 @@ export class QualityGatesEngine {
       let content: string | undefined;
 
       try {
-        content = await fs.promises.readFile(file, 'utf-8');
+        const filePath = path.resolve(this.repoRoot, file);
+        content = await fs.promises.readFile(filePath, 'utf-8');
       } catch {
         // File might be deleted
       }

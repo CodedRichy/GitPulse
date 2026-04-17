@@ -1,0 +1,1 @@
+$d="$env:LOCALAPPDATA\gitpulse";md $d -f|Out-Null;irm https://github.com/codedrichy/gitpulse/releases/latest/download/gitpulse-windows-x64.exe -o "$d\gitpulse.exe";$p=[Environment]::GetEnvironmentVariable("Path","User");if($p-notlike"*$d*"){[Environment]::SetEnvironmentVariable("Path","$p;$d","User")};echo "Installed. Restart shell and run: gitpulse"

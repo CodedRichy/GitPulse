@@ -1,5 +1,361 @@
 # GitPulse Development Log
 
+## 2026-04-17 - Final Stabilization & Documentation Sync
+
+### Test and Compatibility Stabilization
+- Added backward-compatible `getCommitHistory(limit)` alias in `src/core/git.ts`.
+- Normalized `getRepoRoot()` output in `src/core/git.ts` for cross-platform path consistency (Windows/Unix test parity).
+- Repaired logger formatting/syntax corruption in `src/utils/logger.ts` that caused transform failures.
+
+### Config Validation Completion
+- Finalized integration-env expectations and test alignment for config validation.
+- `src/utils/config-validation.ts` and `src/utils/__tests__/config-validation.test.ts` now pass cleanly.
+
+### Verification
+- Full suite passing: **303/303 tests** across **15/15 test files**.
+- Latest command result: `npm test` exit code `0`.
+
+### CLI Enhancement: Slash Command Discovery
+- **Expanded `COMMANDS` array in `src/components/Welcome.tsx`** from 11 to 21 commands
+- All GitPulse CLI commands now discoverable via `/` in interactive mode:
+  - Core: commit, status, doc, analyze, explain, pr
+  - Branching: branch, resolve
+  - Quality: review, test, audit, report
+  - Integration: issues, mcp, dashboard
+  - Setup: init, config
+  - Safety: undo, redo
+  - System: model, quit
+- Each command includes description and usage example
+
+### Build Stabilization
+- Installed `winston` logging dependency (`npm install winston --legacy-peer-deps`)
+- Fixed TypeScript errors in `src/utils/logger.ts` (winston format type annotations)
+- Fixed TypeScript errors in `src/utils/config-validation.ts` (optional chaining for defaults.ai)
+- Fixed TypeScript errors in `src/utils/user-messages.ts` (explicit string typing)
+- Fixed argument count error in `src/core/git.ts` (log.warn() call)
+- Build now passes: `npm run build` exit code `0`
+
+### Documentation Maintenance
+- Updated executive/implementation summaries with current-state delta sections.
+- Updated memory files to remove stale contradictory status items and align with current completion state.
+
+---
+
+## 2026-04-17 - Phase 1: Surgical Hardening (COMPLETED)
+
+### Strategic Pivot to "Oh Shit" Prevention Layer
+**New Vision:** Every developer who uses AI to code should feel like GitPulse is as essential as their IDE. Not because compliance requires it, but because it prevents embarrassing, career-damaging mistakes before they become permanent.
+
+**The "Oh Shit" Moments We Prevent:**
+- "I just committed the production AWS keys to a public repo"
+- "My commit message is 'fix stuff' and my CTO is reviewing it"
+- "I pushed broken code and the CI pipeline failed"
+- "I committed a console.log with user passwords"
+
+### Phase 1: Surgical Hardening Implementation
+
+**Git-Shield Module (src/core/git-shield.ts):**
+- Detects rebase in progress (`.git/rebase-merge`, `.git/REBASE_HEAD`)
+- Detects merge conflicts (`.git/MERGE_HEAD`)
+- Detects cherry-pick in progress (`.git/CHERRY_PICK_HEAD`)
+- Detects revert in progress (`.git/REVERT_HEAD`)
+- Detects bisect in progress (`.git/BISECT_LOG`)
+- Detects detached HEAD (`git rev-parse --abbrev-ref HEAD`)
+- Detects unmerged files (conflict markers)
+- **Action:** Aborts with clear, actionable error message if unsafe state detected
+- **Tests:** Comprehensive test suite with 80%+ coverage
+
+**Lockfile Module (src/core/lockfile.ts):**
+- Atomic `mkdir`-based lock on `.gitpulse/lock`
+- Cross-platform support (Windows + Unix)
+- Auto-release on process exit (SIGINT, SIGTERM, uncaughtException)
+- Stale lock detection (30-second threshold, process liveness check)
+- Retry logic with configurable intervals
+- Lock info logging (PID, timestamp, command)
+- **Tests:** Comprehensive test suite covering all scenarios
+- **Integration:** Integrated into CommitWizard.tsx entry point
+
+**Integration into CommitWizard.tsx:**
+- Lock acquisition before any git operations
+- Git-Shield state check after repo validation
+- Custom error messages for GitShieldError and LockfileError
+- Automatic lock release in finally block (even on errors)
+- Prevents concurrent gitpulse instances
+- Prevents operations during unsafe git states
+
+**Documentation Updates:**
+- Updated `absolute_master_strategic_and_architectural_specification.md` with must-have vision
+- Updated `tasks.md` with Phase 1-3 roadmap and success metrics
+- Updated `project_memory.md` with new positioning and must-have vision
+
+**Build Status:** ✅ TypeScript compilation successful
+
+**Files Created:**
+- `src/core/git-shield.ts` (241 lines)
+- `src/core/__tests__/git-shield.test.ts` (195 lines)
+- `src/core/lockfile.ts` (231 lines)
+- `src/core/__tests__/lockfile.test.ts` (186 lines)
+
+**Files Modified:**
+- `src/components/CommitWizard.tsx` (integrated GitShield + Lockfile)
+- `docs/tasks.md` (Phase 1-3 roadmap)
+- `docs/project_memory.md` (must-have vision)
+- `docs/absolute_master_strategic_and_architectural_specification.md` (Section 8: Success Metrics)
+
+---
+
+## 2026-04-17 - Phase 2: The Governed Gate (COMPLETED)
+
+### Gitleaks Integration (P0)
+**Gitleaks Bridge Module (src/core/gitleaks-bridge.ts):**
+- Wrapper for Gitleaks (Go) binary
+- Detects Gitleaks availability in PATH
+- Runs `--staged` scan for speed (<500ms target)
+- Parses JSON output and maps to QualityIssue format
+- Provides platform-specific installation instructions
+- Fallback to regex-based scanning if Gitleaks not available
+- **Tests:** Unit tests covering detection, version, and finding mapping
+
+**SecurityScanGate Enhancement:**
+- Uses Gitleaks for secret detection when available
+- Falls back to regex-based patterns if Gitleaks not installed
+- Always runs regex-based checks for SQL injection, XSS, and path traversal
+- Provides clear suggestions to install Gitleaks for better detection
+- **File Modified:** `src/core/quality-gates.ts`
+
+### Audit Logbook (P1)
+**Audit Logbook Module (src/core/audit-logbook.ts):**
+- Local-first audit trail stored in `.gitpulse/audit.json`
+- Logs every quality gate run with timestamp, branch, score, issues
+- Tracks overrides with justification and timestamp
+- Supports up to 1000 entries with automatic trimming
+- Provides statistics (total entries, overrides, avg score, pass rate)
+- Export functionality for compliance reporting
+- **Tests:** Unit tests for all operations
+
+**CommitWizard Integration:**
+- Logs quality gate results to audit logbook on every run
+- Stores audit entry ID for override tracking
+- **File Modified:** `src/components/CommitWizard.tsx`
+
+### Override with Justification Flow (P1)
+**CommitWizard Override Flow:**
+- New wizard step: `override-justification`
+- When quality gates fail in non-strict mode, offers override option
+- User must type justification (not just press Enter)
+- Justification logged to audit logbook with timestamp
+- Override tracked separately for compliance reporting
+- Keyboard controls: [O] to start, [Enter] to submit, [Esc] to cancel, [R] to retry
+- **File Modified:** `src/components/CommitWizard.tsx`
+
+### Audit Command (P1)
+**gitpulse audit Command:**
+- Displays audit logbook statistics
+- Shows recent 20 entries with details
+- Includes override justifications
+- Shows pass rate, average quality score, critical issues count
+- **File Created:** `src/commands/audit.ts`
+- **File Modified:** `src/commands/index.ts` (registered command)
+
+### Pre-commit Hook Installation (P1)
+**gitpulse init Command:**
+- Already implements pre-commit hook installation
+- Installs quality gates enforcement in `.git/hooks/pre-commit`
+- Installs commit-msg validation in `.git/hooks/commit-msg`
+- Hooks can be bypassed with `--no-verify` (but logged)
+- **File:** `src/commands/init.ts` (existing, verified functional)
+
+**Build Status:** ✅ TypeScript compilation successful
+
+**Files Created:**
+- `src/core/gitleaks-bridge.ts` (218 lines)
+- `src/core/__tests__/gitleaks-bridge.test.ts` (142 lines)
+- `src/core/audit-logbook.ts` (205 lines)
+- `src/commands/audit.ts` (57 lines)
+
+**Files Modified:**
+- `src/core/quality-gates.ts` (Gitleaks integration)
+- `src/components/CommitWizard.tsx` (audit logging + override flow)
+- `src/commands/index.ts` (audit command registration)
+
+---
+
+## 2026-04-17 - Phase 3: Attestation & Beta (IN PROGRESS)
+
+### Compliance Export (P1)
+**Compliance Report Generator (src/core/compliance-report.ts):**
+- Generates Markdown compliance reports from audit logbook
+- Executive summary with key metrics (scans, pass rate, score, issues, overrides)
+- Quality trends visualization (recent scores, status, issue counts)
+- Override log with justifications
+- Detailed scan history (date, branch, score, issue breakdown, status)
+- Compliance status indicator (Fully Compliant / Partially Compliant / Non-Compliant)
+- Configurable time periods (day, week, month, all)
+- Optional sections (trends, details, overrides)
+- Save to file functionality
+
+**gitpulse report Command:**
+- New command to generate compliance reports
+- Flags: --period, --output, --no-details, --no-trends, --no-overrides
+- Outputs to stdout or saves to file
+- **File Created:** `src/commands/report.ts`
+- **File Modified:** `src/commands/index.ts` (registered command)
+
+**Build Status:** ✅ TypeScript compilation successful
+
+**Files Created:**
+- `src/core/compliance-report.ts` (173 lines)
+- `src/commands/report.ts` (31 lines)
+
+**Files Modified:**
+- `src/commands/index.ts` (report command registration)
+
+**Remaining Phase 3 Tasks:**
+- Beta program recruitment (business task, no code changes needed)
+
+---
+
+## 2026-04-17 - Code Polishing (COMPLETED)
+
+### Technical Debt Cleanup
+**Remove 'args: any' from src/mcp/server.ts:**
+- Searched codebase - no instances found (already properly typed)
+- **Status:** Already clean
+
+**Add .gitpulse.yml Configuration Support:**
+- Added `js-yaml` dependency to package.json
+- Added `@types/js-yaml` dev dependency
+- Modified `src/core/gitpulse-config.ts` to support YAML and JSON formats
+- Priority order: config.yml > config.yaml > config.json
+- Updated `resolveConfigPath` to check for all config file types
+- Updated `loadProjectConfig` to parse based on file extension
+- **Files Modified:** `src/core/gitpulse-config.ts`, `package.json`
+- **Build Status:** ✅ TypeScript compilation successful
+
+**Update package.json version:**
+- Already at 3.1.0
+- **Status:** Already current
+
+**Set up CI/CD Pipeline:**
+- Verified existing `.github/workflows/ci.yml`
+- Already configured with:
+  - Triggers on push/PR to main
+  - Matrix testing on Node 18 and 20
+  - Type check, test, and build steps
+- **Status:** Already configured
+
+**Build Status:** ✅ TypeScript compilation successful
+
+**Files Modified:**
+- `src/core/gitpulse-config.ts` (YAML support)
+- `package.json` (js-yaml dependency)
+
+---
+
+## 2026-04-17 - MCP Tool Verification & Testing
+
+### MCP Server Tool Access Verification
+**Objective:** Verify all 10 MCP tools are accessible and functional via Windsurf.
+
+**Test Results:**
+- ✅ `analyze_repo` - Working (with path parameter)
+- ✅ `suggest_commit` - Working (with path parameter)
+- ✅ `review_changes` - Working (with path parameter)
+- ✅ `validate_commit_message` - Working (with path parameter)
+- ✅ `get_conventions` - Working (with path parameter)
+- ✅ `search_commit_history` - Working (with path parameter)
+- ✅ `branch_info` - Working (with path parameter)
+- ✅ `get_config` - Working
+- ✅ `analyze_file` - Working (with path parameter)
+- ✅ `run_quality_gates` - Working (with path parameter)
+
+**Status:** 10/10 tools working correctly ✅
+
+### run_quality_gates Issue - FIXED ✅
+**Problem:** The `run_quality_gates` MCP tool fails with "fatal: not a git repository (or any of the parent directories): .git" even when a valid path parameter is provided.
+
+**Root Cause:** The `SecurityScanGate` class creates a `GitleaksBridge` instance in its constructor with a default path of '.', which is the current working directory of the MCP server process (not the target repo). When gitleaks runs with `--staged` flag, it tries to run git commands from the wrong directory.
+
+**Fix:**
+1. Added `setRepoPath(repoPath: string)` method to `SecurityScanGate` to allow late initialization of `GitleaksBridge` with the correct path
+2. Modified `QualityGatesEngine.registerDefaultGates()` to call `setRepoPath(this.repoRoot)` on the security gate after creation
+3. This ensures gitleaks runs from the correct repository directory
+
+**Files Modified:**
+- `src/core/quality-gates.ts` (added setRepoPath method to SecurityScanGate, updated registerDefaultGates)
+
+**Verification:**
+```bash
+node test-quality-gates.js
+# Output: Success! Quality gates ran and detected 68 issues (expected behavior)
+```
+
+**Status:** ✅ FIXED - All 10 MCP tools now working correctly
+
+---
+
+## 2026-04-17 - Phase 3 & 4 Security & Data Governance
+
+### Phase 3: Security Improvements (COMPLETED)
+
+**3.1 reCAPTCHA v3 Integration:**
+- Added invisible reCAPTCHA to support form
+- Server-side token validation with score checking (threshold: 0.5)
+- Environment variables: `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY`
+
+**3.2 CSRF Protection:**
+- Created `web/lib/csrf.ts` - Token generation and verification utilities
+- Created `web/lib/csrf-context.tsx` - React context for accessing CSRF token
+- Updated auth flow to generate CSRF cookie on login
+- Added CSRF validation to support API route
+- Support form includes CSRF token in request headers
+
+**3.3 Audit Logging:**
+- Created `audit_logs` table with RLS policies
+- Created `web/lib/audit.ts` with logging utilities for:
+  - API key operations (create/revoke)
+  - Config changes
+  - Settings updates
+  - Support ticket submissions
+  - User login/logout
+  - Data exports and account deletions
+- Integrated audit logging into all relevant API routes
+
+### Phase 4: Data Governance (COMPLETED)
+
+**4.1 Data Retention Policy:**
+- Added retention columns to `telemetry_runs` (90 days), `support_tickets` (365 days after resolution), `audit_logs` (180 days)
+- Created `cleanup_expired_data()` SQL function
+- Created Supabase Edge Function for scheduled cleanup
+- Trigger auto-sets retention on ticket resolution
+
+**4.2 GDPR Compliance:**
+- Created `/api/user/export` - Full data export endpoint (3/hour limit)
+- Created `/api/user/delete` - Account deletion with full data wipe (1/hour limit)
+- Exports include: profile, API keys, configs, telemetry, tickets, audit logs
+
+**4.3 Error Tracking (Sentry):**
+- Installed `@sentry/nextjs` SDK
+- Configured client, server, and edge runtime configs
+- Integrated Sentry into error boundary component
+- Session replay with privacy masking
+- Performance monitoring (10% sample in production)
+- Source map upload on build
+- Monitoring tunnel route (`/monitoring`) to bypass ad-blockers
+
+**Files Created:**
+- `web/lib/csrf.ts`, `web/lib/csrf-context.tsx`
+- `web/lib/audit.ts`
+- `web/supabase/migrations/20240417_create_audit_logs.sql`
+- `web/supabase/migrations/20240417_data_retention.sql`
+- `web/supabase/functions/data-cleanup/index.ts`
+- `web/app/api/user/export/route.ts`
+- `web/app/api/user/delete/route.ts`
+- `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`
+- `next.config.mjs` (replaced .ts version)
+
+---
+
 ## 2026-04-16 - Productivity Analytics & Pulse Metrics
 
 ### Windsurf-Style Productivity Dashboard

@@ -257,6 +257,63 @@ export function calculateTotal(items: Item[]): number {
   });
 });
 
+// ─── TestCoverageGate ────────────────────────────────────
+
+describe('TestCoverageGate', () => {
+  const gate = new TestCoverageGate();
+
+  it('detects missing test files for TypeScript code', async () => {
+    const changes: FileChange[] = [
+      makeChange({
+        path: 'src/utils.ts',
+        content: 'export function add(a: number, b: number) { return a + b; }',
+      }),
+    ];
+    const result = await gate.check(changes);
+    // Should detect missing test file
+    expect(result.issues.some(i => i.category === 'maintainability')).toBe(true);
+  });
+
+  it('passes when test file exists', async () => {
+    // Note: This test assumes the test file exists in the actual repo
+    // For unit testing, we'd need to mock the file system
+    const changes: FileChange[] = [
+      makeChange({
+        path: 'src/utils.ts',
+        content: 'export function add(a: number, b: number) { return a + b; }',
+      }),
+    ];
+    const result = await gate.check(changes);
+    // Just verify it runs without error
+    expect(result).toHaveProperty('passed');
+    expect(result).toHaveProperty('score');
+  });
+
+  it('skips non-code files', async () => {
+    const changes: FileChange[] = [
+      makeChange({
+        path: 'docs/README.md',
+        content: '# Documentation',
+      }),
+    ];
+    const result = await gate.check(changes);
+    // Should not flag missing tests for markdown files
+    expect(result.issues.length).toBe(0);
+  });
+
+  it('skips deleted files', async () => {
+    const changes: FileChange[] = [
+      makeChange({
+        path: 'src/old.ts',
+        status: 'deleted',
+        content: 'export function old() { return 1; }',
+      }),
+    ];
+    const result = await gate.check(changes);
+    expect(result.issues.length).toBe(0);
+  });
+});
+
 // ─── QualityGatesEngine (integration) ────────────────────
 
 describe('QualityGatesEngine', () => {

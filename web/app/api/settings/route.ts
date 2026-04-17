@@ -3,19 +3,52 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { validateEmail, validateUUID } from '@/lib/validation';
 import { logSettingsUpdated } from '@/lib/audit';
+import { rateLimit } from '@/lib/rate-limit';
+import { apiLoggers } from '@/lib/logger';
 
+const log = apiLoggers.settings;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Rate limit: 20 requests per minute per IP
+const limiter = rateLimit({ windowMs: 60 * 1000, maxRequests: 20 });
 
 /**
  * GET /api/settings
  * Returns user settings.
  */
 export async function GET(request: NextRequest) {
+  const startTime = performance.now();
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+
+  // Rate limiting
+  const rateLimitResult = limiter(ip);
+
+  if (!rateLimitResult.success) {
+    const duration = performance.now() - startTime;
+    log.logSecurity('Rate limit exceeded on GET', { ip, durationMs: Math.round(duration) });
+    
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': '20',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+        }
+      }
+    );
+  }
+
   try {
+    log.logRequest('GET', '/api/settings', { ip });
+    
     const session = request.headers.get('authorization')?.replace('Bearer ', '');
     if (!session) {
+      const duration = performance.now() - startTime;
+      log.logResponse(401, '/api/settings', Math.round(duration), { ip, reason: 'unauthorized' });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,6 +61,12 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    const duration = performance.now() - startTime;
+    log.logResponse(200, '/api/settings', Math.round(duration), { 
+      ip, 
+      userId: userData.user.id 
+    });
+
     return NextResponse.json({
       email: user.email,
       github_login: user.github_login,
@@ -36,7 +75,11 @@ export async function GET(request: NextRequest) {
       tier: user.tier,
     });
   } catch (error) {
-    console.error('Settings API error:', error);
+    const duration = performance.now() - startTime;
+    log.error('Settings API GET error', error, {
+      ip,
+      durationMs: Math.round(duration)
+    });
     return NextResponse.json(
       { error: 'Failed to load settings' },
       { status: 500 }
@@ -49,18 +92,58 @@ export async function GET(request: NextRequest) {
  * Updates user settings.
  */
 export async function POST(request: NextRequest) {
+  const startTime = performance.now();
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+
+  // Rate limiting
+  const rateLimitResult = limiter(ip);
+
+  if (!rateLimitResult.success) {
+    const duration = performance.now() - startTime;
+    log.logSecurity('Rate limit exceeded on POST', { ip, durationMs: Math.round(duration) });
+    
+    return NextResponse.json(
+      { error: 'Too many requests' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': '20',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
+        }
+      }
+    );
+  }
+
   try {
+    log.logRequest('POST', '/api/settings', { ip });
+    
     const { userId, email } = await request.json();
 
     if (!userId || !email) {
+      const duration = performance.now() - startTime;
+      log.logResponse(400, '/api/settings', Math.round(duration), { 
+        ip, 
+        reason: 'missing_fields' 
+      });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     if (!validateUUID(userId)) {
+      const duration = performance.now() - startTime;
+      log.logResponse(400, '/api/settings', Math.round(duration), { 
+        ip, 
+        reason: 'invalid_userId' 
+      });
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
     if (!validateEmail(email)) {
+      const duration = performance.now() - startTime;
+      log.logResponse(400, '/api/settings', Math.round(duration), { 
+        ip, 
+        reason: 'invalid_email' 
+      });
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
@@ -77,13 +160,24 @@ export async function POST(request: NextRequest) {
     // Log settings update
     await logSettingsUpdated(request, userId, { email });
 
+    const duration = performance.now() - startTime;
+    log.logResponse(200, '/api/settings', Math.round(duration), { 
+      ip, 
+      userId,
+      action: 'settings_updated' 
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Settings saved successfully',
       user: data,
     });
   } catch (error) {
-    console.error('Settings API error:', error);
+    const duration = performance.now() - startTime;
+    log.error('Settings API POST error', error, {
+      ip,
+      durationMs: Math.round(duration)
+    });
     return NextResponse.json(
       { error: 'Failed to save settings' },
       { status: 500 }

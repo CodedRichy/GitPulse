@@ -2,8 +2,11 @@ import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
 import {   Box, Text, useInput, useApp   } from "ink";
 import { GitOperations } from '../core/git.js';
-import { AIProviderFactory } from '../ai/providers.js';
-import { loadConfig, getAIProviderConfig } from '../utils/config.js';
+import { GitShield, GitShieldError } from '../core/git-shield.js';
+import { Lockfile, LockfileError } from '../core/lockfile.js';
+import { AuditLogbook } from '../core/audit-logbook.js';
+import { SmartProvider } from '../ai/smart-provider.js';
+import { loadConfig } from '../utils/config.js';
 import { CommitSuggestion } from '../core/models.js';
 import { addCommitToHistory, type CommitHistoryEntry } from '../utils/history.js';
 import { recordCorrection, loadLearning, generateLearnedPrompt } from '../ai/learning.js';
@@ -19,7 +22,7 @@ interface CommitWizardProps {
   lax?: boolean;
 }
 
-type WizardStep = 'check' | 'analyze' | 'quality-gates' | 'generate' | 'review' | 'edit' | 'commit' | 'done' | 'error';
+type WizardStep = 'check' | 'analyze' | 'quality-gates' | 'override-justification' | 'generate' | 'review' | 'edit' | 'commit' | 'done' | 'error';
 
 export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
   const { exit } = useApp();
@@ -28,20 +31,38 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
   const [suggestion, setSuggestion] = useState<CommitSuggestion | null>(null);
   const [diff, setDiff] = useState<string>('');
   const [editedMessage, setEditedMessage] = useState<string>('');
+  const [overrideJustification, setOverrideJustification] = useState<string>('');
+  const [currentAuditEntryId, setCurrentAuditEntryId] = useState<string>('');
   const [git] = useState(() => new GitOperations());
+  const [gitShield] = useState(() => new GitShield());
+  const [lockfile] = useState(() => new Lockfile());
+  const [auditLogbook] = useState(() => new AuditLogbook());
   const [qualityReport, setQualityReport] = useState<QualityReport | null>(null);
   const [qualityGates] = useState(() => new QualityGatesEngine());
   const [conventions, setConventions] = useState<TeamConventions | null>(null);
   const [conventionLearner] = useState(() => new ConventionLearner());
+  const [smartProvider] = useState(() => new SmartProvider());
+  const [fallbackInfo, setFallbackInfo] = useState<{from: string; to: string; reason: string} | null>(null);
   
   useEffect(() => {
     runWizard();
   }, []);
 
   async function runWizard() {
+    let lockRelease: (() => void) | undefined;
+    
     try {
-      // Step 1: Check if this is a git repo
+      // Step 0: Acquire lock to prevent concurrent gitpulse instances
       setStep('check');
+      const lockResult = await lockfile.acquire();
+      if (!lockResult.acquired) {
+        setError(`GitPulse is already running in another terminal.\n\n${lockResult.error}`);
+        setStep('error');
+        return;
+      }
+      lockRelease = lockResult.release;
+
+      // Step 1: Check if this is a git repo
       const isRepo = await git.isRepo();
       if (!isRepo) {
         setError('Not a git repository');
@@ -49,7 +70,20 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
         return;
       }
 
-      // Step 2: Check for staged changes, auto-stage if needed
+      // Step 2: Git-Shield - Check for unsafe git states
+      try {
+        await gitShield.assertSafeState();
+      } catch (shieldErr) {
+        if (shieldErr instanceof GitShieldError) {
+          setError(`${shieldErr.message}\n\n${shieldErr.action}`);
+        } else {
+          setError('GitPulse: Unsafe git state detected. Please resolve before continuing.');
+        }
+        setStep('error');
+        return;
+      }
+
+      // Step 3: Check for staged changes, auto-stage if needed
       setStep('analyze');
       const status = await git.getStatus();
 
@@ -75,10 +109,34 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
       const report = await qualityGates.runAllGates(strict);
       setQualityReport(report);
 
+      // Log quality gate results to audit logbook
+      auditLogbook.addEntry({
+        branch: status.branch,
+        qualityScore: report.overallScore,
+        passed: report.passed,
+        criticalIssues: report.criticalIssues,
+        highIssues: report.highIssues,
+        mediumIssues: report.mediumIssues,
+        lowIssues: report.lowIssues,
+        issues: report.gates.flatMap(g => g.issues.map(i => ({
+          severity: i.severity,
+          category: i.category,
+          file: i.file,
+          message: i.message,
+        }))),
+        duration: report.duration,
+      });
+
       // If strict mode and gates failed, stop here
       if (strict && !report.passed) {
         setError(`Quality gates failed. ${report.criticalIssues} critical issues found. Fix before committing.`);
         setStep('error');
+        return;
+      }
+
+      // If not strict mode and gates failed, offer override option
+      if (!strict && !report.passed) {
+        setStep('override-justification');
         return;
       }
 
@@ -92,12 +150,12 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
       const stagedDiff = await git.getStagedDiff();
       setDiff(stagedDiff);
       const config = loadConfig();
-      const aiConfig = getAIProviderConfig();
-
-      const provider = AIProviderFactory.create(config.aiProvider, aiConfig);
 
       const prompt = await buildCommitPrompt(stagedDiff, config.commitStyle, loadedConventions);
-      const response = await provider.generate(prompt);
+      const { result: response, provider, usedFallback } = await smartProvider.generate(prompt, {
+        taskContext: { taskType: 'commit_message', complexity: 'medium', priority: 'balanced' },
+        onFallback: (from, to, reason) => setFallbackInfo({ from, to, reason })
+      });
       
       const parsed = parseCommitSuggestion(response);
       setSuggestion(parsed);
@@ -105,8 +163,19 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
       setStep('review');
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (err instanceof GitShieldError) {
+        setError(`${err.message}\n\n${err.action}`);
+      } else if (err instanceof LockfileError) {
+        setError(`GitPulse is already running in another terminal.\n\n${err.message}`);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
       setStep('error');
+    } finally {
+      // Always release lock, even on errors
+      if (lockRelease) {
+        lockRelease();
+      }
     }
   }
 
@@ -137,6 +206,30 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
         setEditedMessage(prev => prev.slice(0, -1));
       } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
         setEditedMessage(prev => prev + input);
+      }
+    } else if (step === 'override-justification') {
+      if (input === 'o' || input === 'O') {
+        // Start entering justification
+        setOverrideJustification('');
+      } else if (input === 'r' || input === 'R') {
+        // Retry quality gates
+        setStep('quality-gates');
+        retryQualityGates();
+      } else if (key.escape) {
+        // Cancel and exit
+        exit();
+      } else if (overrideJustification !== undefined) {
+        if (key.return && overrideJustification.length > 0) {
+          // Submit override
+          submitOverride(overrideJustification);
+        } else if (key.escape) {
+          // Cancel justification entry
+          setOverrideJustification('');
+        } else if (key.backspace || key.delete) {
+          setOverrideJustification(prev => prev.slice(0, -1));
+        } else if (input && input.length === 1 && !key.ctrl && !key.meta) {
+          setOverrideJustification(prev => prev + input);
+        }
       }
     } else if (step === 'error' || step === 'done') {
       exit();
@@ -170,15 +263,97 @@ export function CommitWizard({ dryRun, edit, strict, lax }: CommitWizardProps) {
     }
   }
 
+  async function retryQualityGates() {
+    try {
+      const report = await qualityGates.runAllGates(strict);
+      setQualityReport(report);
+
+      // Log quality gate results to audit logbook
+      const status = await git.getStatus();
+      const entryId = auditLogbook.addEntry({
+        branch: status.branch,
+        qualityScore: report.overallScore,
+        passed: report.passed,
+        criticalIssues: report.criticalIssues,
+        highIssues: report.highIssues,
+        mediumIssues: report.mediumIssues,
+        lowIssues: report.lowIssues,
+        issues: report.gates.flatMap(g => g.issues.map(i => ({
+          severity: i.severity,
+          category: i.category,
+          file: i.file,
+          message: i.message,
+        }))),
+        duration: report.duration,
+      });
+      setCurrentAuditEntryId(entryId);
+
+      if (report.passed) {
+        // Passed now, continue to generate commit message
+        setStep('analyze');
+        const loadedConventions = await conventionLearner.loadOrAnalyzeConventions();
+        setConventions(loadedConventions);
+        setStep('generate');
+        const stagedDiff = await git.getStagedDiff();
+        setDiff(stagedDiff);
+        const config = loadConfig();
+        const prompt = await buildCommitPrompt(stagedDiff, config.commitStyle, loadedConventions);
+        const { result: response, provider, usedFallback } = await smartProvider.generate(prompt, {
+          taskContext: { taskType: 'commit_message', complexity: 'medium', priority: 'balanced' },
+          onFallback: (from, to, reason) => setFallbackInfo({ from, to, reason })
+        });
+        const parsed = parseCommitSuggestion(response);
+        setSuggestion(parsed);
+        setEditedMessage(parsed.message);
+        setStep('review');
+      } else {
+        // Still failed, show override option again
+        setStep('override-justification');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStep('error');
+    }
+  }
+
+  async function submitOverride(justification: string) {
+    try {
+      // Log override to audit logbook
+      auditLogbook.addOverride(currentAuditEntryId, justification);
+
+      // Continue to generate commit message
+      setStep('analyze');
+      const loadedConventions = await conventionLearner.loadOrAnalyzeConventions();
+      setConventions(loadedConventions);
+      setStep('generate');
+      const stagedDiff = await git.getStagedDiff();
+      setDiff(stagedDiff);
+      const config = loadConfig();
+      const prompt = await buildCommitPrompt(stagedDiff, config.commitStyle, loadedConventions);
+      const { result: response, provider, usedFallback } = await smartProvider.generate(prompt, {
+        taskContext: { taskType: 'commit_message', complexity: 'medium', priority: 'balanced' },
+        onFallback: (from, to, reason) => setFallbackInfo({ from, to, reason })
+      });
+      const parsed = parseCommitSuggestion(response);
+      setSuggestion(parsed);
+      setEditedMessage(parsed.message);
+      setStep('review');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStep('error');
+    }
+  }
+
   async function retryGeneration() {
     try {
       setStep('generate');
       const config = loadConfig();
-      const aiConfig = getAIProviderConfig();
-      const provider = AIProviderFactory.create(config.aiProvider, aiConfig);
 
       const prompt = await buildCommitPrompt(diff, config.commitStyle, conventions || undefined);
-      const response = await provider.generate(prompt);
+      const { result: response, provider, usedFallback } = await smartProvider.generate(prompt, {
+        taskContext: { taskType: 'commit_message', complexity: 'medium', priority: 'balanced' },
+        onFallback: (from, to, reason) => setFallbackInfo({ from, to, reason })
+      });
 
       const parsed = parseCommitSuggestion(response);
       setSuggestion(parsed);
@@ -289,6 +464,15 @@ Respond with a JSON object:
 
   return (
     <Box flexDirection="column">
+      {/* Fallback Notification */}
+      {fallbackInfo && (
+        <Box marginBottom={1}>
+          <Text color="yellow">
+            ⚡ Switched from {fallbackInfo.from} to {fallbackInfo.to} ({fallbackInfo.reason})
+          </Text>
+        </Box>
+      )}
+      
       {step === 'check' && (
         <ChatMessage role="assistant" loading>
           <Spinner text="Checking repository..." />
@@ -304,6 +488,66 @@ Respond with a JSON object:
       {step === 'quality-gates' && (
         <ChatMessage role="assistant" loading>
           <Spinner text="Running quality gates..." />
+        </ChatMessage>
+      )}
+
+      {step === 'override-justification' && qualityReport && (
+        <ChatMessage role="assistant">
+          <Box flexDirection="column">
+            <Text bold color="#FF5555">Quality Gates Failed</Text>
+            <SectionDivider />
+            <Text>Score: {qualityReport.overallScore}%</Text>
+            <Box marginTop={1}>
+              <Text dimColor>Issues: </Text>
+              {qualityReport.criticalIssues > 0 && (
+                <Text color="#FF5555">{qualityReport.criticalIssues} critical </Text>
+              )}
+              {qualityReport.highIssues > 0 && (
+                <Text color="#FFB86C">{qualityReport.highIssues} high </Text>
+              )}
+              {qualityReport.mediumIssues > 0 && (
+                <Text color="#F1FA8C">{qualityReport.mediumIssues} medium </Text>
+              )}
+            </Box>
+            {/* Show actual issues, not just counts */}
+            <Box marginTop={1} flexDirection="column">
+              <Text bold>Issues Found:</Text>
+              {qualityReport.gates.flatMap((gate, gateIdx) => 
+                gate.issues.map((issue, issueIdx) => (
+                  <Box key={`${gate.gateName}-${issueIdx}`} marginTop={1}>
+                    <Text color={
+                      issue.severity === 'critical' ? '#FF5555' :
+                      issue.severity === 'high' ? '#FFB86C' :
+                      issue.severity === 'medium' ? '#F1FA8C' : '#8BE9FD'
+                    }>
+                      • [{issue.severity.toUpperCase()}] {issue.category}
+                    </Text>
+                    <Text dimColor> {issue.file}{issue.line ? `:${issue.line}` : ''}</Text>
+                    <Box marginLeft={2}>
+                      <Text>{issue.message}</Text>
+                    </Box>
+                    {issue.fix && (
+                      <Box marginLeft={2}>
+                        <Text dimColor>Fix: {issue.fix}</Text>
+                      </Box>
+                    )}
+                  </Box>
+                ))
+              )}
+            </Box>
+
+            <Box marginTop={2} flexDirection="column">
+              <Text dimColor>Press [O] to override with justification</Text>
+              <Text dimColor>Press [R] to retry</Text>
+              <Text dimColor>Press [Esc] to cancel</Text>
+            </Box>
+            {overrideJustification && (
+              <Box marginTop={1} flexDirection="column">
+                <Text>Justification: {overrideJustification}</Text>
+                <Text dimColor>Press [Enter] to submit, [Esc] to cancel</Text>
+              </Box>
+            )}
+          </Box>
         </ChatMessage>
       )}
 

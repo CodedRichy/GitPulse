@@ -9,6 +9,7 @@ import { GitOperations } from '../core/git.js';
 import { MODEL_ALIASES, resolveModel } from '../utils/config.js';
 import { getSetting, setSetting } from '../utils/settings.js';
 import { AIProviderFactory } from '../ai/providers.js';
+import { ProviderHealth, getGlobalHealthManager } from '../ai/provider-health.js';
 
 interface RecentActivity {
   type: 'commit' | 'doc' | 'pr' | 'analyze';
@@ -21,16 +22,26 @@ interface WelcomeProps {
 }
 
 const COMMANDS = [
-  { name: 'commit', desc: 'Generate AI commit message', example: 'commit' },
-  { name: 'status', desc: 'View repository status', example: 'status' },
-  { name: 'doc', desc: 'Generate documentation for file', example: 'doc <file>' },
+  { name: 'commit', desc: 'Generate AI commit message with quality gates', example: 'commit [--strict]' },
+  { name: 'status', desc: 'View repository status and health score', example: 'status' },
+  { name: 'doc', desc: 'Generate AI documentation for file', example: 'doc <file>' },
   { name: 'analyze', desc: 'Analyze documentation coverage', example: 'analyze [path]' },
-  { name: 'pr', desc: 'Generate PR description', example: 'pr' },
-  { name: 'explain', desc: 'Explain file history', example: 'explain <file>' },
-  { name: 'model', desc: 'Select AI model', example: 'model' },
-  { name: 'config', desc: 'Configure settings', example: 'config' },
-  { name: 'undo', desc: 'Undo last commit', example: 'undo' },
+  { name: 'explain', desc: 'Explain file history with AI', example: 'explain <file>' },
+  { name: 'pr', desc: 'Generate PR description from commits', example: 'pr [--dry-run]' },
+  { name: 'branch', desc: 'AI-powered branch management', example: 'branch [list|create|switch]' },
+  { name: 'review', desc: 'AI code review with quality analysis', example: 'review [staged|<file>]' },
+  { name: 'resolve', desc: 'AI-assisted merge conflict resolution', example: 'resolve [ai|manual]' },
+  { name: 'test', desc: 'Run tests with coverage analysis', example: 'test [--coverage]' },
+  { name: 'issues', desc: 'Issue tracker integration', example: 'issues [list|show|link]' },
+  { name: 'audit', desc: 'View quality gate audit history', example: 'audit' },
+  { name: 'report', desc: 'Generate compliance report', example: 'report [--period week]' },
+  { name: 'init', desc: 'Initialize GitPulse hooks and config', example: 'init [--force]' },
+  { name: 'mcp', desc: 'Start MCP server for IDE integration', example: 'mcp [start|config]' },
+  { name: 'dashboard', desc: 'Open web dashboard for analytics', example: 'dashboard [--port 3001]' },
+  { name: 'config', desc: 'Configure GitPulse settings', example: 'config [key] [value]' },
+  { name: 'undo', desc: 'Undo last commit safely', example: 'undo [--force]' },
   { name: 'redo', desc: 'Redo last undone commit', example: 'redo' },
+  { name: 'model', desc: 'Select AI model', example: 'model' },
   { name: 'quit', desc: 'Exit GitPulse', example: 'quit' }
 ];
 
@@ -57,6 +68,8 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
   const [repoInfo, setRepoInfo] = useState<{ name: string; branch: string; clean: boolean } | null>(null);
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [dynamicModelOptions, setDynamicModelOptions] = useState(MODEL_OPTIONS);
+  const [providerHealth, setProviderHealth] = useState<ProviderHealth[]>([]);
+  const [fallbackNotice, setFallbackNotice] = useState<{from: string; to: string; reason: string} | null>(null);
   const [tips] = useState([
     'Type / to see all commands',
     'Use /model to switch AI models',
@@ -73,7 +86,55 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
     loadRecentActivity();
     loadRepoInfo();
     loadOllamaModels();
+    loadProviderHealth();
+    
+    // Refresh health every 30 seconds
+    const interval = setInterval(loadProviderHealth, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  async function loadProviderHealth() {
+    const healthManager = getGlobalHealthManager();
+    await healthManager.checkAllHealth();
+    setProviderHealth(healthManager.getAllHealth());
+  }
+
+  function getProviderStatus(modelAlias: string): { healthy: boolean; circuitOpen: boolean; latency: number } {
+    // Map model alias to provider
+    let providerName: string | null = null;
+    
+    if (modelAlias.includes('openrouter') || modelAlias.startsWith('nvidia/') || modelAlias.startsWith('google/gemma')) {
+      providerName = 'openrouter';
+    } else if (modelAlias.includes('groq') || modelAlias.startsWith('llama-') || modelAlias.startsWith('meta-llama')) {
+      providerName = 'groq';
+    } else if (modelAlias.includes('gemini')) {
+      providerName = 'google';
+    } else if (modelAlias.includes('gpt')) {
+      providerName = 'openai';
+    } else if (!modelAlias.includes('/')) {
+      // Assume Ollama for simple model names
+      providerName = 'ollama';
+    }
+
+    if (!providerName) return { healthy: true, circuitOpen: false, latency: 0 };
+
+    const health = providerHealth.find(h => h.name === providerName);
+    if (!health) return { healthy: true, circuitOpen: false, latency: 0 };
+
+    return {
+      healthy: health.available && !health.circuitOpen,
+      circuitOpen: health.circuitOpen,
+      latency: health.averageLatencyMs,
+    };
+  }
+
+  function getHealthIndicator(status: { healthy: boolean; circuitOpen: boolean; latency: number }): string {
+    if (status.circuitOpen) return '🔴'; // Circuit open - failing
+    if (!status.healthy) return '🟡'; // Unhealthy
+    if (status.latency > 5000) return '🐌'; // Slow
+    if (status.latency < 1000) return '⚡'; // Fast
+    return '🟢'; // Normal
+  }
 
   async function loadOllamaModels() {
     try {
@@ -135,6 +196,15 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
   useEffect(() => {
     setSelectedIndex(0);
   }, [input, showCommands]);
+
+  useEffect(() => {
+    if (fallbackNotice) {
+      const timeout = setTimeout(() => {
+        setFallbackNotice(null);
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [fallbackNotice]);
 
   function executeCommand(commandName: string) {
     if (commandName === 'quit') {
@@ -217,7 +287,14 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
         </Box>
         <Box flexDirection="column">
             <Text bold>GitPulse <Text color="gray">v3.0</Text></Text>
-            <Text dimColor>{currentModel.split('/').pop() || currentModel} • {repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'No Repo'}</Text>
+            <Text dimColor>
+              {(() => {
+                const status = getProviderStatus(currentModel);
+                const indicator = getHealthIndicator(status);
+                return `${indicator} ${currentModel.split('/').pop() || currentModel}`;
+              })()} 
+              • {repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'No Repo'}
+            </Text>
             <Text dimColor>{process.cwd()}</Text>
         </Box>
       </Box>
@@ -235,15 +312,32 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
         {/* Model Selector */}
         {showModelSelector ? (
           <Box flexDirection="column" marginBottom={1}>
-            <Text dimColor>Select AI Model:</Text>
-            {dynamicModelOptions.map((option, index) => (
-              <Box key={option.alias}>
-                <Text color={selectedModelIndex === index ? 'white' : 'gray'} bold={selectedModelIndex === index}>
-                  {selectedModelIndex === index ? '❯ ' : '  '}
-                  {option.alias}
-                </Text>
-              </Box>
-            ))}
+            <Text dimColor>Select AI Model (health indicators shown):</Text>
+            {dynamicModelOptions.map((option, index) => {
+              const status = getProviderStatus(option.alias);
+              const indicator = getHealthIndicator(status);
+              const isDisabled = status.circuitOpen;
+              
+              return (
+                <Box key={option.alias}>
+                  <Text 
+                    color={selectedModelIndex === index ? 'white' : isDisabled ? 'red' : 'gray'} 
+                    bold={selectedModelIndex === index}
+                    dimColor={isDisabled}
+                  >
+                    {selectedModelIndex === index ? '❯ ' : '  '}
+                    {indicator} {option.alias}
+                    {status.circuitOpen && ' [unavailable]'}
+                    {!status.circuitOpen && status.latency > 0 && ` (${Math.round(status.latency)}ms)`}
+                  </Text>
+                </Box>
+              );
+            })}
+            <Box marginTop={1}>
+              <Text dimColor>
+                ⚡ Fast | 🟢 Normal | 🐌 Slow | 🟡 Unhealthy | 🔴 Unavailable
+              </Text>
+            </Box>
           </Box>
         ) : (
           <Box flexDirection="column">
@@ -276,7 +370,9 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
             {!showCommands && (
                <Box marginTop={0} flexDirection="row" justifyContent="space-between">
                  <Text dimColor={!showExitWarning} color={showExitWarning ? "yellow" : undefined}>
-                    {showExitWarning ? "(Press Ctrl+C again to quit)" : "Type / for commands or ? for shortcuts"}
+                    {showExitWarning ? "(Press Ctrl+C again to quit)" : 
+                     fallbackNotice ? `⚡ Fallback: ${fallbackNotice.from} → ${fallbackNotice.to}` : 
+                     "Type / for commands or ? for shortcuts"}
                  </Text>
                  <Text dimColor>• {currentModel.split('/').pop() || currentModel} • /model</Text>
                </Box>

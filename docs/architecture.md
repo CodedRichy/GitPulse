@@ -25,7 +25,13 @@ GitPulse v3.1.0 (TypeScript + Ink + MCP)
 │   │   ├── convention-learner.ts # Context-aware intelligence
 │   │   ├── branch-intelligence.ts # Branch management
 │   │   ├── code-review.ts    # Code review automation
-│   │   └── issue-tracker.ts  # Issue tracker integration
+│   │   ├── issue-tracker.ts  # Issue tracker integration
+│   │   ├── git-shield.ts     # Git state detection (Phase 1)
+│   │   ├── lockfile.ts       # Concurrency mutex (Phase 1)
+│   │   ├── gitleaks-bridge.ts # Gitleaks wrapper (Phase 2)
+│   │   ├── audit-logbook.ts  # Audit trail storage (Phase 2)
+│   │   ├── compliance-report.ts # Compliance reports (Phase 3)
+│   │   └── gitpulse-config.ts # Project configuration (YAML/JSON)
 │   ├── mcp/                  # MCP server
 │   │   ├── server.ts         # MCP server with stdio transport
 │   │   └── index.ts          # MCP entry point

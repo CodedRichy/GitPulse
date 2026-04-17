@@ -201,18 +201,46 @@ CREATE TABLE audit_logs (
 **Priority:** Low
 **Effort:** High (1-2 days)
 
-### 4.2 Error Tracking
-**Options:**
-- Sentry (recommended for Next.js)
-- LogRocket
-- Custom logging solution
-
+### 4.2 Error Tracking ✅ COMPLETED
 **Implementation:**
-1. Install SDK
-2. Configure with environment variables
-3. Add error boundaries
-4. Track performance metrics
+1. Installed `@sentry/nextjs` SDK
+2. Configured Sentry for client, server, and edge runtimes:
+   - `sentry.client.config.ts` - Client-side error tracking with session replay
+   - `sentry.server.config.ts` - Server-side error tracking
+   - `sentry.edge.config.ts` - Edge runtime error tracking
+3. Updated `next.config.mjs` with Sentry webpack plugin
+4. Integrated Sentry into existing error boundary component
+5. Added environment variables to `.env.local`
 
+**Features:**
+- Automatic error tracking (client & server)
+- Performance monitoring (10% sample in production)
+- Session replay with privacy masking
+- Source map upload on build
+- Monitoring tunnel route (`/monitoring`) to bypass ad-blockers
+- Filters for common non-actionable errors (network errors, etc.)
+
+**Environment Variables Required:**
+```
+NEXT_PUBLIC_SENTRY_DSN=https://.../sentry.io/...
+SENTRY_DSN=https://.../sentry.io/...
+SENTRY_ORG=your-org-name
+SENTRY_PROJECT=gitpulse-web
+SENTRY_AUTH_TOKEN=sntrys_...
+```
+
+**Files Created:**
+- `sentry.client.config.ts`
+- `sentry.server.config.ts`
+- `sentry.edge.config.ts`
+- `next.config.mjs` (replaced .ts version)
+
+**Files Modified:**
+- `web/components/error-boundary.tsx` - Sentry integration
+- `web/.env.local` - Added Sentry env vars
+- `web/package.json` - Added Sentry dependency
+
+**Status:** Completed
 **Priority:** Low
 **Effort:** Medium (2-3 hours)
 

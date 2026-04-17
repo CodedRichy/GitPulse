@@ -6,6 +6,8 @@ import { mcpCommand } from './mcp.js';
 import { conflictDetectCommand } from './conflict-detect.js';
 import { branchAwarenessCommand } from './branch-awareness.js';
 import { conflictPredictCommand } from './conflict-predict.js';
+import { auditCommand } from './audit.js';
+import { reportCommand } from './report.js';
 
 export { Command, CommandContext, CommandResult, CommandComponentProps, CommandRegistration } from './types.js';
 export {
@@ -24,6 +26,8 @@ export { reviewCommand } from './review.js';
 export { testCommand } from './test.js';
 export { issuesCommand } from './issues.js';
 export { mcpCommand } from './mcp.js';
+export { auditCommand } from './audit.js';
+export { reportCommand } from './report.js';
 
 export function initializeCommands(): void {
   registry.register(initCommand);
@@ -33,6 +37,8 @@ export function initializeCommands(): void {
   registry.register(conflictDetectCommand);
   registry.register(branchAwarenessCommand);
   registry.register(conflictPredictCommand);
+  registry.register(auditCommand);
+  registry.register(reportCommand);
 }
 
 export function getAvailableCommands(): string[] {
