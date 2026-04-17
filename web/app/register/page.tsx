@@ -48,8 +48,25 @@ export default function RegisterPage() {
           </Link>
           <h1 className="text-4xl font-bold tracking-tighter mb-4 uppercase">Initialise_Account</h1>
           <p className="text-stone-500 font-light text-sm tracking-wide">
-            Provision your identity to the security network
+            Create an account to sync CLI telemetry to your cloud dashboard
           </p>
+          <div className="mt-6 p-4 rounded-xl bg-stone-900/50 border border-stone-800 text-left">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 mb-2">With an account you get:</p>
+            <ul className="text-xs text-stone-400 space-y-1.5 font-light">
+              <li className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-emerald-500/50" />
+                Cloud-synced telemetry from your CLI
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-emerald-500/50" />
+                Team analytics and productivity insights
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-emerald-500/50" />
+                API keys for CLI authentication
+              </li>
+            </ul>
+          </div>
         </div>
 
         {error && (

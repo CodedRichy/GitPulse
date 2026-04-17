@@ -18,6 +18,10 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "GitPulse - AI-Powered Git Workflow Assistant",
   description: "Supercharge your workflow with intelligent commit messages, automated documentation, and clean architecture.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
