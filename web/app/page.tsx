@@ -17,19 +17,22 @@ export default function Home() {
         {/* HERO SECTION */}
         <section className="relative pt-64 pb-32 px-6 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            {/* Announcement Badge */}
+            {/* CLI Tool Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              v3.2: Obsidian Identity Released
+              CLI Tool v3.2 — npm install -g gitpulse
             </div>
             
-            <h1 className="text-6xl md:text-[120px] font-bold tracking-tighter leading-[0.85] mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              SAFETY <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-500 to-indigo-500">BY DESIGN.</span>
+            <h1 className="text-5xl md:text-[100px] font-bold tracking-tighter leading-[0.85] mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+              CODE QUALITY <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-500 to-indigo-500">AT THE CLI.</span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-3xl mb-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
-              GitPulse is the intelligent guardrail for code. Secure your repository, enforce team conventions, and generate perfect documentation with state-of-the-art AI.
+            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-3xl mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
+              GitPulse is a CLI tool that enforces code quality before every commit. Quality gates, AI-powered commit messages, and automatic documentation — right in your terminal.
+            </p>
+            <p className="text-sm text-stone-500 font-light mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
+              Web dashboard included for analytics and team management.
             </p>
 
             <div className="flex flex-wrap justify-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
@@ -51,10 +54,10 @@ export default function Home() {
               ) : (
                 <>
                   <Link 
-                    href="/register" 
+                    href="/docs#quick-start" 
                     className="px-10 py-5 rounded-full bg-white text-black hover:bg-emerald-400 hover:text-white transition-all duration-300 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-white/5 active:scale-95"
                   >
-                    Get Started Free
+                    Install CLI
                   </Link>
                   <Link 
                     href="/docs" 
@@ -80,6 +83,43 @@ export default function Home() {
           />
         </section>
 
+        {/* HOW IT WORKS */}
+        <section className="py-24 px-6 bg-zinc-950/50 border-y border-stone-900">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-[12px] font-bold uppercase tracking-[0.3em] text-emerald-500 mb-4">How It Works</h2>
+              <h3 className="text-4xl md:text-5xl font-bold tracking-tight">Install. Commit. Protect.</h3>
+            </div>
+            
+            <div className="grid md:grid-cols-4 gap-8">
+              <WorkflowStep 
+                number="01" 
+                title="Install" 
+                desc="npm install -g gitpulse"
+                detail="Global CLI tool for your terminal"
+              />
+              <WorkflowStep 
+                number="02" 
+                title="Initialize" 
+                desc="pulse init"
+                detail="Installs git hooks in your repo"
+              />
+              <WorkflowStep 
+                number="03" 
+                title="Commit" 
+                desc="git commit"
+                detail="Quality gates run automatically"
+              />
+              <WorkflowStep 
+                number="04" 
+                title="Sync" 
+                desc="pulse dashboard"
+                detail="Web analytics for your team"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* TERMINAL SECTION */}
         <section className="py-24 px-6 relative">
           <div className="max-w-7xl mx-auto flex flex-col items-center">
@@ -87,13 +127,13 @@ export default function Home() {
                 <Terminal />
                 {/* Visual Label */}
                 <div className="absolute -right-8 top-1/2 transform -rotate-90 origin-right text-[10px] font-mono font-bold tracking-[0.5em] text-emerald-900/40 uppercase">
-                  Safety_Protocol_Active
+                  CLI_Quality_Guardian
                 </div>
              </div>
           </div>
         </section>
 
-        {/* LATEST RELEASES (Differentiated from Anthropic) */}
+        {/* LATEST RELEASES */}
         <section className="py-32 px-6 border-t border-stone-900">
           <div className="max-w-7xl mx-auto">
              <div className="flex justify-between items-end mb-16">
@@ -127,18 +167,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FEATURE SHOWCASE (ASIMMETRICAL) */}
+        {/* FEATURE SHOWCASE - CLI FIRST */}
         <section className="py-40 bg-zinc-950/50 grainy">
            <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-32 items-center">
               <div>
-                 <h2 className="text-5xl md:text-7xl font-bold tracking-tighter mb-10">THE AI <br /> GUARDRAIL.</h2>
+                 <h2 className="text-5xl md:text-7xl font-bold tracking-tighter mb-10">CLI-FIRST <br /> QUALITY.</h2>
                  <p className="text-xl text-stone-400 font-light leading-relaxed mb-12">
-                   The future of engineering is AI-assisted, but it needs a supervisor. GitPulse acts as the bridge between raw AI output and production-ready code.
+                   GitPulse lives in your terminal. It hooks into your git workflow and runs quality checks before every commit. No browser required.
                  </p>
                  <div className="space-y-8">
-                    <FeaturePoint title="Convention Enforcement" desc="Keeps your git history clean and professional automatically." />
-                    <FeaturePoint title="Auto-Documentation" desc="Architecture diagrams that update themselves on every PR." />
-                    <FeaturePoint title="Security Gating" desc="Zero-tolerance for hardcoded secrets and common vulnerabilities." />
+                    <FeaturePoint title="Git Hooks Integration" desc="Automatically runs quality gates on every git commit." />
+                    <FeaturePoint title="AI-Powered Commits" desc="Generates professional commit messages from your code changes." />
+                    <FeaturePoint title="Local Analysis" desc="Everything runs on your machine — no code leaves your repo." />
                  </div>
               </div>
               <div className="relative aspect-square glass-panel rounded-3xl overflow-hidden flex items-center justify-center border-stone-800">
@@ -147,7 +187,7 @@ export default function Home() {
                     <div className="w-64 h-64 border border-emerald-500/20 rounded-full animate-[ping_3s_infinite]" />
                     <div className="absolute w-48 h-48 border border-emerald-500/30 rounded-full animate-[ping_2s_infinite]" />
                     <div className="absolute w-32 h-32 bg-emerald-500 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(6,182,212,0.4)]">
-                        <span className="text-white text-4xl">✦</span>
+                        <span className="text-white text-4xl font-mono">&gt;_</span>
                     </div>
                  </div>
               </div>
@@ -183,6 +223,19 @@ function FeaturePoint({ title, desc }: { title: string, desc: string }) {
           <h4 className="font-bold text-lg mb-2">{title}</h4>
           <p className="text-stone-500 text-sm font-light leading-relaxed">{desc}</p>
        </div>
+    </div>
+  );
+}
+
+function WorkflowStep({ number, title, desc, detail }: { number: string, title: string, desc: string, detail: string }) {
+  return (
+    <div className="text-center group">
+      <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
+        <span className="text-emerald-400 font-mono text-lg font-bold">{number}</span>
+      </div>
+      <h4 className="font-bold text-lg mb-2">{title}</h4>
+      <code className="text-emerald-400 text-sm font-mono bg-stone-900 px-2 py-1 rounded">{desc}</code>
+      <p className="text-stone-500 text-sm font-light mt-3">{detail}</p>
     </div>
   );
 }

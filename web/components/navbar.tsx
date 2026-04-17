@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/session";
 
@@ -16,11 +17,19 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-[100] px-6 py-8">
       <div className="max-w-7xl mx-auto flex items-center justify-between glass-panel px-8 py-4 rounded-full border border-stone-800/50 shadow-2xl">
         <div className="flex items-center gap-12">
-          <Link href="/" className="font-bold text-2xl tracking-tighter group flex items-center gap-2">
-            <div className="w-6 h-6 bg-emerald-500 rounded-sm flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-               <span className="text-[10px] text-white underline">P</span>
+          <Link href="/" className="font-bold text-2xl tracking-tighter group flex items-center gap-3">
+            <div className="relative w-8 h-8">
+              <Image
+                src="/GitPulseLogoTransparent.png"
+                alt="GitPulse Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-            Git<span className="text-emerald-400 group-hover:text-white transition-colors">Pulse</span>
+            <span className="hidden sm:inline">
+              Git<span className="text-emerald-400 group-hover:text-white transition-colors">Pulse</span>
+            </span>
           </Link>
           
           <div className="hidden md:flex items-center gap-8">

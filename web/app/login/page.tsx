@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -61,12 +62,23 @@ export default function LoginPage() {
 
       <div className="w-full max-w-[440px] relative">
         <div className="mb-12 text-center">
-          <Link href="/" className="inline-block text-2xl font-bold tracking-tighter mb-10 group">
-             Git<span className="text-emerald-400 group-hover:text-white transition-colors">Pulse</span>
+          <Link href="/" className="inline-block mb-8">
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <Image
+                src="/GitPulseLogo.png"
+                alt="GitPulse Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 uppercase">Identity_Check</h1>
           <p className="text-stone-500 font-light text-sm tracking-wide">
-            Establish a secure connection via GitHub
+            Sign in to view your CLI dashboard and team analytics
+          </p>
+          <p className="mt-3 text-xs text-stone-600 font-light">
+            Requires GitPulse CLI installed locally
           </p>
         </div>
 
