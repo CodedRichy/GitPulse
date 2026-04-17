@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { rateLimit } from '@/lib/rate-limit';
+import { logApiKeyCreated, logApiKeyRevoked } from '@/lib/audit';
 import bcrypt from 'bcryptjs';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -131,6 +132,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create key' }, { status: 500 });
     }
 
+    // Log the API key creation
+    await logApiKeyCreated(request, sessionData.userId, key.id, name);
+
     const response = NextResponse.json({ 
       key: {
         ...key,
@@ -185,6 +189,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Key ID required' }, { status: 400 });
     }
 
+    // Get key name for audit log before revoking
+    const { data: keyData } = await supabase
+      .from('api_keys')
+      .select('name')
+      .eq('id', keyId)
+      .eq('user_id', sessionData.userId)
+      .single();
+
     // Soft delete by setting revoked_at
     const { error } = await supabase
       .from('api_keys')
@@ -196,6 +208,9 @@ export async function DELETE(request: NextRequest) {
       console.error('Failed to revoke API key:', error);
       return NextResponse.json({ error: 'Failed to revoke key' }, { status: 500 });
     }
+
+    // Log the API key revocation
+    await logApiKeyRevoked(request, sessionData.userId, keyId, keyData?.name);
 
     const response = NextResponse.json({ success: true });
     response.headers.set('X-RateLimit-Limit', '10');

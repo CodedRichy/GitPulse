@@ -3,6 +3,35 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { validateEmail } from '@/lib/validation';
 import { rateLimit } from '@/lib/rate-limit';
+import { verifyCsrfToken } from '@/lib/csrf';
+import { logSupportTicketCreated } from '@/lib/audit';
+
+// Verify reCAPTCHA v3 token with Google
+async function verifyRecaptcha(token: string): Promise<{ success: boolean; score?: number; action?: string }> {
+  try {
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey) {
+      console.warn('RECAPTCHA_SECRET_KEY not set, skipping verification');
+      return { success: true, score: 0.9 }; // Allow in dev if not configured
+    }
+
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=${secretKey}&response=${token}`,
+    });
+
+    const data = await response.json();
+    return {
+      success: data.success,
+      score: data.score,
+      action: data.action,
+    };
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return { success: false };
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -86,7 +115,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, email, message, subject = 'General Inquiry' } = body;
+    const { name, email, message, subject = 'General Inquiry', recaptchaToken } = body;
 
     if (!name || !email || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -98,6 +127,34 @@ export async function POST(request: NextRequest) {
 
     if (message.length > 5000) {
       return NextResponse.json({ error: 'Message too long (max 5000 characters)' }, { status: 400 });
+    }
+
+    // Verify CSRF token
+    const csrfToken = request.headers.get('x-csrf-token');
+    const csrfCookie = request.cookies.get('csrf_token')?.value;
+    
+    if (!csrfToken || !csrfCookie) {
+      return NextResponse.json({ error: 'CSRF token missing' }, { status: 403 });
+    }
+    
+    if (!verifyCsrfToken(csrfToken, csrfCookie)) {
+      return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
+    }
+
+    // Verify reCAPTCHA v3 token
+    if (!recaptchaToken) {
+      return NextResponse.json({ error: 'reCAPTCHA verification required' }, { status: 400 });
+    }
+
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+    
+    if (!recaptchaResult.success) {
+      return NextResponse.json({ error: 'reCAPTCHA verification failed. Please try again.' }, { status: 400 });
+    }
+
+    // Check score (v3 returns score 0.0-1.0, 0.5 is Google's recommended threshold)
+    if (recaptchaResult.score !== undefined && recaptchaResult.score < 0.5) {
+      return NextResponse.json({ error: 'Suspicious activity detected. Please try again later.' }, { status: 403 });
     }
 
     // Try to get user ID if authenticated
@@ -129,6 +186,9 @@ export async function POST(request: NextRequest) {
       console.error('Failed to save support ticket:', error);
       return NextResponse.json({ error: 'Failed to submit ticket' }, { status: 500 });
     }
+
+    // Log support ticket creation
+    await logSupportTicketCreated(request, userId, ticket?.id || '', subject);
 
     // In production, you would also:
     // 1. Send email notification to support team

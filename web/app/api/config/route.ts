@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConfig, updateConfig } from '@/lib/telemetry-client';
+import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { rateLimit } from '@/lib/rate-limit';
+import { logConfigUpdated } from '@/lib/audit';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Rate limit: 20 requests per minute per IP
 const limiter = rateLimit({ windowMs: 60 * 1000, maxRequests: 20 });
@@ -24,8 +29,43 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
-    const { config } = await getConfig();
-    return NextResponse.json({ config });
+    // Fetch config from Supabase
+    const { data: userConfig, error } = await supabase
+      .from('user_configs')
+      .select('config')
+      .eq('user_id', sessionData.userId)
+      .single();
+
+    if (error) {
+      // If no config exists, return default config
+      if (error.code === 'PGRST116') {
+        const defaultConfig = {
+          version: 1,
+          tier: 'free',
+          quality_gates: {
+            'security-scan': { enabled: true, severity: 'critical' },
+            'code-smells': { enabled: true, severity: 'high' },
+            'test-coverage': { enabled: true, severity: 'medium' },
+            'documentation': { enabled: true, severity: 'low' },
+          },
+          custom_gates: [],
+          conventions: {
+            commit_style: 'conventional',
+            enforce_scope: false,
+            allowed_types: ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore'],
+            auto_learn: true,
+          },
+          hooks: {
+            pre_commit: true,
+            commit_msg: true,
+          },
+        };
+        return NextResponse.json({ config: defaultConfig });
+      }
+      throw error;
+    }
+
+    return NextResponse.json({ config: userConfig?.config || {} });
   } catch (error) {
     console.error('Config API error:', error);
     return NextResponse.json(
@@ -71,10 +111,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired session' }, { status: 401 });
     }
 
-    const { config } = await getConfig();
+    // Fetch current config to check tier
+    const { data: currentConfig, error: fetchError } = await supabase
+      .from('user_configs')
+      .select('config')
+      .eq('user_id', sessionData.userId)
+      .single();
+
+    const existingConfig = currentConfig?.config || {};
+    const tier = existingConfig.tier || 'free';
 
     // Check tier - only Pro and Team can modify config via API
-    const tier = config.tier || 'free';
     if (tier === 'free') {
       return NextResponse.json(
         { error: 'Config editing requires Pro or Team tier' },
@@ -83,9 +130,36 @@ export async function POST(request: NextRequest) {
     }
 
     const updates = await request.json();
-    await updateConfig(updates);
 
-    const response = NextResponse.json({ success: true });
+    // Merge updates with existing config
+    const mergedConfig = {
+      ...existingConfig,
+      ...updates,
+      version: (existingConfig.version || 1) + 1,
+    };
+
+    // Upsert config to Supabase
+    const { error: upsertError } = await supabase
+      .from('user_configs')
+      .upsert(
+        {
+          user_id: sessionData.userId,
+          config: mergedConfig,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id',
+        }
+      );
+
+    if (upsertError) {
+      throw upsertError;
+    }
+
+    // Log config update
+    await logConfigUpdated(request, sessionData.userId, updates);
+
+    const response = NextResponse.json({ success: true, config: mergedConfig });
     response.headers.set('X-RateLimit-Limit', '20');
     response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
     response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString());

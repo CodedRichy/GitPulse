@@ -134,44 +134,65 @@ export async function getAnalytics(days: number = 30): Promise<{ analytics: Anal
 }
 
 export async function getConfig(): Promise<{ config: any }> {
-  // Mock config for development
-  return {
-    config: {
-      version: 1,
-      tier: 'pro',
-      quality_gates: {
-        'security-scan': { enabled: true, severity: 'critical' },
-        'code-smells': { enabled: true, severity: 'high' },
-        'test-coverage': { enabled: true, severity: 'medium' },
-        'documentation': { enabled: true, severity: 'low' },
-      },
-      custom_gates: [
-        {
-          name: 'no-console-in-src',
-          description: 'No console.log in src directory',
-          pattern: 'console\\.log',
-          severity: 'medium',
-          include: ['src/**/*.{ts,tsx}'],
+  try {
+    const response = await fetch('/api/config', {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch config');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch config from API, falling back to default:', error);
+    // Fallback to default config
+    return {
+      config: {
+        version: 1,
+        tier: 'free',
+        quality_gates: {
+          'security-scan': { enabled: true, severity: 'critical' },
+          'code-smells': { enabled: true, severity: 'high' },
+          'test-coverage': { enabled: true, severity: 'medium' },
+          'documentation': { enabled: true, severity: 'low' },
         },
-      ],
-      conventions: {
-        commit_style: 'conventional',
-        enforce_scope: false,
-        allowed_types: ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore'],
-        auto_learn: true,
+        custom_gates: [],
+        conventions: {
+          commit_style: 'conventional',
+          enforce_scope: false,
+          allowed_types: ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore'],
+          auto_learn: true,
+        },
+        hooks: {
+          pre_commit: true,
+          commit_msg: true,
+        },
       },
-      hooks: {
-        pre_commit: true,
-        commit_msg: true,
-      },
-    },
-  };
+    };
+  }
 }
 
 export async function updateConfig(updates: any): Promise<{ success: boolean }> {
-  // In production, this would call the CLI API to save config
-  console.log('Updating config:', updates);
-  return { success: true };
+  try {
+    const response = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(updates),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update config');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Failed to update config:', error);
+    return { success: false };
+  }
 }
 
 // Cloud telemetry types (from Supabase)
