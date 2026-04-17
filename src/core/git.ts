@@ -1,6 +1,9 @@
 import { simpleGit, SimpleGit, StatusResult } from 'simple-git';
 import { RepoStatus, FileChange, CommitInfo, DiffStats } from './models.js';
 import * as path from 'path';
+import { loggers } from '../utils/logger.js';
+
+const log = loggers.git;
 
 export class GitOperations {
   private git: SimpleGit;
@@ -17,11 +20,12 @@ export class GitOperations {
   async isRepo(): Promise<boolean> {
     try {
       await this.git.status();
+      log.debug('Repository detected', { repoPath: this.repoPath });
       return true;
     } catch (error) {
       // Log error for debugging but still return false
       if (error instanceof Error && !error.message.includes('not a git repository')) {
-        console.warn(`Git error in isRepo(): ${error.message}`);
+        log.warn('Git error in isRepo()', { error: error.message, repoPath: this.repoPath });
       }
       return false;
     }
@@ -31,9 +35,10 @@ export class GitOperations {
    * Get current repository status
    */
   async getStatus(): Promise<RepoStatus> {
+    const startTime = performance.now();
     const status: StatusResult = await this.git.status();
     
-    return {
+    const repoStatus = {
       staged: [...status.staged],
       unstaged: [...status.modified, ...status.deleted].filter((f: string) => !status.staged.includes(f)),
       untracked: [...status.not_added],
@@ -42,6 +47,17 @@ export class GitOperations {
       behind: status.behind || 0,
       isClean: status.isClean()
     };
+
+    const duration = performance.now() - startTime;
+    log.debug('Repository status retrieved', {
+      branch: repoStatus.branch,
+      staged: repoStatus.staged.length,
+      unstaged: repoStatus.unstaged.length,
+      untracked: repoStatus.untracked.length,
+      durationMs: Math.round(duration)
+    });
+
+    return repoStatus;
   }
 
   /**
@@ -162,6 +178,13 @@ export class GitOperations {
   }
 
   /**
+   * Backward-compatible alias for getRecentCommits
+   */
+  async getCommitHistory(limit: number = 20): Promise<CommitInfo[]> {
+    return this.getRecentCommits(limit);
+  }
+
+  /**
    * Stage files
    */
   async stage(files: string[]): Promise<void> {
@@ -203,7 +226,7 @@ export class GitOperations {
    */
   async getRepoRoot(): Promise<string> {
     const result = await this.git.revparse(['--show-toplevel']);
-    return result.trim();
+    return path.normalize(result.trim());
   }
 
   /**

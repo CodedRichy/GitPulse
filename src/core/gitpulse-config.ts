@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
 
 /**
  * Custom quality gate configuration.
@@ -92,11 +93,11 @@ const DEFAULT_CONFIG: GitPulseProjectConfig = {
   },
 };
 
-const CONFIG_FILENAME = 'config.json';
+const CONFIG_FILENAMES = ['config.yml', 'config.yaml', 'config.json'];
 const GITPULSE_DIR = '.gitpulse';
 
 /**
- * Load project config from `.gitpulse/config.json`.
+ * Load project config from `.gitpulse/config.yml`, `.gitpulse/config.yaml`, or `.gitpulse/config.json`.
  * Falls back to defaults if file doesn't exist.
  */
 export function loadProjectConfig(repoRoot?: string): GitPulseProjectConfig {
@@ -105,7 +106,14 @@ export function loadProjectConfig(repoRoot?: string): GitPulseProjectConfig {
   try {
     if (fs.existsSync(configPath)) {
       const raw = fs.readFileSync(configPath, 'utf-8');
-      const parsed = JSON.parse(raw);
+      let parsed: unknown;
+
+      // Parse based on file extension
+      if (configPath.endsWith('.yml') || configPath.endsWith('.yaml')) {
+        parsed = yaml.load(raw);
+      } else {
+        parsed = JSON.parse(raw);
+      }
 
       // Merge with defaults (so new fields get default values)
       return deepMerge(DEFAULT_CONFIG, parsed) as GitPulseProjectConfig;
@@ -225,7 +233,18 @@ export function getDefaultConfig(): GitPulseProjectConfig {
 
 function resolveConfigPath(repoRoot?: string): string {
   const base = repoRoot || process.cwd();
-  return path.join(base, GITPULSE_DIR, CONFIG_FILENAME);
+  const gitpulseDir = path.join(base, GITPULSE_DIR);
+
+  // Check for config files in priority order: yml, yaml, json
+  for (const filename of CONFIG_FILENAMES) {
+    const configPath = path.join(gitpulseDir, filename);
+    if (fs.existsSync(configPath)) {
+      return configPath;
+    }
+  }
+
+  // Default to config.json for new configs
+  return path.join(gitpulseDir, 'config.json');
 }
 
 function deepMerge(target: any, source: any): any {

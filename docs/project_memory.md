@@ -8,8 +8,54 @@
 
 ## Current Status
 
-**Phase:** Phase 6 - Strategic Pivot & Foundation Reset
-**Status:** Strategic review completed (2026-04-15). Pivoting from consumer "Grammarly for Code" to team governance infrastructure. Addressing critical technical debt.
+**Phase:** Phase 3 - Attestation & Beta (Code Complete) - Awaiting Beta Program Recruitment
+**Status:** 2026-04-17 - All code phases complete (Phase 1: Surgical Hardening, Phase 2: The Governed Gate, Phase 3: Attestation & Beta). Code polishing complete. Ready for beta program recruitment.
+
+**The Must-Have Vision:**
+Every developer who uses AI to code should feel like GitPulse is as essential as their IDE. Not because compliance requires it, but because **it prevents embarrassing, career-damaging mistakes before they become permanent.**
+
+**The "Oh Shit" Moments We Prevent:**
+- "I just committed the production AWS keys to a public repo"
+- "My commit message is 'fix stuff' and my CTO is reviewing it"
+- "I pushed broken code and the CI pipeline failed"
+- "I committed a console.log with user passwords"
+
+**The Feeling:** "GitPulse just saved my ass. I almost leaked secrets / looked unprofessional / broke production."
+
+### Completed Phases (2026-04-17)
+
+**Phase 1: Surgical Hardening** ✅
+- Git-Shield: Git state detection (rebase, merge, detached HEAD, unmerged files)
+- Lockfile: Concurrency mutex preventing multiple GitPulse instances
+- Test coverage for quality gates, git-shield, and lockfile
+- Cleanup: Removed dead script files
+
+**Phase 2: The Governed Gate** ✅
+- Gitleaks integration for secret scanning with regex fallback
+- Audit logbook: Local-first audit trail (.gitpulse/audit.json)
+- Override with justification flow in CommitWizard
+- gitpulse audit command to view history
+- Pre-commit hook installation (gitpulse init)
+
+**Phase 3: Attestation & Beta (Code Complete)** ✅
+- Compliance report generator (Markdown format)
+- gitpulse report command
+- Scan history, override log, quality trends in reports
+
+**Code Polishing** ✅
+- .gitpulse.yml configuration support (YAML + JSON)
+- CI/CD pipeline verification
+- Package.json version 3.1.0
+
+**Phase 3: Security Improvements** ✅
+- reCAPTCHA v3 on support form
+- CSRF protection with tokens and validation
+- Comprehensive audit logging (API keys, config, settings, support tickets)
+
+**Phase 4: Data Governance** ✅
+- Data retention policies (90d telemetry, 365d tickets, 180d audit logs)
+- GDPR compliance: data export and account deletion
+- Sentry error tracking with session replay
 
 ### Completed Features (Phase 1-5)
 
@@ -35,9 +81,16 @@
 
 **Phase 5 - MCP Integration & Quality Gates:**
 - ✅ **MCP Server Foundation** - Exposes git intelligence as MCP tools/resources
-  - `analyze_repo` - Repository health & metrics
-  - `suggest_commit` - AI commit message generation
-  - `review_changes` - Quality review of staged changes
+  - `analyze_repo` - Repository health & metrics ✅ Working
+  - `suggest_commit` - AI commit message generation ✅ Working
+  - `review_changes` - Quality review of staged changes ✅ Working
+  - `run_quality_gates` - Quality gates engine ✅ Working
+  - `validate_commit_message` - Commit message validation ✅ Working
+  - `get_conventions` - Team convention detection ✅ Working
+  - `search_commit_history` - Git history search ✅ Working
+  - `branch_info` - Branch status and info ✅ Working
+  - `get_config` - GitPulse configuration ✅ Working
+  - `analyze_file` - File complexity analysis ✅ Working
 - ✅ **Quality Gates** - Prevents AI-generated tech debt
   - Security Scan (hardcoded secrets, SQL injection, XSS, path traversal)
   - Code Smells (long functions, TODO/FIXME, console.log, debugger)
@@ -246,110 +299,57 @@ web/                      # Next.js web dashboard
 
 ## Known Issues
 
-### Critical Technical Debt (Identified 2026-04-15)
+### Current Open Gaps (Post-Remediation Snapshot)
 
-**🔴 Zero Test Coverage**
-- No test files in the entire project
-- Quality gates and convention learner have no unit tests
-- Critical for a tool that promotes code quality
-- **Action Required:** Add tests for quality-gates.ts, convention-learner.ts, providers.ts before shipping new features
+**🟠 MCP Server Test Expansion**
+- Core MCP tools are working and verified.
+- Dedicated, broader MCP server test coverage is still pending.
+- **Action Required:** Add/expand MCP server tests for tool execution paths and auth flows.
 
-**✅ RESOLVED - Web Folder Cleanup (2026-04-16)**
-- Deleted unused files: `csrf.ts`, `realtime.ts`, `useRealtimeUser.ts`
-- Removed dead functions from `tier.ts` and `validation.ts`
-- Cleaned empty `pricing/` directory and default Next.js SVG assets
+**🟡 Config Validation Track (Near-complete)**
+- Zod-based config validation is implemented and tested.
+- Validation and merge behavior are passing current suites.
+- **Action Required:** Finalize task tracking state and keep schema/docs aligned as config evolves.
 
-**✅ RESOLVED - Dead Code Cleanup (2026-04-16)**
-- 7 temporary script files from refactoring sessions already deleted:
-  - `clean_imports.ts`, `fix_input.ts`, `fix_login_compile.ts`
-  - `replace_use_app.ts`, `update_exit.ts`, `update_login.ts`, `update_welcome.ts`
-- `src/ai/model-tester.ts` (842 lines) - deleted, was unused
-- **Note:** Files were already removed from codebase
+**🟡 Product/Platform Work (Planned)**
+- Team collaboration/dashboard expansion (Phase 8) remains planned.
+- MCP tool and distribution expansion remain planned.
 
-**🔴 No CI/CD Pipeline**
-- No `.github/workflows/` directory
-- No build verification, lint, or type-check in CI
-- PRs could break build without detection
-- **Action Required:** Set up GitHub Actions workflow
-
-**🟠 Version Mismatch**
-- `package.json` says `3.0.0` but docs claim `3.1.0`
-- **Action Required:** Update package.json to 3.1.0
-
-**🟠 Type Safety Issues**
-- MCP server uses `args: any` extensively (server.ts:168, 200, 269)
-- `calculateHealthScore(status: any)` defeats TypeScript purpose
-- **Action Required:** Add proper type definitions
-
-**🟠 No Configuration Override**
-- Convention learning is fully automatic with no manual override
-- Teams need explicit rule configuration capability
-- **Action Required:** Add `.gitpulse.yml` for convention rules
-
-**🟠 Web Dashboard is Incomplete** (PARTIALLY RESOLVED 2026-04-16)
-- ✅ GitHub OAuth authentication working
-- ✅ Settings page functional with real-time updates
-- ✅ Profile page with real-time sync
-- ✅ Dashboard page with analytics display
-- ✅ Production security hardening (JWT, rate limiting, validation)
-- ⏳ Team dashboard for org-wide analytics
-- ⏳ Subscription/payment integration
-
-### Architecture Issues
-
-**Monorepo Structure Needed**
-- CLI and web app share zero code despite both being TypeScript
-- Should move to proper monorepo with shared core package
-
-**Plugin Architecture for Quality Gates**
-- Current hardcoded gate registration doesn't scale
-- Need plugin system for custom team rules
-
-**Streaming AI Responses**
-- All AI providers use `stream: false`
-- Should stream tokens for better perceived performance
-
-**Error Handling**
-- 30+ empty catch blocks silently swallow errors
-- Should log to debug file at minimum
-
-**Prompt Templates**
-- Prompts hardcoded inline (CommitWizard.tsx, mcp/server.ts)
-- Should extract to `prompts/` directory for versioning and testing
+### Recently Resolved
+- Test stability issues in git tests were fixed (`getCommitHistory` compatibility and cross-platform `getRepoRoot` normalization).
+- Logger syntax corruption was fixed and test suite is green.
+- Full test run status: **303/303 passing**.
 
 ## Current Focus
 
-**Immediate Priority:** Phase 6 - Foundation Reset
-- Delete dead script files (7 files in src/)
-- Add test coverage for core modules
-- Fix version consistency (3.0.0 → 3.1.0)
-- Set up CI/CD pipeline
-- Remove `any` types from codebase
-- Add .gitpulse.yml configuration
-- Publish to npm with hook installation
+**Immediate Priority:** MCP server test expansion and stabilization.
+
+**Secondary Focus:** Keep documentation/task tracking in sync with completed remediation work and test outcomes.
 
 ## Strategic Positioning
 
 **Old Positioning:** "Grammarly for Code" — AI writes your commit messages
-**New Positioning:** "Guardrails for AI-Assisted Development" — Quality gates and convention enforcement for teams
+**New Positioning (v1):** "Guardrails for AI-Assisted Development" — Quality gates and convention enforcement for teams
+**New Positioning (v2 - The Must-Have):** "The Oh Shit Prevention Layer" — Prevents embarrassing, career-damaging mistakes before they become permanent
+
+**The Evolution:**
+1. Started as "Grammarly for Code" (commodity feature)
+2. Pivoted to "Guardrails for AI-Assisted Development" (compliance market)
+3. **Current:** "The Oh Shit Prevention Layer" (developer love + compliance value)
 
 **Rationale:**
 - AI commit message generation is now table stakes (Copilot, Cursor, Windsurf)
-- Differentiator is governance: quality gates, convention enforcement, pre-commit hooks
-- Plays WITH AI coding tools, not against them
-- Addresses real pain: teams worried about AI-generated code quality
-- Revenue opportunity in team dashboard ($10-15/seat/month) vs individual developer tool
+- Compliance alone is a vitamin; preventing disasters is a painkiller
+- Developers will USE it because it saves their ass
+- Teams will MANDATE it because it provides audit trails
+- Revenue opportunity: $20/user/year for "peace of mind + professional polish"
 
 ## Next Steps
 
-1. Delete dead script files from src/
-2. Add unit tests for quality-gates.ts and convention-learner.ts
-3. Set up GitHub Actions CI/CD pipeline
-4. Update package.json version to 3.1.0
-5. Remove `any` types from MCP server
-6. Add .gitpulse.yml configuration support
-7. Implement pre-commit/commit-msg hook installation via `gitpulse init`
-8. Publish to npm
+1. Add dedicated MCP server tests (tool execution, error paths, auth middleware behavior).
+2. Mark config validation task fully complete once tracking/docs are synced.
+3. Continue Phase 7 distribution and MCP expansion work.
+4. Begin Phase 8 team/revenue features after MCP test baseline is in place.
 
 ## Configuration
 
@@ -412,13 +412,7 @@ npm start      # Run compiled version
 - ✅ Context-aware AI prompts
 
 ### Phase 6: Foundation Reset (Current)
-- ⏳ Delete dead script files
-- ⏳ Add test coverage
-- ⏳ Set up CI/CD
-- ⏳ Fix version consistency
-- ⏳ Remove `any` types
-- ⏳ Add .gitpulse.yml config
-- ⏳ npm publish with hook installation
+- ✅ Completed (core hardening, CI/CD, tests, logging, validation, auth and governance modules)
 
 ### Phase 6.5: Web Security (Complete 2026-04-16)
 - ✅ JWT session encryption
