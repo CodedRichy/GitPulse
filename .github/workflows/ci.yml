@@ -98,7 +98,7 @@ jobs:
           echo "✅ Build verification passed"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-dist
           path: dist/

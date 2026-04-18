@@ -1,5 +1,88 @@
 # GitPulse Development Log
 
+## 2026-04-18 - Code Quality Improvements & Security Fixes
+
+### Dependency Cleanup
+Removed unused dependencies from package.json to reduce bundle size and maintenance burden.
+
+**Removed Dependencies:**
+- chalk (not imported anywhere)
+- dotenv (not imported anywhere)
+- ink-spinner (not imported anywhere)
+- @babel/traverse (not imported anywhere)
+- @types/bcryptjs (not imported anywhere)
+- swr (moved to web/package.json where it's actually used)
+
+**Result:** Reduced from 21 to 15 dependencies in root package.json
+
+### Security Vulnerabilities Fixed
+Ran npm audit and fixed 2 moderate security vulnerabilities.
+
+**Fixed:**
+- follow-redirects <=1.15.11 (leaks Custom Authentication Headers)
+- hono <4.12.14 (HTML injection in hono/jsx SSR)
+
+**Result:** 0 vulnerabilities after npm audit fix
+
+### Codebase Cleanup
+Removed dead code and debug statements from the codebase.
+
+**Files Removed:**
+- web/scratch/ directory (temporary test scripts)
+- web/proxy.ts (unused middleware)
+- src/utils/validation-extended.ts (unused validation functions)
+- src/utils/errors.ts (error classes only used in tests)
+- src/utils/user-messages.ts (only used in tests)
+- src/utils/__tests__/user-messages.test.ts (test file for deleted code)
+
+**Debug Statements Cleaned:**
+- src/core/issue-tracker.ts (removed console.log from linkCommitToIssue)
+- src/components/Login.tsx (removed console.log from Ollama error handler)
+- src/ai/model-tester.ts (removed multiple debug console.log statements)
+
+### Test Coverage Review
+Ran test:ci to identify coverage gaps.
+
+**Files with 0% Coverage:**
+- conflict-detection.ts
+- conflict-prediction.ts
+- issue-tracker.ts
+- models.ts
+- mcp/auth.ts
+- mcp/index.ts
+
+**Low Coverage (<50%):**
+- mcp/tools/get-conventions.ts (27.27%)
+- mcp/tools/quality-gates.ts (38.8%)
+- mcp/tools/review-changes.ts (37.03%)
+- mcp/tools/suggest-commit.ts (29.41%)
+
+### Environment Variable Review
+Documented all environment variable usage across CLI and web codebase.
+
+**CLI Environment Variables:**
+- AI_PROVIDER, COMMIT_STYLE, AUTO_COMMIT
+- OPENROUTER_API_KEY, OLLAMA_HOST, OLLAMA_MODEL
+- GROQ_API_KEY, GOOGLE_API_KEY
+- GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITLAB_CLIENT_ID, GITLAB_CLIENT_SECRET
+- GITPULSE_API_URL, GITPULSE_CONFIG_DIR, MCP_REQUIRE_AUTH
+- LOG_LEVEL, NODE_ENV
+
+**Web Environment Variables:**
+- NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+- JWT_SECRET, LEMON_SQUEEZY_API_KEY, LEMON_SQUEEZY_WEBHOOK_SECRET
+- NEXT_PUBLIC_GITHUB_CLIENT_ID, NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+- REDIS_URL
+
+**Result:** No hardcoded secrets found, all properly referenced
+
+### TypeScript Configuration
+Verified TypeScript strict mode is enabled in tsconfig.json.
+
+**Result:** ✅ Strict mode already enabled
+
+---
+
 ## 2026-04-18 - Next.js 15+ Compatibility & TypeScript Fixes
 
 ### Build Error Resolution
