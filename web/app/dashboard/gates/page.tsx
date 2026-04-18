@@ -50,7 +50,7 @@ export default function GatesPage() {
 
   async function saveConfig() {
     if (!config) return;
-    
+
     const emeraldEdit = canUseFeature(config.tier, 'configEditing');
     if (!emeraldEdit) {
       setMessage('Config editing requires Pro or Team tier');
@@ -59,15 +59,23 @@ export default function GatesPage() {
 
     try {
       setSaving(true);
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('gitpulse_csrf='))
+        ?.split('=')[1];
       const response = await fetch('/api/config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+        },
+        credentials: 'include',
         body: JSON.stringify({
           quality_gates: config.quality_gates,
           custom_gates: config.custom_gates,
         }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to save');
       setMessage('Configuration saved successfully');
       setTimeout(() => setMessage(null), 3000);
