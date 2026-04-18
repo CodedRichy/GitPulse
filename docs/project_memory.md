@@ -9,7 +9,7 @@
 ## Current Status
 
 **Phase:** Phase 9 - Enterprise Readiness & Revenue (Current)
-**Status:** 2026-04-18 - Phase 6-8 complete. Team API endpoints implemented (/api/teams/[id]/settings, /api/teams/[id]/members). Enterprise roadmap established based on Claude Code Audit. Target: $50k MRR path by Month 6.
+**Status:** 2026-04-18 - Phase 9.1 complete (Enterprise Foundation), Phase 9.2 in progress (Team Dashboard). Team API endpoints implemented (/api/teams/[id]/settings, /api/teams/[id]/members), Lemon Squeezy billing live, Next.js 15+ compatibility complete. Target: $50k MRR path by Month 6.
 
 **The Must-Have Vision:**
 Every developer who uses AI to code should feel like GitPulse is as essential as their IDE. Not because compliance requires it, but because **it prevents embarrassing, career-damaging mistakes before they become permanent.**
@@ -42,6 +42,15 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
   - src/components/Login.tsx
   - src/ai/model-tester.ts (multiple debug statements removed)
 - Note: Intentional console.log statements in CLI output (dashboard.ts, init.ts) and testing utilities (model-tester.ts contest output) were preserved
+
+**Code Quality Improvements (2026-04-18)** ✅
+- Removed unused dependencies from package.json: chalk, dotenv, ink-spinner, @babel/traverse, @types/bcryptjs, swr
+- Fixed 2 moderate security vulnerabilities (follow-redirects, hono) via npm audit fix
+- Verified TypeScript strict mode is enabled in tsconfig.json
+- Reviewed test coverage: identified 0% coverage in conflict-detection.ts, conflict-prediction.ts, issue-tracker.ts, models.ts, mcp/auth.ts, mcp/index.ts
+- Reviewed environment variable usage: documented all env vars across CLI and web codebase (no hardcoded secrets found)
+- Note: swr moved from root to web/package.json where it's actually used
+- See docs/dev_log.md for detailed code quality improvements entry
 
 **Phase 2: The Governed Gate** ✅
 - Gitleaks integration for secret scanning with regex fallback
@@ -462,39 +471,44 @@ npm start      # Run compiled version
 ### Phase 8: Documentation & Audit Response (Complete)
 - ✅ Claude Code Audit completed (2026-04-18)
 - ✅ Implementation Plan v9 created
-- ✅ Pricing Strategy updated to $25/dev/month Pro tier
+- ✅ Lemon Squeezy billing integration live (₹1,799/$19 Pro, ₹9,199/$99 Team)
+- ✅ Next.js 15+ compatibility fixes
+- ✅ Web App Security Audit completed (20 vulnerabilities identified)
 - ✅ Documentation comprehensively updated
 
 ### Phase 9: Enterprise Readiness & Revenue (Current)
 **Timeline:** 6 months (April - October 2026)
 **Target:** $50k MRR path, venture-fundable metrics
 
-**Phase 9.1: Enterprise Foundation (Month 1)**
+**Phase 9.1: Enterprise Foundation (Month 1) ✅ Complete**
 - Team schema and RBAC API
 - CLI team support
 - Organization management
+- Lemon Squeezy billing integration
+- Next.js 15+ compatibility
 
-**Phase 9.2: Team Dashboard (Month 2)**
+**Phase 9.2: Team Dashboard (Month 2) 🔄 In Progress**
 - Team analytics and compliance exports
 - Enterprise features
 - Admin controls
+- Team management UI components
 
-**Phase 9.3: Security Hardening (Month 2-3)**
+**Phase 9.3: Security Hardening (Month 2-3) ⏳ Planned**
 - Field-level encryption
 - Distributed locks
 - Audit immutability
 
-**Phase 9.4: New Pricing Model (Month 3)**
-- $25/dev/month Pro tier
-- $2k-5k Enterprise tiers
-- Sales flow implementation
+**Phase 9.4: New Pricing Model (Month 3) ⏳ Planned**
+- $19/dev/month Pro tier (live)
+- $99/month Team tier (live)
+- Enterprise sales flow
 
-**Phase 9.5: Distribution (Month 4-5)**
+**Phase 9.5: Distribution (Month 4-5) ⏳ Planned**
 - GitHub Marketplace
 - AI tool partnerships
 - Content marketing
 
-**Phase 9.6: Scale Prep (Month 6)**
+**Phase 9.6: Scale Prep (Month 6) ⏳ Planned**
 - Performance optimization
 - Monitoring setup
 - 99.9% uptime target
@@ -504,37 +518,43 @@ npm start      # Run compiled version
 - 5+ Pro customers
 - 1+ Enterprise conversation
 
-## Pricing Strategy (Updated 2026-04-17)
+## Pricing Strategy (Updated 2026-04-18)
 
-Based on "Business-Critical Guardian" positioning and Claude Code Audit recommendations:
+**Implemented via Lemon Squeezy billing integration (April 18, 2026)**
 
-### Current Pricing (Phase 9 Transition)
+### Current Live Pricing
 
-**Hobbyist Tier** - $0
+**Hobbyist Tier** - ₹0 / $0 per month
 - Individual developers (local-first)
 - Standard quality gates
 - Local audit logbook
+- Community support
 
-**Pro Tier** - $25/dev/month (New Phase 9 Pricing)
+**Pro Tier** - ₹1,799 / $19 per month
 - Unlimited repositories
 - All quality gates
+- Custom quality gates (up to 5)
 - Convention learning
 - Cloud sync
 - Priority support
+- AI style learning
+- Context-aware intelligence
 
-**Team Tier** - $2,000-5,000/month (Enterprise)
-- Volume pricing for 10+ developers
-- Team dashboard
-- Shared conventions
-- Admin controls
-- Compliance exports
-- SSO & audit logs
+**Team Tier** - ₹9,199 / $99 per month (Flat Fee)
+- Up to 10 contributors included
+- Team Registry Management
+- Compliance Exports
+- Organization Analytics
+- SSO Identity Isolation
+- Unlimited custom quality gates
+- Team sync capabilities
 
-### Pricing Psychology (Phase 9)
-- **Positioning:** $25/month anchors against AI coding assistants (Copilot $10-19)
-- **Enterprise Value:** $2k-5k for team security and compliance
-- **Revenue Target:** $50k MRR path by Month 6
-- **Conversion Goal:** 500+ free sign-ups, 5+ Pro customers, 1+ Enterprise deal
+### Pricing Psychology
+- **Pro Positioning:** ₹1,799 ($19) positions against AI coding assistants (Copilot $10-19)
+- **Team Value:** Flat fee ₹9,199 ($99) is attractive for small-to-medium teams
+- **Currency:** Indian Rupee pricing with USD equivalent for global market
+- **Revenue Target:** Focus on conversion from free to paid tiers
+- **Implementation:** Live via Lemon Squeezy with automated tax compliance
 
 ## Research
 
