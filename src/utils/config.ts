@@ -2,7 +2,6 @@ import { Config } from '../core/models.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import 'dotenv/config';
 import { getSetting as getSettingsSetting } from './settings.js';
 
 export const CONFIG_DIR = path.join(os.homedir(), '.gitpulse');
