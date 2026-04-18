@@ -17,10 +17,11 @@
 - [x] Team analytics page (`/dashboard/teams/[id]/analytics`)
 - [x] Team members page (`/dashboard/teams/[id]/members`)
 - [x] Team settings page (`/dashboard/teams/[id]/settings`)
-- [ ] Wire up API endpoints to real data
-- [ ] Add charts to analytics page
-- [ ] Implement member invite flow
-- [ ] Connect settings to backend
+- [x] Wire up SWR hooks to API endpoints
+- [ ] Implement `/api/teams/[id]/analytics` endpoint
+- [ ] Add real charts to analytics page
+- [ ] Test member invite/remove flows
+- [ ] Test settings save functionality
 
 ## Immediate Next Actions
 

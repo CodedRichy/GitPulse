@@ -9,11 +9,11 @@ import { useSession } from '@/lib/session';
 import useSWR from 'swr';
 import type { Team, TeamMemberWithUser } from '@/lib/team-types';
 
-interface TeamData {
-  team: Team;
-  members: TeamMemberWithUser[];
-  currentMember: TeamMemberWithUser;
-}
+// API response includes myRole and team_members directly on team object
+type TeamWithMembers = Team & {
+  myRole: string;
+  team_members: TeamMemberWithUser[];
+};
 
 function TeamLayoutContent({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -21,7 +21,7 @@ function TeamLayoutContent({ children }: { children: React.ReactNode }) {
   const teamId = params.id as string;
   const { user } = useSession();
 
-  const { data, isLoading } = useSWR<TeamData>(
+  const { data, isLoading } = useSWR<TeamWithMembers>(
     `/api/teams/${teamId}`,
     (url) => fetch(url, { credentials: 'include' }).then(r => r.json()),
     { refreshInterval: 30000 }
@@ -57,7 +57,8 @@ function TeamLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const { team, currentMember } = data;
+  const team = data;
+  const members = team.team_members || [];
 
   return (
     <div className="min-h-screen bg-[#09090B] text-[#FAFAFA] grainy">
