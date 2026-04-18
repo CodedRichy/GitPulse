@@ -80,6 +80,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Checkout API Route Error:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
