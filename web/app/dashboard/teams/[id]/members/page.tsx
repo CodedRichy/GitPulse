@@ -5,11 +5,16 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import type { TeamMemberWithUser, TeamMemberRole, Team } from '@/lib/team-types';
 import { hasPermission } from '@/lib/team-types';
+import { useSession } from '@/lib/session';
 
-interface TeamMembersData {
-  team: Team;
+interface MembersApiResponse {
   members: TeamMemberWithUser[];
-  currentMember: TeamMemberWithUser;
+  myRole: TeamMemberRole;
+}
+
+interface TeamApiResponse extends Team {
+  myRole: TeamMemberRole;
+  team_members: TeamMemberWithUser[];
 }
 
 const ROLES: { id: TeamMemberRole; label: string; description: string }[] = [
@@ -22,15 +27,26 @@ const ROLES: { id: TeamMemberRole; label: string; description: string }[] = [
 export default function TeamMembersPage() {
   const params = useParams();
   const teamId = params.id as string;
+  const { user } = useSession();
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamMemberRole>('developer');
   const [isInviting, setIsInviting] = useState(false);
 
-  const { data, error, mutate } = useSWR<TeamMembersData>(
+  const { data: teamData } = useSWR<TeamApiResponse>(
     `/api/teams/${teamId}`,
     (url) => fetch(url, { credentials: 'include' }).then(r => r.json()),
     { refreshInterval: 30000 }
   );
+
+  const { data: membersData, error, mutate } = useSWR<MembersApiResponse>(
+    `/api/teams/${teamId}/members`,
+    (url) => fetch(url, { credentials: 'include' }).then(r => r.json()),
+    { refreshInterval: 30000 }
+  );
+
+  const team = teamData;
+  const members = membersData?.members || [];
+  const myRole = membersData?.myRole || 'viewer';
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +104,7 @@ export default function TeamMembersPage() {
     }
   };
 
-  if (!data) {
+  if (!membersData || !teamData) {
     return (
       <div className="flex items-center justify-center py-20 font-mono text-emerald-500 animate-pulse">
         <span className="tracking-[0.3em] uppercase">Loading_Members</span>
@@ -96,10 +112,9 @@ export default function TeamMembersPage() {
     );
   }
 
-  const { team, members, currentMember } = data;
-  const canInvite = hasPermission(currentMember.role, 'inviteMembers');
-  const canRemove = hasPermission(currentMember.role, 'removeMembers');
-  const canUpdateRoles = hasPermission(currentMember.role, 'updateRoles');
+  const canInvite = hasPermission(myRole, 'inviteMembers');
+  const canRemove = hasPermission(myRole, 'removeMembers');
+  const canUpdateRoles = hasPermission(myRole, 'updateRoles');
 
   return (
     <div className="space-y-8">
@@ -120,7 +135,7 @@ export default function TeamMembersPage() {
               onChange={(e) => setInviteRole(e.target.value as TeamMemberRole)}
               className="px-4 py-3 bg-stone-900 border border-stone-800 rounded-xl text-sm focus:border-emerald-500 focus:outline-none"
             >
-              {ROLES.filter(r => r.id !== 'admin' || currentMember.role === 'admin').map((role) => (
+              {ROLES.filter(r => r.id !== 'admin' || myRole === 'admin').map((role) => (
                 <option key={role.id} value={role.id}>{role.label}</option>
               ))}
             </select>
@@ -133,7 +148,7 @@ export default function TeamMembersPage() {
             </button>
           </form>
           <p className="text-stone-500 text-xs mt-4">
-            {team.seats_used} / {team.seats} seats used
+            {team?.seats_used || 0} / {team?.seats || 0} seats used
           </p>
         </div>
       )}
@@ -169,7 +184,7 @@ export default function TeamMembersPage() {
               </div>
 
               <div className="flex items-center gap-4">
-                {canUpdateRoles && member.id !== currentMember.id ? (
+                {canUpdateRoles && member.user.id !== user?.id ? (
                   <select
                     value={member.role}
                     onChange={(e) => handleUpdateRole(member.id, e.target.value as TeamMemberRole)}
@@ -189,7 +204,7 @@ export default function TeamMembersPage() {
                   </span>
                 )}
 
-                {canRemove && member.id !== currentMember.id && (
+                {canRemove && member.user.id !== teamData.owner_id && (
                   <button
                     onClick={() => handleRemove(member.id)}
                     className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"

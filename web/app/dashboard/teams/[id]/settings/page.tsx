@@ -3,13 +3,16 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import useSWR from 'swr';
-import type { Team, TeamSettings, QualityGatePolicy } from '@/lib/team-types';
+import type { Team, TeamSettings, QualityGatePolicy, TeamMemberRole } from '@/lib/team-types';
 import { hasPermission } from '@/lib/team-types';
 
-interface TeamSettingsData {
-  team: Team;
+interface SettingsApiResponse {
   settings: TeamSettings;
-  currentMember: { role: string };
+}
+
+interface TeamApiResponse extends Team {
+  myRole: TeamMemberRole;
+  team_members: Array<{ id: string; user_id: string; role: string; status: string }>;
 }
 
 const QUALITY_GATES = [
@@ -26,23 +29,33 @@ export default function TeamSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data, mutate } = useSWR<TeamSettingsData>(
+  const { data: teamData } = useSWR<TeamApiResponse>(
+    `/api/teams/${teamId}`,
+    (url) => fetch(url, { credentials: 'include' }).then(r => r.json()),
+    { refreshInterval: 30000 }
+  );
+
+  const { data: settingsData, mutate } = useSWR<SettingsApiResponse>(
     `/api/teams/${teamId}/settings`,
     (url) => fetch(url, { credentials: 'include' }).then(r => r.json()),
     { refreshInterval: 30000 }
   );
 
+  const team = teamData;
+  const myRole = teamData?.myRole || 'viewer';
+  const settings = settingsData?.settings;
+
   const [formData, setFormData] = useState<Partial<TeamSettings> & { name?: string; description?: string }>({});
 
   // Initialize form when data loads
-  if (data && !formData.name) {
+  if (teamData && settingsData && !formData.name) {
     setFormData({
-      name: data.team.name,
-      description: data.team.description || '',
-      quality_gate_policies: data.settings.quality_gate_policies,
-      enforce_policies: data.settings.enforce_policies,
-      allow_override: data.settings.allow_override,
-      require_justification: data.settings.require_justification,
+      name: teamData.name,
+      description: teamData.description || '',
+      quality_gate_policies: settingsData.settings.quality_gate_policies,
+      enforce_policies: settingsData.settings.enforce_policies,
+      allow_override: settingsData.settings.allow_override,
+      require_justification: settingsData.settings.require_justification,
     });
   }
 
@@ -50,7 +63,7 @@ export default function TeamSettingsPage() {
     setIsSaving(true);
     try {
       // Update team details
-      if (formData.name !== data?.team.name || formData.description !== data?.team.description) {
+      if (formData.name !== teamData?.name || formData.description !== teamData?.description) {
         await fetch(`/api/teams/${teamId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -115,7 +128,7 @@ export default function TeamSettingsPage() {
     });
   };
 
-  if (!data) {
+  if (!teamData || !settingsData) {
     return (
       <div className="flex items-center justify-center py-20 font-mono text-emerald-500 animate-pulse">
         <span className="tracking-[0.3em] uppercase">Loading_Settings</span>
@@ -123,9 +136,8 @@ export default function TeamSettingsPage() {
     );
   }
 
-  const { team, currentMember } = data;
-  const canEdit = hasPermission(currentMember.role as any, 'editSettings');
-  const canDelete = hasPermission(currentMember.role as any, 'deleteTeam');
+  const canEdit = hasPermission(myRole, 'editSettings');
+  const canDelete = hasPermission(myRole, 'deleteTeam');
 
   return (
     <div className="space-y-8">

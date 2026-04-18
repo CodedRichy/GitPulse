@@ -15,37 +15,31 @@ export default function Home() {
 
       <main>
         {/* HERO SECTION */}
-        <section className="relative pt-64 pb-32 px-6 overflow-hidden">
+        <section className="relative pt-48 pb-32 px-6 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col items-center text-center">
-            {/* CLI Tool Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              CLI Tool v0.1 — npm install -g gitpulse
-            </div>
-            
-            <h1 className="text-5xl md:text-[100px] font-bold tracking-tighter leading-[0.85] mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              CODE QUALITY <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-500 to-indigo-500">AT THE CLI.</span>
+            <h1 className="text-5xl md:text-[90px] font-bold tracking-tighter leading-[0.9] mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+              STOP SHIPPING <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-500 to-indigo-500">BROKEN CODE.</span>
             </h1>
-            
-            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-3xl mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
-              GitPulse is a CLI tool that enforces code quality before every commit. Quality gates, AI-powered commit messages, and automatic documentation — right in your terminal.
+
+            <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-3xl mb-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-400">
+              Quality gates that catch secrets, SQL injection, and critical bugs before they reach production. Works with Cursor, Copilot, Claude Code, and any AI coding assistant.
             </p>
             <p className="text-sm text-stone-500 font-light mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
-              Web dashboard included for analytics and team management.
+              Free for individuals. Teams start at $99/month.
             </p>
 
             <div className="flex flex-wrap justify-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
               {isAuthenticated ? (
                 <>
-                  <Link 
-                    href="/dashboard" 
+                  <Link
+                    href="/dashboard"
                     className="px-10 py-5 rounded-full bg-white text-black hover:bg-emerald-400 hover:text-white transition-all duration-300 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-white/5 active:scale-95"
                   >
                     Go to Dashboard
                   </Link>
-                  <Link 
-                    href="/profile" 
+                  <Link
+                    href="/profile"
                     className="px-10 py-5 rounded-full glass-panel text-white hover:bg-stone-800 transition-all font-bold uppercase tracking-widest text-sm"
                   >
                     View Profile
@@ -53,17 +47,17 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <Link 
-                    href="/docs#quick-start" 
+                  <Link
+                    href="/docs#quick-start"
                     className="px-10 py-5 rounded-full bg-white text-black hover:bg-emerald-400 hover:text-white transition-all duration-300 font-bold uppercase tracking-widest text-sm shadow-2xl shadow-white/5 active:scale-95"
                   >
                     Install CLI
                   </Link>
-                  <Link 
-                    href="/docs" 
+                  <Link
+                    href="/docs"
                     className="px-10 py-5 rounded-full glass-panel text-white hover:bg-stone-800 transition-all font-bold uppercase tracking-widest text-sm"
                   >
-                    View Documentation
+                    How It Works
                   </Link>
                 </>
               )}
@@ -72,11 +66,40 @@ export default function Home() {
 
           {/* BACKGROUND DECORATIONS */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[600px] bg-emerald-500/10 blur-[160px] rounded-full -z-10 animate-pulse duration-[10s]" />
-          
+
           {/* SAFETY GRID */}
           <div
             className="absolute inset-x-0 bottom-0 h-64 opacity-20 -z-10 bg-[radial-gradient(circle_at_1px_1px,rgba(34,211,238,0.2)_1px,transparent_0)] [background-size:40px_40px]"
           />
+        </section>
+
+        {/* PROBLEM SECTION */}
+        <section className="py-24 px-6 bg-zinc-950/50 border-y border-stone-900">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-[12px] font-bold uppercase tracking-[0.3em] text-red-500 mb-4">The Problems We Prevent</h2>
+              <h3 className="text-4xl md:text-5xl font-bold tracking-tight">The "Oh Shit" Moments</h3>
+            </div>
+
+            <div className="space-y-6">
+              <ProblemCard
+                title="Anthropic leaked Claude Code's entire source code via npm package (March 2026)"
+                desc="512,000+ lines of code exposed through source maps. GitPulse blocks build artifacts before they're published."
+              />
+              <ProblemCard
+                title="AWS engineer published passwords, keys, and customer data to public GitHub (2020)"
+                desc="954MB of credentials exposed in 5 hours. GitPulse detects secrets before they leave your machine."
+              />
+              <ProblemCard
+                title="Travis CI exposed thousands of GitHub, AWS, and Docker tokens in build logs"
+                desc="CI/CD tokens leaked twice in one year. GitPulse scans CI configs for hardcoded tokens."
+              />
+              <ProblemCard
+                title="Your team commits secrets, broken code, and embarrassing messages"
+                desc="GitPulse prevents all of this before it reaches your repo. Security without slowing you down."
+              />
+            </div>
+          </div>
         </section>
 
         {/* HOW IT WORKS */}
@@ -233,6 +256,24 @@ function WorkflowStep({ number, title, desc, detail }: { number: string, title: 
       <h4 className="font-bold text-lg mb-2">{title}</h4>
       <code className="text-emerald-400 text-sm font-mono bg-stone-900 px-2 py-1 rounded">{desc}</code>
       <p className="text-stone-500 text-sm font-light mt-3">{detail}</p>
+    </div>
+  );
+}
+
+function ProblemCard({ title, desc }: { title: string, desc: string }) {
+  return (
+    <div className="glass-panel p-8 rounded-2xl border border-stone-800 hover:border-red-500/30 transition-all duration-300">
+      <div className="flex gap-4">
+        <div className="w-12 h-12 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 flex items-center justify-center flex-shrink-0">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <h4 className="font-bold text-lg mb-2 text-red-400">{title}</h4>
+          <p className="text-stone-400 font-light leading-relaxed">{desc}</p>
+        </div>
+      </div>
     </div>
   );
 }

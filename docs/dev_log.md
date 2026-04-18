@@ -1,5 +1,58 @@
 # GitPulse Development Log
 
+## 2026-04-18 - SWR Hooks Wired to API Endpoints
+
+### Connected Team Dashboard to Backend
+All Phase 9.2 Team Dashboard pages now fetch real data from API endpoints.
+
+**API Integration Completed:**
+- `/dashboard/teams` → `GET /api/teams` - Lists user's teams with myRole
+- `/dashboard/teams/[id]` → `GET /api/teams/[id]` - Team details with team_members
+- `/dashboard/teams/[id]/members` → `GET /api/teams/[id]/members` - Member list with myRole
+- `/dashboard/teams/[id]/settings` → `GET /api/teams/[id]/settings` + `GET /api/teams/[id]`
+
+**Implementation Details:**
+- All SWR hooks configured with `credentials: 'include'` for session cookies
+- 30-second refresh interval for near real-time updates
+- TypeScript interfaces updated to match actual API response shapes:
+  - `{ teams: Team[] }` from `/api/teams`
+  - `Team & { myRole, team_members[] }` from `/api/teams/[id]`
+  - `{ members[], myRole }` from `/api/teams/[id]/members`
+  - `{ settings }` from `/api/teams/[id]/settings`
+- RBAC permissions now use `myRole` field from API responses
+- Member invite/remove/role-change API calls configured
+- Settings save uses PATCH to both team and settings endpoints
+
+**Pending:**
+- `/api/teams/[id]/analytics` endpoint for analytics page
+- Real stats data (currently placeholder values in overview)
+- Real recent activity feed
+
+---
+
+## 2026-04-18 - GitHub OAuth Email Fetching
+
+### Primary Email from GitHub
+Fixed GitHub OAuth to fetch primary email address from `/user/emails` endpoint instead of relying on public email from `/user` endpoint.
+
+**Issue:**
+- GitHub's `/user` endpoint only returns public emails
+- Private emails (which most users have) were not being captured
+- Billing checkout failed due to missing/invalid email
+
+**Fix:**
+- Added fetch to `https://api.github.com/user/emails` endpoint
+- Extract primary email from emails array
+- Use primary email for user creation/update in database
+- OAuth scope `user:email` was already configured in login flow
+
+**Files Modified:**
+- `web/app/api/auth/github/route.ts` - Added /user/emails fetch, use primaryEmail
+
+**Result:** Users authenticating via GitHub will now have their primary email captured for billing and notifications.
+
+---
+
 ## 2026-04-18 - Netlify Deployment Fixes
 
 ### Environment Variables Configuration

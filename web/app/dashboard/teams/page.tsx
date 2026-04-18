@@ -13,9 +13,10 @@ interface Team {
   name: string;
   slug: string;
   description: string | null;
-  avatar_url: string | null;
-  role: 'admin' | 'lead' | 'developer';
-  member_count: number;
+  logo_url: string | null;
+  myRole: 'admin' | 'lead' | 'developer' | 'viewer';
+  seats_used: number;
+  tier: 'free' | 'pro' | 'enterprise';
   created_at: string;
 }
 
@@ -60,9 +61,10 @@ function TeamsListContent() {
     const styles = {
       admin: 'bg-red-500/10 text-red-500 border-red-500/20',
       lead: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-      developer: 'bg-stone-800 text-stone-400 border-stone-700'
+      developer: 'bg-stone-800 text-stone-400 border-stone-700',
+      viewer: 'bg-stone-800 text-stone-500 border-stone-700'
     };
-    const labels = { admin: 'Admin', lead: 'Lead', developer: 'Developer' };
+    const labels = { admin: 'Admin', lead: 'Lead', developer: 'Developer', viewer: 'Viewer' };
     return (
       <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${styles[role as keyof typeof styles]}`}>
         {labels[role as keyof typeof labels]}
@@ -128,9 +130,9 @@ function TeamsListContent() {
               >
                 <div className="flex items-start justify-between mb-6">
                   <div className="flex items-center gap-4">
-                    {team.avatar_url ? (
+                    {team.logo_url ? (
                       <img
-                        src={team.avatar_url}
+                        src={team.logo_url}
                         alt={team.name}
                         className="w-14 h-14 rounded-2xl object-cover border border-stone-800"
                       />
@@ -146,7 +148,7 @@ function TeamsListContent() {
                       <p className="text-[10px] font-mono text-stone-500 uppercase tracking-wider">@{team.slug}</p>
                     </div>
                   </div>
-                  {getRoleBadge(team.role)}
+                  {getRoleBadge(team.myRole)}
                 </div>
 
                 {team.description && (
@@ -160,7 +162,7 @@ function TeamsListContent() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    <span className="font-mono">{team.member_count} members</span>
+                    <span className="font-mono">{team.seats_used} members</span>
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1">
                     View <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
