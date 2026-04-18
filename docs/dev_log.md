@@ -1,5 +1,57 @@
 # GitPulse Development Log
 
+## 2026-04-18 - Netlify Deployment Fixes
+
+### Environment Variables Configuration
+Fixed Netlify deployment issues by configuring environment variables properly.
+
+**Issues Resolved:**
+- Missing `LEMON_SQUEEZY_API_KEY` in Netlify environment variables
+- Secrets scanning blocking build due to `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` in bundle
+- Billing checkout failing with invalid email error
+
+**Fixes Applied:**
+- Added all Lemon Squeezy environment variables to Netlify dashboard (Production context)
+- Added `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` to `SECRETS_SCAN_OMIT_KEYS` in netlify.toml
+- Added email validation in billing checkout route to provide better error messages
+- Fixed deprecated `actions/upload-artifact@v3` to `v4` in CI workflow
+
+**Files Modified:**
+- `web/netlify.toml` - Added reCAPTCHA site key to secrets scan omit list
+- `web/app/api/billing/checkout/route.ts` - Added email validation
+- `.github/workflows/ci.yml` - Updated actions/upload-artifact to v4
+
+**Build Status:** ✅ Netlify deployment successful
+
+---
+
+## 2026-04-18 - Phase 9.2 Team Dashboard UI (Page Shells)
+
+### Created Team Dashboard Pages
+Built all Phase 9.2 Team Dashboard page shells matching the existing GitPulse dark UI aesthetic.
+
+**Files Created:**
+- `web/app/dashboard/teams/page.tsx` - Team list page with role badges (admin/lead/developer)
+- `web/app/dashboard/teams/[id]/layout.tsx` - Tab navigation layout with team header
+- `web/app/dashboard/teams/[id]/page.tsx` - Team overview with stats and recent activity
+- `web/app/dashboard/teams/[id]/analytics/page.tsx` - Analytics dashboard with trends
+- `web/app/dashboard/teams/[id]/members/page.tsx` - Member management with RBAC controls
+- `web/app/dashboard/teams/[id]/settings/page.tsx` - Team settings with gate policies
+
+**UI Pattern Consistency:**
+- Uses existing `glass-panel`, `grainy` Tailwind classes
+- Inline SVG icons (no lucide-react dependency)
+- GitPulse dark theme: `#09090B` background, emerald accents
+- `useSWR` for data fetching (matching dashboard pattern)
+- `useSession` for auth state
+- Navbar/Footer components from existing codebase
+
+**Page Shells Ready For:**
+- API endpoint integration (all SWR hooks configured)
+- Member invite/remove functionality
+- Quality gate policy editing
+- Team deletion flow
+
 ## 2026-04-18 - Code Quality Improvements & Security Fixes
 
 ### Dependency Cleanup
