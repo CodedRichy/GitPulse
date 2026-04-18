@@ -75,7 +75,7 @@ export function getCsrfCookieOptions(): {
   return {
     name: CSRF_COOKIE_NAME,
     value: token,
-    httpOnly: false, // Must be accessible by JavaScript for forms
+    httpOnly: true, // Security: Prevent XSS from reading CSRF token
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: 24 * 60 * 60, // 24 hours

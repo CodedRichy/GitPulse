@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/jwt';
 import { validateEmail, validateUUID } from '@/lib/validation';
 import { logSettingsUpdated } from '@/lib/audit';
 import { rateLimit } from '@/lib/rate-limit';
+import { validateCsrf, csrfErrorResponse } from '@/lib/csrf-middleware';
 import { apiLoggers } from '@/lib/logger';
 
 const log = apiLoggers.settings;
@@ -45,18 +46,27 @@ export async function GET(request: NextRequest) {
   try {
     log.logRequest('GET', '/api/settings', { ip });
     
-    const session = request.headers.get('authorization')?.replace('Bearer ', '');
-    if (!session) {
+    // Security: Verify JWT token instead of parsing as JSON
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       const duration = performance.now() - startTime;
       log.logResponse(401, '/api/settings', Math.round(duration), { ip, reason: 'unauthorized' });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userData = JSON.parse(session);
+    const token = authHeader.substring(7);
+    const sessionData = verifyToken(token);
+    
+    if (!sessionData || !sessionData.userId) {
+      const duration = performance.now() - startTime;
+      log.logResponse(401, '/api/settings', Math.round(duration), { ip, reason: 'invalid_token' });
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
     const { data: user, error } = await supabase
       .from('users')
       .select('email, github_login, name, avatar_url, tier')
-      .eq('id', userData.user.id)
+      .eq('id', sessionData.userId)
       .single();
 
     if (error) throw error;
@@ -64,7 +74,7 @@ export async function GET(request: NextRequest) {
     const duration = performance.now() - startTime;
     log.logResponse(200, '/api/settings', Math.round(duration), { 
       ip, 
-      userId: userData.user.id 
+      userId: sessionData.userId 
     });
 
     return NextResponse.json({
@@ -76,7 +86,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const duration = performance.now() - startTime;
-    log.error('Settings API GET error', error, {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    log.error('Settings API GET error', errorMsg, {
       ip,
       durationMs: Math.round(duration)
     });
@@ -92,6 +103,12 @@ export async function GET(request: NextRequest) {
  * Updates user settings.
  */
 export async function POST(request: NextRequest) {
+  // Security: Validate CSRF token for state-changing operation
+  const csrfResult = validateCsrf(request);
+  if (!csrfResult.valid) {
+    return csrfErrorResponse(csrfResult.error!);
+  }
+
   const startTime = performance.now();
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
 
@@ -174,7 +191,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const duration = performance.now() - startTime;
-    log.error('Settings API POST error', error, {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    log.error('Settings API POST error', errorMsg, {
       ip,
       durationMs: Math.round(duration)
     });

@@ -1,259 +1,115 @@
-# GitPulse — Commercial-Grade Hardening Action Plan
+# GitPulse — Phase 9 Enterprise Action Plan
 
 **Start Date**: April 18, 2026  
-**Target Production**: June 1, 2026 (6 weeks)  
-**Current Status**: All Phases Complete (Beta Ready)  
+**Target Enterprise Launch**: October 2026 (6 months)  
+**Current Status**: Phase 9.1 Complete (Team Foundation), Phase 9.2 In Progress  
 
 ---
 
-## ✅ COMPLETED (This Session)
+## ✅ PHASE 9.1 COMPLETE (Month 1 - Team Foundation)
 
-### 1. **Error Handling System** ✅
-📄 **File**: `src/utils/errors.ts`  
-📝 **What**: Structured error classes replacing generic strings  
-🎯 **Impact**: Enables proper error recovery and user guidance
+### 1. **Team Database Schema** ✅
+📄 **Migration**: `web/supabase/migrations/20250418_team_schema_phase9.sql`  
+📝 **What**: 4 new tables (teams, team_members, team_settings, team_audit_logs)  
+🎯 **Impact**: Multi-tenant data model for enterprise
 
-### 2. **Input Validation** ✅
-📄 **File**: `src/utils/validation-extended.ts`  
-📝 **What**: Comprehensive sanitization for all user inputs  
-🎯 **Impact**: Blocks injection attacks, path traversal
+### 2. **RBAC API Routes** ✅
+📄 **Files**: `web/app/api/teams/**/*.ts`  
+📝 **What**: Full team management API with role-based access  
+🎯 **Impact**: Web dashboard can manage teams programmatically
 
-### 3. **MCP Authentication** ✅
-📄 **File**: `src/mcp/auth.ts`  
-📝 **What**: Token-based authentication for MCP server  
-🎯 **Impact**: Secures git access from external agents
+### 3. **CLI Team Support** ✅
+📄 **Files**: `src/commands/teams.ts`, `src/commands/config.ts`  
+📝 **What**: `gitpulse teams` and `gitpulse config --set-api-key` commands  
+🎯 **Impact**: CLI syncs to team workspaces via API key
 
-### 4. **CI/CD Pipeline** ✅
-📄 **File**: `.github/workflows/ci.yml`  
-📝 **What**: Comprehensive GitHub Actions workflow  
-🎯 **Impact**: Automated validation on every PR/push
+### 4. **Cloud-Sync Team Detection** ✅
+📄 **File**: `src/core/cloud-sync.ts`  
+📝 **What**: Auto-detects personal vs team API keys (`gp_team_*` prefix)  
+🎯 **Impact**: Telemetry routes to correct workspace
 
-### 5. **Git Tests** ✅
-📄 **File**: `src/core/__tests__/git.test.ts`  
-📝 **What**: 20+ new tests for git operations  
-🎯 **Impact**: Catches git bugs before production
-
----
-
-## ⏳ NEXT UP (This Week - 20-30 hours)
-
-### 6. **Structured Logging** ⏳
-📄 **Files to Create**: `src/utils/logger.ts`  
-📝 **What to Do**:
-```typescript
-// src/utils/logger.ts
-import winston from 'winston';
-
-export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'gitpulse' },
-  transports: [
-    new winston.transports.File({ 
-      filename: '.gitpulse/error.log', 
-      level: 'error' 
-    }),
-    new winston.transports.File({ 
-      filename: '.gitpulse/gitpulse.log' 
-    }),
-  ],
-});
-```
-
-📋 **Then Apply To** (30+ files):
-- `src/index.ts` - Replace console calls
-- `src/core/git.ts` - Replace console calls
-- `src/core/quality-gates.ts` - Replace console calls
-- All command handlers
-- Web API routes
-
-⏱️ **Effort**: 6-8 hours  
-✅ **Acceptance**: `logger.info()`, `logger.error()` used everywhere instead of `console`
+### 5. **Sentry Removal** ✅
+📄 **Files**: Removed from `web/`  
+📝 **What**: Removed `@sentry/nextjs` (cost: $312/year → $0)  
+🎯 **Impact**: Pre-revenue cost optimization, console logging sufficient
 
 ---
 
-### 7. **Web API Rate Limiting** ⏳
-📄 **Files to Create**: `web/app/api/middleware/rateLimit.ts`  
-📝 **What to Do**:
-```typescript
-// web/app/api/middleware/rateLimit.ts
-import { NextRequest, NextResponse } from 'next/server';
+## ⏳ PHASE 9.2 IN PROGRESS (Month 2 - Team Dashboard)
 
-export function withRateLimit(
-  handler: (req: NextRequest) => Promise<NextResponse>,
-  limit = { requests: 10, window: 60000 }
-) {
-  return async (req: NextRequest) => {
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const key = `${ip}:${req.nextUrl.pathname}`;
-    
-    // Use existing rate-limit.ts (but it's not used!)
-    const { success } = rateLimit(key, limit.requests, limit.window);
-    
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded' },
-        { status: 429, headers: { 'Retry-After': '60' } }
-      );
-    }
-    
-    return handler(req);
-  };
-}
-```
+### 6. **Team List Page** ⏳
+📄 **File**: `web/app/dashboard/teams/page.tsx`  
+📝 **What**: Cards showing all teams user belongs to  
+🎯 **Impact**: Users can see and switch between teams
 
-📋 **Apply To** (8 routes):
-- `web/app/api/analytics/runs/route.ts`
-- `web/app/api/analytics/stats/route.ts`
-- `web/app/api/telemetry/route.ts`
-- `web/app/api/keys/route.ts`
-- `web/app/api/settings/route.ts`
-- `web/app/api/health/route.ts`
-- All other API routes
+### 7. **Team Detail Page** ⏳
+📄 **File**: `web/app/dashboard/teams/[id]/page.tsx`  
+📝 **What**: Team overview with tabs (Overview | Analytics | Members | Settings)  
+🎯 **Impact**: Central team workspace
 
-⏱️ **Effort**: 2-3 hours  
-✅ **Acceptance**: All API routes return 429 when rate limited
+### 8. **Team Analytics** ⏳
+📄 **File**: `web/app/dashboard/teams/[id]/analytics/page.tsx`  
+📝 **What**: Quality score trends, issue charts, repo rankings  
+🎯 **Impact**: CTOs can see team code quality
+
+### 9. **Team Members Management** ⏳
+📄 **File**: `web/app/dashboard/teams/[id]/members/page.tsx`  
+📝 **What**: Invite, remove, change roles (admin/lead/developer)  
+🎯 **Impact**: Self-service team administration
+
+### 10. **Team Settings Page** ⏳
+📄 **File**: `web/app/dashboard/teams/[id]/settings/page.tsx`  
+📝 **What**: Configure team name, conventions, policies, danger zone  
+🎯 **Impact**: Team customization and configuration
 
 ---
 
-### 8. **Auth Module Tests** ⏳
-📄 **File to Create**: `src/core/__tests__/auth.test.ts`  
-📝 **What to Test**:
-```typescript
-describe('Auth', () => {
-  describe('JWT Token Generation', () => {
-    it('generates valid JWT tokens');
-    it('includes expiration in token');
-    it('validates token signature');
-  });
-  
-  describe('Token Refresh', () => {
-    it('refreshes expired tokens');
-    it('returns new tokens');
-  });
-  
-  describe('Token Validation', () => {
-    it('accepts valid tokens');
-    it('rejects expired tokens');
-    it('rejects tampered tokens');
-  });
-});
-```
+## 📅 PHASE 9.3-9.6 (Months 3-6)
 
-⏱️ **Effort**: 4-5 hours  
-✅ **Acceptance**: 8+ new tests, all passing
+| Phase | Focus | Duration | Key Deliverables |
+|-------|-------|----------|------------------|
+| 9.3 | Security Hardening | Month 2-3 | Field-level encryption, distributed locks, audit immutability |
+| 9.4 | New Pricing Model | Month 3 | $25/dev/month Pro, $2k-5k Enterprise, Lemon Squeezy checkout |
+| 9.5 | Distribution | Month 4-5 | GitHub Marketplace, AI tool partnerships, content marketing |
+| 9.6 | Scale Prep | Month 6 | Performance optimization, monitoring, 99.9% uptime |
 
 ---
 
-## 📅 WEEK 2 (May 20-27)
+## 🔍 Phase 9 Roadmap
 
-### 9. **User-Friendly Error Messages**
-📄 **File to Create**: `src/utils/error-messages.ts`  
-```typescript
-export const ERROR_MESSAGES = {
-  'GIT_NOT_REPO': {
-    title: 'Not a git repository',
-    action: 'Run `git init` or navigate to a git project'
-  },
-  'NO_STAGED_FILES': {
-    title: 'No files to commit',
-    action: 'Use `git add` to stage files'
-  },
-  // ... 30+ more errors
-};
-```
+| Phase | Focus | Duration | Status |
+|-------|-------|----------|--------|
+| 9.1 | Enterprise Foundation | Month 1 | ✅ Complete |
+| 9.2 | Team Dashboard | Month 2 | ⏳ In Progress |
+| 9.3 | Security Hardening | Month 2-3 | ⏳ Planned |
+| 9.4 | New Pricing Model | Month 3 | ⏳ Planned |
+| 9.5 | Distribution | Month 4-5 | ⏳ Planned |
+| 9.6 | Scale Prep | Month 6 | ⏳ Planned |
 
-⏱️ **Effort**: 4-5 hours
+**Kill Criteria (Month 6):**
+- ❌ 500+ free sign-ups → Rethink messaging
+- ❌ 5+ Pro customers → Product-market fit is fake
+- ❌ 1+ Enterprise conversation → Pivot to SMB
 
 ---
 
-### 10. **Config Validation with Zod**
-📄 **File to Modify**: `src/utils/config.ts` (or create config-schema.ts)  
-```typescript
-import { z } from 'zod';
+## 🎯 Phase 9 Monthly Summary
 
-export const GitPulseConfigSchema = z.object({
-  aiProvider: z.enum(['ollama', 'openrouter', 'openai']),
-  ollamaHost: z.string().url().optional(),
-  ollamaModel: z.string().min(1).optional(),
-  strict: z.boolean().default(false),
-});
+### Month 1 (Complete) - Enterprise Foundation
+- **Done**: Team schema (4 tables), RBAC API (6 routes), CLI team support (2 commands)
+- **Impact**: Multi-tenant architecture, team API keys, telemetry routing
+- **Status**: ✅ Database deployed, API tested, CLI integrated
 
-// Usage:
-const config = GitPulseConfigSchema.parse(loadedConfig);
-```
+### Month 2 (In Progress) - Team Dashboard
+- **Goal**: Team list page, team detail with tabs, analytics, member management
+- **Hours**: 40-60
+- **Focus**: Web UI for team workspaces
+- **Target**: Functional team dashboard
 
-⏱️ **Effort**: 3-4 hours
-
----
-
-### 11. **MCP Server Tests**
-📄 **File to Create**: `src/mcp/__tests__/server.test.ts`  
-
-⏱️ **Effort**: 6-8 hours
-
----
-
-## 📅 WEEK 3-4 (May 27 - June 10)
-
-### 12. **Performance: File Hash Caching**
-- Add caching to quality-gates to avoid rescanning unchanged files
-- ⏱️ **Effort**: 3-4 hours
-
-### 13. **Web Component Tests**
-- Set up testing library + write tests for key components
-- ⏱️ **Effort**: 10-15 hours
-
-### 14. **Docker Support**
-- Create Dockerfile + docker-compose.yml
-- ⏱️ **Effort**: 6-8 hours
-
-### 15. **Documentation**
-- Deployment guide
-- Architecture decision records
-- API documentation
-- ⏱️ **Effort**: 8-10 hours
-
----
-
-## 🔍 Current Gaps (Not Yet Started)
-
-| Gap | Severity | Status | ETA |
-|-----|----------|--------|-----|
-| Structured Logging | HIGH | ⏳ Week 1 | 6-8h |
-| Rate Limiting | HIGH | ⏳ Week 1 | 2-3h |
-| Config Validation | MEDIUM | ⏳ Week 2 | 3-4h |
-| Web Offline Support | MEDIUM | ⏳ Week 3 | 4-5h |
-| Docker Setup | MEDIUM | ⏳ Week 3 | 6-8h |
-| Mobile Responsiveness | MEDIUM | ⏳ Week 3 | 6-8h |
-| Git-Shield Feature | LOW | ⏳ Week 3 | 8-10h |
-| Lockfile Feature | LOW | ⏳ Week 3 | 6-8h |
-
----
-
-## 🎯 Weekly Summary
-
-### Week 1 (This Week)
-- **Goal**: Add logging, rate limiting, auth tests
-- **Hours**: 20-30
-- **Coverage Target**: 50%
-- **Security**: 70% of critical issues fixed
-
-### Week 2
-- **Goal**: Better errors, config validation, more tests
-- **Hours**: 20-25
-- **Coverage Target**: 65%
-- **Security**: 85% of critical issues fixed
-
-### Week 3-4
-- **Goal**: Performance, web tests, Docker, documentation
-- **Hours**: 30-40
-- **Coverage Target**: 75%+
-- **Security**: 95% fixed, ready for audit
+### Months 3-6 (Planned)
+- Month 3: Security hardening + New pricing ($25 Pro, Lemon Squeezy)
+- Month 4-5: Distribution (GitHub Marketplace, partnerships)
+- Month 6: Scale prep (99.9% uptime, performance)
 
 ---
 
@@ -283,30 +139,31 @@ npm audit          # Dependency scan
 
 ---
 
-## 📈 Success Metrics
+## 📈 Phase 9 Success Metrics
 
-Track these weekly:
-
-| Metric | Week 1 | Week 2 | Week 3 | Week 4 | Target |
-|--------|--------|--------|--------|--------|--------|
-| Test Coverage | 45% | 55% | 65% | 75% | 75%+ |
-| Critical Issues | 2 | 1 | 0 | 0 | 0 |
-| High Issues | 5 | 3 | 1 | 0 | 0 |
-| CI Pass Rate | 100% | 100% | 100% | 100% | 100% |
-| Docs Completeness | 30% | 50% | 75% | 100% | 100% |
+| Metric | Month 1 | Month 2 | Month 3 | Month 6 | Target |
+|--------|---------|---------|---------|---------|--------|
+| Team Schema | ✅ | ✅ | ✅ | ✅ | Multi-tenant |
+| RBAC API | ✅ | ✅ | ✅ | ✅ | Role-based access |
+| Team Dashboard | ⏳ | ✅ | ✅ | ✅ | Full UI |
+| Pricing Live | ⏳ | ⏳ | ✅ | ✅ | $25 Pro tier |
+| Free Signups | - | - | 100+ | 500+ | 500+ |
+| Pro Customers | - | - | 2+ | 5+ | 5+ |
+| Enterprise Leads | - | - | 0 | 1+ | 1+ |
 
 ---
 
-## 🎉 Done When:
+## 🎉 Phase 9 Done When:
 
-- ✅ All critical security issues fixed
-- ✅ Test coverage >75%
-- ✅ CI/CD pipeline all green
-- ✅ Comprehensive error handling throughout
-- ✅ All user-facing error messages friendly
-- ✅ Docker support working
-- ✅ Documentation complete
-- ✅ No unresolved GitHub issues tagged "production"
+- ✅ Team schema with RLS policies deployed
+- ✅ RBAC API with role enforcement working
+- ✅ CLI team sync functional
+- ✅ Team dashboard UI complete
+- ✅ New pricing model live ($25 Pro)
+- ✅ Lemon Squeezy checkout integrated
+- ✅ 500+ free sign-ups or pivot decision
+- ✅ 5+ Pro customers or product-market fit review
+- ✅ 1+ Enterprise conversation or SMB pivot
 
 ---
 
@@ -323,11 +180,11 @@ Track these weekly:
 
 ## 📞 Questions?
 
-- **Error handling question?** → See `src/utils/errors.ts`
-- **Validation question?** → See `src/utils/validation-extended.ts`
-- **Auth question?** → See `src/mcp/auth.ts`
-- **CI/CD question?** → See `.github/workflows/ci.yml`
-- **Test question?** → See `src/core/__tests__/*`
+- **Team schema question?** → See `web/supabase/migrations/20250418_team_schema_phase9.sql`
+- **RBAC API question?** → See `web/app/api/teams/**/*.ts`
+- **CLI team command?** → See `src/commands/teams.ts`
+- **Cloud sync question?** → See `src/core/cloud-sync.ts`
+- **Team types question?** → See `web/lib/team-types.ts`
 
 All files have comprehensive JSDoc comments!
 

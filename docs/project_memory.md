@@ -8,8 +8,8 @@
 
 ## Current Status
 
-**Phase:** Phase 3 - Attestation & Beta (Code Complete) - Awaiting Beta Program Recruitment
-**Status:** 2026-04-17 - All code phases complete (Phase 1: Surgical Hardening, Phase 2: The Governed Gate, Phase 3: Attestation & Beta). Code polishing complete. Ready for beta program recruitment.
+**Phase:** Phase 9 - Enterprise Readiness & Revenue (Current)
+**Status:** 2026-04-18 - Phase 6-8 complete. Team API endpoints implemented (/api/teams/[id]/settings, /api/teams/[id]/members). Enterprise roadmap established based on Claude Code Audit. Target: $50k MRR path by Month 6.
 
 **The Must-Have Vision:**
 Every developer who uses AI to code should feel like GitPulse is as essential as their IDE. Not because compliance requires it, but because **it prevents embarrassing, career-damaging mistakes before they become permanent.**
@@ -29,6 +29,19 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 - Lockfile: Concurrency mutex preventing multiple GitPulse instances
 - Test coverage for quality gates, git-shield, and lockfile
 - Cleanup: Removed dead script files
+
+**Codebase Cleanup (2026-04-18)** ✅
+- Removed web/scratch/ directory (temporary test scripts: verify_signature.js, verify_checkout_connectivity.js)
+- Removed web/proxy.ts (unused middleware not imported anywhere)
+- Removed src/utils/validation-extended.ts (unused validation functions, only used in tests)
+- Removed src/utils/errors.ts (error classes only used in deleted test files)
+- Removed src/utils/user-messages.ts (only used in deleted test files)
+- Removed src/utils/__tests__/user-messages.test.ts (test file for deleted code)
+- Cleaned up debug console.log statements from:
+  - src/core/issue-tracker.ts
+  - src/components/Login.tsx
+  - src/ai/model-tester.ts (multiple debug statements removed)
+- Note: Intentional console.log statements in CLI output (dashboard.ts, init.ts) and testing utilities (model-tester.ts contest output) were preserved
 
 **Phase 2: The Governed Gate** ✅
 - Gitleaks integration for secret scanning with regex fallback
@@ -55,7 +68,7 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 **Phase 4: Data Governance** ✅
 - Data retention policies (90d telemetry, 365d tickets, 180d audit logs)
 - GDPR compliance: data export and account deletion
-- Sentry error tracking with session replay
+- Console logging for errors (Sentry removed - too expensive pre-revenue)
 
 ### Completed Features (Phase 1-5)
 
@@ -74,24 +87,20 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 - ✅ Pre-commit hooks integration
 - ✅ Multi-file context for AI generation
 - ✅ Branch management commands (create, switch, delete, list, rename, suggest)
-- ✅ Conflict resolution assistant with AI
-- ✅ Branch intelligence and AI-powered suggestions
-- ✅ Code review automation with static analysis + AI
-- ✅ Issue tracker integration (GitHub/Linear/Jira)
 
 **Phase 5 - MCP Integration & Quality Gates:**
-- ✅ **MCP Server Foundation** - Exposes git intelligence as MCP tools/resources
-  - `analyze_repo` - Repository health & metrics ✅ Working
-  - `suggest_commit` - AI commit message generation ✅ Working
-  - `review_changes` - Quality review of staged changes ✅ Working
-  - `run_quality_gates` - Quality gates engine ✅ Working
-  - `validate_commit_message` - Commit message validation ✅ Working
-  - `get_conventions` - Team convention detection ✅ Working
-  - `search_commit_history` - Git history search ✅ Working
-  - `branch_info` - Branch status and info ✅ Working
-  - `get_config` - GitPulse configuration ✅ Working
-  - `analyze_file` - File complexity analysis ✅ Working
-- ✅ **Quality Gates** - Prevents AI-generated tech debt
+- **MCP Server Foundation** - Exposes git intelligence as MCP tools/resources (10 total tools)
+  - `analyze_repo` - Repository health & metrics - Working
+  - `suggest_commit` - AI commit message generation - Working
+  - `review_changes` - Quality review of staged changes - Working
+  - `run_quality_gates` - Quality gates engine - Working
+  - `validate_commit_message` - Commit message validation - Working
+  - `get_conventions` - Team convention detection - Working
+  - `search_commit_history` - Git history search - Working
+  - `branch_info` - Branch status and info - Working
+  - `get_config` - GitPulse configuration - Working
+  - `analyze_file` - File complexity analysis - Working
+- **Quality Gates** - Prevents AI-generated tech debt
   - Security Scan (hardcoded secrets, SQL injection, XSS, path traversal)
   - Code Smells (long functions, TODO/FIXME, console.log, debugger)
   - Test Coverage (missing tests for changed files)
@@ -157,15 +166,20 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 - ⏳ Publish to npm with `npx gitpulse init` for hook installation
 
 **Phase 7: Distribution & MCP Expansion**
-- ⏳ GitHub Action for CI quality gate integration
-- ⏳ Expand MCP tools from 3 to 10+ (semantic search, branch naming, PR templates, risk scoring)
-- ⏳ VSCode extension for inline quality gate results
-- ⏳ Convention learning v2 (ML-backed, not heuristic)
+- GitHub Action for CI quality gate integration
+- Expand MCP tools from 3 to 10+ (semantic search, branch naming, PR templates, risk scoring)
+- VSCode extension for inline quality gate results
+- Convention learning v2 (ML-backed, not heuristic)
 
-**Phase 8: Team & Revenue**
-- ⏳ Team dashboard for org-wide convention adherence and quality trends
-- ⏳ Supabase team sync for sharing conventions across members
-- ⏳ Convention marketplace for sharing/importing rule packs
+**Phase 8: Team & Revenue (Complete)**
+- **Lemon Squeezy Integration** - Checkout and Webhook logic for Pro/Team subscriptions
+- **Dynamic Pricing** - $19 Pro and $99 Business-grade flat-fee Team tiers
+- **Tier Logic** - Enforcement of 10-contributor limit for Team tier
+- **Webhook Security** - HMAC SHA256 signature verification for payment events
+- **Team API Endpoints** - /api/teams/[id]/settings and /api/teams/[id]/members routes
+- **RBAC Implementation** - Role-based access control for team operations
+- **Organization Onboarding** - Automated team creation upon purchase
+- **Convention Marketplace** - Share/import rule packs (Planned)
 
 ## Tech Stack
 
@@ -423,10 +437,10 @@ npm start      # Run compiled version
 - ✅ Convention learner for team pattern detection
 - ✅ Context-aware AI prompts
 
-### Phase 6: Foundation Reset (Current)
+### Phase 6: Foundation Reset (Complete)
 - ✅ Completed (core hardening, CI/CD, tests, logging, validation, auth and governance modules)
 
-### Phase 6.5: Web Security (Complete 2026-04-16)
+### Phase 6.5: Web Security (Complete 2026-04-18)
 - ✅ JWT session encryption
 - ✅ Rate limiting on API endpoints
 - ✅ Input validation
@@ -434,75 +448,113 @@ npm start      # Run compiled version
 - ✅ Cookie-based sessions
 - ✅ Health check endpoint
 - ✅ Real-time sync via Supabase Realtime
+- ✅ Security audit completed (20 vulnerabilities identified)
+- ⚠️ Critical issues require fixes: OAuth PKCE, CSRF httpOnly, Settings API auth, API key timing attacks, rate limiting scaling, account deletion confirmation, service role key usage
 
-### Phase 7: Distribution & MCP Expansion (Planned)
-- ⏳ GitHub Action for CI integration
-- ⏳ Expand MCP tools to 10+
-- ⏳ VSCode extension
-- ⏳ Convention learning v2 (ML-backed)
+### Phase 7: Distribution & MCP Expansion (Complete)
+- ✅ GitHub Action v1 for CI integration
+- ✅ Expanded MCP tools to 10 total
+- ✅ PowerShell installer implemented
+- ✅ Smart Provider Health system
+- ⏳ VSCode extension (planned)
+- ⏳ Convention learning v2 (planned)
 
-### Phase 8: Team & Revenue (Planned)
-- ⏳ Team dashboard
-- ⏳ Supabase team sync
-- ⏳ Convention marketplace
+### Phase 8: Documentation & Audit Response (Complete)
+- ✅ Claude Code Audit completed (2026-04-18)
+- ✅ Implementation Plan v9 created
+- ✅ Pricing Strategy updated to $25/dev/month Pro tier
+- ✅ Documentation comprehensively updated
+
+### Phase 9: Enterprise Readiness & Revenue (Current)
+**Timeline:** 6 months (April - October 2026)
+**Target:** $50k MRR path, venture-fundable metrics
+
+**Phase 9.1: Enterprise Foundation (Month 1)**
+- Team schema and RBAC API
+- CLI team support
+- Organization management
+
+**Phase 9.2: Team Dashboard (Month 2)**
+- Team analytics and compliance exports
+- Enterprise features
+- Admin controls
+
+**Phase 9.3: Security Hardening (Month 2-3)**
+- Field-level encryption
+- Distributed locks
+- Audit immutability
+
+**Phase 9.4: New Pricing Model (Month 3)**
+- $25/dev/month Pro tier
+- $2k-5k Enterprise tiers
+- Sales flow implementation
+
+**Phase 9.5: Distribution (Month 4-5)**
+- GitHub Marketplace
+- AI tool partnerships
+- Content marketing
+
+**Phase 9.6: Scale Prep (Month 6)**
+- Performance optimization
+- Monitoring setup
+- 99.9% uptime target
+
+**Kill Criteria (Month 6):**
+- 500+ free sign-ups
+- 5+ Pro customers
+- 1+ Enterprise conversation
 
 ## Pricing Strategy (Updated 2026-04-17)
 
-Based on competitive analysis of code quality tools and AI coding assistants:
+Based on "Business-Critical Guardian" positioning and Claude Code Audit recommendations:
 
-### Competitive Landscape
-| Tool | Pricing | Notes |
-|------|---------|-------|
-| **SonarQube Cloud** | $32/month | Direct competitor for code quality |
-| **GitHub Copilot** | $10/month (individual) | AI coding assistant |
-| **GitHub Copilot Business** | $19/month per user | Enterprise tier |
-| **Cursor Pro** | $20/month | AI coding assistant |
-| **Cursor Business** | $40/month per user | Team tier |
+### Current Pricing (Phase 9 Transition)
 
-### Recommended Pricing Tiers
+**Hobbyist Tier** - $0
+- Individual developers (local-first)
+- Standard quality gates
+- Local audit logbook
 
-**Free Tier** (Essential for user acquisition)
-- Individual developers only
-- Limited to 1-3 repos or 100 commits/month
-- Basic quality gates (security scan only)
-- Local-only (no cloud sync)
+**Pro Tier** - $25/dev/month (New Phase 9 Pricing)
+- Unlimited repositories
+- All quality gates
+- Convention learning
+- Cloud sync
+- Priority support
 
-**Pro Tier** - $10/month ($96/year with annual billing)
-- Unlimited repos
-- All quality gates (security, code smells, test coverage, documentation)
-- Convention learning and team patterns
-- Cloud sync for settings and history
-- Priority email support
-- Positioned competitively against Copilot ($10/month)
+**Team Tier** - $2,000-5,000/month (Enterprise)
+- Volume pricing for 10+ developers
+- Team dashboard
+- Shared conventions
+- Admin controls
+- Compliance exports
+- SSO & audit logs
 
-**Team Tier** - $8/month per user (5+ users, annual billing)
-- Everything in Pro, plus:
-- Team dashboard for org-wide analytics
-- Shared convention rules across team
-- Admin controls and user management
-- Volume discount incentive
-
-**Enterprise** - Custom pricing
-- SSO and SAML integration
-- Audit logs and compliance reports
-- On-premise deployment option
-- Dedicated support and SLAs
-- Custom integrations
-
-### Pricing Psychology
-- **Anchoring:** $10/month feels "less than lunch" to developers
-- **Positioning:** Below SonarQube ($32/month) but valuable enough to charge
-- **Conversion:** SaaS freemium averages 2-3% conversion; free tier is critical
-- **Annual preference:** Better cash flow, reduces churn by ~15-20%
-
-### Revenue Targets
-- Previous: $20/user/year (underpriced)
-- New Pro: $120/user/year (6x increase, still competitive)
-- Team discount: $96/user/year (volume incentive)
+### Pricing Psychology (Phase 9)
+- **Positioning:** $25/month anchors against AI coding assistants (Copilot $10-19)
+- **Enterprise Value:** $2k-5k for team security and compliance
+- **Revenue Target:** $50k MRR path by Month 6
+- **Conversion Goal:** 500+ free sign-ups, 5+ Pro customers, 1+ Enterprise deal
 
 ## Research
 
 Detailed AI model research and benchmarks available in `/docs/research/ai-models.md`
+
+## Future Considerations (Post-Revenue)
+
+Services to add once we have paying customers:
+
+| Service | Cost | Benefit | When to Add |
+|---------|------|---------|-------------|
+| **Sentry** | $26/mo | Error tracking, session replay, performance monitoring | 100+ users or onboarding friction |
+| **LogRocket/Hotjar** | $31/mo | User session recordings | Need UX insights |
+| **Datadog/New Relic** | $15/mo | Infrastructure monitoring | Complex deployments |
+| **Pendo/Amplitude** | Custom | Product analytics | Need funnel optimization |
+
+**Rationale:**
+- Sentry was removed (April 2026) - $312/year before first customer is wasteful
+- Console logs + Vercel analytics sufficient for MVP
+- Revisit when error volume justifies the cost
 
 ## Archived Plans
 

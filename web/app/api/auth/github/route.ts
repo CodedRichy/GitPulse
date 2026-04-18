@@ -125,12 +125,12 @@ async function handleAuth(request: NextRequest, code: string) {
     // Create redirect response and set cookies on it
     const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url), 307);
     
-    // Set auth cookie
+    // Set auth cookie with strict security settings
     redirectResponse.cookies.set('gitpulse_auth', sessionToken, {
       httpOnly: true,
       secure: isSecureCookie,
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
+      sameSite: 'strict', // Security: Changed from 'lax' to 'strict' for better CSRF protection
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds (reduced from 30)
       path: '/',
     });
     

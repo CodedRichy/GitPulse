@@ -92,18 +92,18 @@ export async function DELETE(request: NextRequest) {
 
   const response = NextResponse.json({ success: true });
   
-  // Clear both old and new cookie names
+  // Clear both old and new cookie names with strict security settings
   response.cookies.set('gitpulse_auth', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // Security: Changed from 'lax' to 'strict'
     maxAge: 0,
     path: '/',
   });
   response.cookies.set('gitpulse_session', '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // Security: Changed from 'lax' to 'strict'
     maxAge: 0,
     path: '/',
   });

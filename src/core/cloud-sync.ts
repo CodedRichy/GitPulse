@@ -32,7 +32,7 @@ interface SyncResult {
  * Load sync configuration from .gitpulse/config.json
  * User stores API key locally (like Claude Code stores auth token)
  */
-function loadSyncConfig(repoRoot: string): SyncConfig | null {
+export function loadSyncConfig(repoRoot: string): SyncConfig | null {
   const configPath = join(repoRoot, '.gitpulse', 'config.json');
   
   if (!existsSync(configPath)) {
@@ -204,6 +204,7 @@ export function getCloudSyncStatus(repoRoot: string): {
   available: boolean;
   enabled: boolean;
   message: string;
+  teamContext?: string;
 } {
   const config = loadSyncConfig(repoRoot);
   
@@ -223,9 +224,23 @@ export function getCloudSyncStatus(repoRoot: string): {
     };
   }
 
+  // Detect if this might be a team API key based on key format
+  // Team API keys start with 'gp_team_' (optional convention)
+  const isTeamKey = config.apiKey.startsWith('gp_team_');
+
   return {
     available: true,
     enabled: true,
-    message: 'Cloud sync active',
+    message: isTeamKey ? 'Cloud sync active (team workspace)' : 'Cloud sync active (personal workspace)',
+    teamContext: isTeamKey ? 'team' : 'personal',
   };
+}
+
+/**
+ * Detect if API key is a team key (for routing telemetry)
+ * Note: Actual team detection happens server-side via API key lookup
+ */
+export function isTeamApiKey(repoRoot: string): boolean {
+  const config = loadSyncConfig(repoRoot);
+  return !!config?.apiKey?.startsWith('gp_team_');
 }

@@ -8,6 +8,8 @@ import { branchAwarenessCommand } from './branch-awareness.js';
 import { conflictPredictCommand } from './conflict-predict.js';
 import { auditCommand } from './audit.js';
 import { reportCommand } from './report.js';
+import { teamsCommand } from './teams.js';
+import { configCommand } from './config.js';
 
 export { Command, CommandContext, CommandResult, CommandComponentProps, CommandRegistration } from './types.js';
 export {
@@ -39,6 +41,8 @@ export function initializeCommands(): void {
   registry.register(conflictPredictCommand);
   registry.register(auditCommand);
   registry.register(reportCommand);
+  registry.register(teamsCommand);
+  registry.register(configCommand);
 }
 
 export function getAvailableCommands(): string[] {

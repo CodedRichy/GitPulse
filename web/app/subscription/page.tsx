@@ -1,17 +1,45 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/session';
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import Link from "next/link";
 
 export default function SubscriptionPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState('');
+  const router = useRouter();
+  const { isAuthenticated, isLoading: sessionLoading } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleUpgrade = (tier: string) => {
-    setSelectedTier(tier);
-    setModalOpen(true);
+  const handleUpgrade = async (tier: string) => {
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/subscription');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: tier.toLowerCase() }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to generate checkout');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Upgrade error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,6 +57,12 @@ export default function SubscriptionPage() {
            </Link>
         </div>
 
+        {error && (
+          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-[10px] font-bold uppercase tracking-widest text-center animate-in fade-in slide-in-from-top-2">
+            Error: {error}
+          </div>
+        )}
+
         <div className="grid md:grid-cols-3 gap-8 mb-40">
            <PlanCard 
              tier="Hobbyist"
@@ -36,65 +70,41 @@ export default function SubscriptionPage() {
              current={true}
              features={[
                "Standard Quality Gates",
-               "Local Telemetry Only",
-               "Manual CI Integration",
-               "Community Support"
+               "Local Audit Logbook",
+               "Community Support",
+               "Manual CI Integration"
              ]}
              onUpgrade={() => {}}
+             loading={loading}
            />
            <PlanCard 
-             tier="Professional"
-             price="19"
+             tier="Pro"
+             price="1,799"
              highlighted={true}
              features={[
                "Unlimited Sync Capacity",
                "Custom Quality Gates",
+               "AI style learning",
                "Priority Support",
-               "Native MCP Access",
                "Context-Aware Intelligence"
              ]}
-             onUpgrade={() => handleUpgrade('Professional')}
+             onUpgrade={() => handleUpgrade('Pro')}
+             loading={loading}
            />
            <PlanCard 
-             tier="Business"
-             price="49"
+             tier="Team"
+             price="9,199"
              features={[
+               "Flat fee (up to 10 users)",
                "Team Registry Management",
-               "Network-Wide Analytics",
-               "SSO Identity Isolation",
-               "Dedicated Core Support",
-               "Custom LLM Integration"
+               "Compliance Exports",
+               "Organization Analytics",
+               "SSO Identity Isolation (Phase 9.1)"
              ]}
-             onUpgrade={() => handleUpgrade('Business')}
+             onUpgrade={() => handleUpgrade('Team')}
+             loading={loading}
            />
         </div>
-
-        {/* Coming Soon Modal */}
-        {modalOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
-            <div className="glass-panel p-8 rounded-3xl border-stone-800 max-w-md w-full">
-              <h3 className="text-xl font-bold uppercase tracking-tight mb-4">Tier Upgrade</h3>
-              <p className="text-stone-400 font-light mb-6">
-                {selectedTier} tier is coming soon. Join the waitlist to get early access when we launch paid plans.
-              </p>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setModalOpen(false)}
-                  className="flex-1 py-3 bg-stone-900 text-stone-400 rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-stone-800 transition-all"
-                >
-                  Close
-                </button>
-                <Link 
-                  href="/support"
-                  onClick={() => setModalOpen(false)}
-                  className="flex-1 py-3 bg-emerald-500 text-[#09090B] rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-white transition-all text-center"
-                >
-                  Join Waitlist
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* USAGE METRICS (Technical Dashboard Style) */}
         <div className="glass-panel p-12 rounded-3xl border-stone-800">
@@ -127,13 +137,14 @@ export default function SubscriptionPage() {
   );
 }
 
-function PlanCard({ tier, price, features, highlighted, current, onUpgrade }: { 
+function PlanCard({ tier, price, features, highlighted, current, onUpgrade, loading }: { 
   tier: string, 
   price: string, 
   features: string[], 
   highlighted?: boolean,
   current?: boolean,
-  onUpgrade: () => void
+  onUpgrade: () => void,
+  loading?: boolean
 }) {
   return (
     <div className={`p-10 rounded-3xl flex flex-col h-full border transition-all duration-500 ${
@@ -145,7 +156,7 @@ function PlanCard({ tier, price, features, highlighted, current, onUpgrade }: {
             {current && <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-stone-900 text-stone-500 border border-stone-800 rounded">Current</span>}
          </div>
          <div className="flex items-baseline gap-1 mb-10">
-            <span className="text-4xl font-bold tracking-tighter">${price}</span>
+            <span className="text-4xl font-bold tracking-tighter">₹{price}</span>
             <span className="text-stone-600 text-[10px] font-bold">/MO</span>
          </div>
          <ul className="space-y-4 mb-16">
@@ -159,14 +170,15 @@ function PlanCard({ tier, price, features, highlighted, current, onUpgrade }: {
       </div>
       <button 
         onClick={onUpgrade}
-        disabled={current}
+        disabled={current || loading}
         className={`w-full py-4 rounded-xl font-bold uppercase tracking-[0.2em] text-[10px] transition-all ${
           current ? 'bg-stone-900 text-stone-600 cursor-not-allowed' :
           highlighted ? 'bg-emerald-500 text-[#09090B] hover:bg-white shadow-xl shadow-emerald-500/20' : 
           'bg-white text-black hover:bg-emerald-400 hover:text-white'
-        }`}>
-        {current ? 'Active_Tuned' : highlighted ? 'Upgrade_Terminal' : 'Initialise_Tier'}
+        } disabled:opacity-50`}>
+        {loading ? 'Initializing...' : current ? 'Active_Tuned' : highlighted ? 'Upgrade_Terminal' : 'Initialise_Tier'}
       </button>
     </div>
   );
 }
+

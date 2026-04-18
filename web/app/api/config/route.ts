@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { rateLimit } from '@/lib/rate-limit';
 import { logConfigUpdated } from '@/lib/audit';
+import { validateCsrf, csrfErrorResponse } from '@/lib/csrf-middleware';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -80,6 +81,12 @@ export async function GET(request: NextRequest) {
  * Updates GitPulse configuration.
  */
 export async function POST(request: NextRequest) {
+  // Security: Validate CSRF token for state-changing operation
+  const csrfResult = validateCsrf(request);
+  if (!csrfResult.valid) {
+    return csrfErrorResponse(csrfResult.error!);
+  }
+
   // Rate limiting
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   const rateLimitResult = limiter(ip);

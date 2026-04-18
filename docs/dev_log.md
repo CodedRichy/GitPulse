@@ -1,5 +1,135 @@
 # GitPulse Development Log
 
+## 2026-04-18 - Next.js 15+ Compatibility & TypeScript Fixes
+
+### Build Error Resolution
+Fixed multiple TypeScript and Next.js 15+ compatibility issues preventing successful build.
+
+**Next.js 15+ Async Params Migration:**
+- Updated route handlers to use `params: Promise<{ id: string }>` instead of `params: { id: string }`
+- Added `await params` before accessing route parameters
+- **Files Fixed:**
+  - `web/app/api/teams/[id]/settings/route.ts` (GET, PATCH)
+  - `web/app/api/teams/[id]/members/route.ts` (GET, POST, PATCH, DELETE)
+  - `web/app/api/teams/[id]/route.ts` (GET, PATCH, DELETE)
+
+**JWT Payload Email Issue:**
+- JWT token only contains `userId` and `exp`, not `email`
+- Fixed billing checkout route to fetch user email from database instead
+- **File Fixed:** `web/app/api/billing/checkout/route.ts`
+
+**TypeScript Error Logging:**
+- Fixed `unknown` error type in logging calls across multiple routes
+- Converted to error message string before passing to logger
+- **Files Fixed:**
+  - `web/app/api/health/route.ts`
+  - `web/app/api/settings/route.ts` (GET and POST handlers)
+
+**Zod Schema Syntax:**
+- Fixed `z.record()` syntax to include key type parameter
+- Changed from `z.record(z.any())` to `z.record(z.string(), z.any())`
+- **File Fixed:** `web/app/api/teams/[id]/settings/route.ts`
+
+**JWT Validation Logic:**
+- Fixed overly strict weak pattern detection in JWT secret validation
+- Changed from substring matching to exact match only
+- Prevents false positives on legitimate hex strings containing "123", "secret", etc.
+- **File Fixed:** `web/lib/jwt.ts`
+
+**Build Status:** ✅ Successful (exit code 0)
+
+---
+
+## 2026-04-18 - Billing & Revenue Integration (Lemon Squeezy)
+
+### Switched to Lemon Squeezy Merchant of Record
+**Rationale:** Automated global tax compliance (VAT/GST) and secure subscription management without building complex per-seat logic manually.
+
+**Changes:**
+- **Store Configuration**: store_id `349267` connected.
+- **Variant Mapping**: 
+    - Pro: `1544667` (₹1,799 / $19)
+    - Team: `1544681` (₹9,199 / $99 flat)
+- **Checkout API (`web/app/api/billing/checkout/route.ts`)**: Generates secure LS checkout sessions with user metadata.
+- **Webhook API (`web/app/api/webhooks/lemonsqueezy/route.ts`)**: 
+    - Implemented HMAC SHA256 signature verification.
+    - Handles `subscription_created`, `subscription_updated`, and `subscription_cancelled`.
+    - Automatically promotes users to 'admin' role in the `teams` schema upon Team purchase.
+- **Environment Logic**: Centralized LS keys in `.env.local` for vault security.
+
+**Multi-tenant Logic**: 
+- Purchaser of the Team tier is automatically designated as the **Organization Owner**.
+- Enforcement of 10-contributor seat limit via `lib/tier.ts`.
+
+---
+
+## 2026-04-18 - Web App Security Audit
+
+### Comprehensive Security Review
+**Scope:** Systematic audit of GitPulse web application for vulnerabilities similar to CLI audit
+
+**Critical Vulnerabilities Found (7):**
+1. OAuth implementation missing PKCE - authorization code interception risk
+2. CSRF cookie httpOnly: false - XSS can steal CSRF token
+3. Settings API uses JSON.parse on Authorization header - auth bypass possible
+4. API key timing attack - linear search through bcrypt hashes allows enumeration
+5. In-memory rate limiting - doesn't scale across production instances
+6. Account deletion weak confirmation - only boolean flag, no password/email verification
+7. Service role key usage - bypasses RLS policies in multiple endpoints
+
+**High Severity Vulnerabilities (8):**
+8. CSRF protection not applied consistently - only in support route
+9. JWT 30-day expiration - too long for session tokens
+10. Auth cookies use SameSite='lax' - should be 'strict'
+11. No API key expiration mechanism - keys valid indefinitely
+12. Data export not encrypted - GDPR compliance issue
+13. No session revocation mechanism - compromised sessions valid until expiration
+14. Environment variable validation weak - only checks presence, not strength
+15. reCAPTCHA bypass in development - returns success if secret not configured
+
+**Medium Severity (5):**
+16-20. Generic error messages, no input schema validation, bcryptjs instead of native bcrypt, rate limiting per IP only, no dependency scanning
+
+**Files Audited:**
+- `web/app/api/auth/github/route.ts` - OAuth flow
+- `web/app/api/session/route.ts` - Session management
+- `web/app/api/keys/route.ts` - API key management
+- `web/app/api/settings/route.ts` - User settings
+- `web/app/api/telemetry/route.ts` - Telemetry ingestion
+- `web/app/api/support/route.ts` - Support tickets
+- `web/app/api/config/route.ts` - Configuration
+- `web/app/api/user/delete/route.ts` - Account deletion
+- `web/app/api/user/export/route.ts` - Data export
+- `web/app/api/teams/[id]/settings/route.ts` - Team settings (new)
+- `web/lib/jwt.ts` - JWT token handling
+- `web/lib/rate-limit.ts` - Rate limiting
+- `web/lib/csrf.ts` - CSRF protection
+- `web/lib/audit.ts` - Audit logging
+- `web/lib/validation.ts` - Input validation
+
+**Status:** Security audit complete with 20 vulnerabilities identified. Prioritized fixes recommended.
+
+---
+
+## 2026-04-18 - Sentry Removal (Cost Optimization)
+
+### Removed Sentry Integration
+**Rationale:** Pre-revenue product cannot justify $312/year ($26/mo) for error tracking
+
+**Changes:**
+- Uninstalled `@sentry/nextjs` from `web/package.json`
+- Deleted config files: `sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`
+- Updated `web/lib/logger.ts` - removed Sentry capture calls
+- Updated `web/components/error-boundary.tsx` - removed Sentry error reporting
+- Simplified `web/next.config.mjs` - removed `withSentryConfig` wrapper
+- Removed Sentry env vars from `web/.env.local`
+
+**Alternative:** Console logging + Vercel analytics sufficient for MVP phase
+
+**Future:** Re-add Sentry when reaching 100+ users or experiencing onboarding friction
+
+---
+
 ## 2026-04-17 - Website Updates & Smart Provider Infrastructure
 
 ### Website Refresh

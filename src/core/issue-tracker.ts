@@ -395,7 +395,6 @@ export async function linkCommitToIssue(
   // This would need to be implemented based on the specific tracker
   // For GitHub, this could be done via commit message conventions
   // For Linear/Jira, this would require their specific APIs
-  console.log(`Linking commit ${commitHash} to issue ${issueId}: ${message}`);
   return true;
 }
 

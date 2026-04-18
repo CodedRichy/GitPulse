@@ -1,5 +1,6 @@
 // Simple in-memory rate limiter for API endpoints
-// In production, use Redis or a similar distributed cache
+// CRITICAL: In production with multiple instances, use Redis or similar distributed cache
+// This in-memory store is lost on restart and doesn't share state across instances
 
 interface RateLimitEntry {
   count: number;
@@ -7,6 +8,13 @@ interface RateLimitEntry {
 }
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Security: Warn about production usage
+if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+  console.warn('⚠️  SECURITY WARNING: Using in-memory rate limiting in production.');
+  console.warn('   This is vulnerable to bypass in multi-instance deployments.');
+  console.warn('   Set REDIS_URL to use Redis-based rate limiting.');
+}
 
 export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds

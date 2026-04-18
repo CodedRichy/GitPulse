@@ -16,7 +16,7 @@ GitPulse is a TypeScript CLI application that uses Ink (React for terminal) to p
 ## Module Structure
 
 ```
-GitPulse v3.1.0 (TypeScript + Ink + MCP)
+GitPulse v0.1.0 (TypeScript + Ink + MCP)
 ├── src/
 │   ├── index.ts              # CLI entry point
 │   ├── components/           # React Ink UI components
@@ -49,7 +49,9 @@ GitPulse v3.1.0 (TypeScript + Ink + MCP)
 │   │   │   ├── telemetry/    # Cloud telemetry sync (CLI→Cloud)
 │   │   │   ├── stats/        # Productivity stats aggregation
 │   │   │   ├── keys/         # API key management
-│   │   │   └── support/      # Support tickets
+│   │   │   ├── support/      # Support tickets
+│   │   │   └── teams/        # Team management
+│   │   │       └── [id]/settings/  # Team settings (admin only)
 │   │   ├── dashboard/        # Dashboard page
 │   │   ├── profile/          # User profile
 │   │   ├── settings/         # Settings page
