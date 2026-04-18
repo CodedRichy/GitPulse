@@ -61,7 +61,7 @@ export default function GatesPage() {
       setSaving(true);
       const csrfToken = document.cookie
         .split('; ')
-        .find(row => row.startsWith('gitpulse_csrf='))
+        .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
       const response = await fetch('/api/config', {
         method: 'POST',

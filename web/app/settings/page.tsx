@@ -58,7 +58,7 @@ export default function SettingsPage() {
       // Get CSRF token from cookie
       const csrfToken = document.cookie
         .split('; ')
-        .find(row => row.startsWith('gitpulse_csrf='))
+        .find(row => row.startsWith('csrf_token='))
         ?.split('=')[1];
 
       const response = await fetch('/api/settings', {
@@ -187,7 +187,7 @@ export default function SettingsPage() {
                                    if (!confirm('Revoke this API key? This action cannot be undone.')) return;
                                    const csrfToken = document.cookie
                                      .split('; ')
-                                     .find(row => row.startsWith('gitpulse_csrf='))
+                                     .find(row => row.startsWith('csrf_token='))
                                      ?.split('=')[1];
                                    await fetch(`/api/keys?id=${key.id}`, {
                                      method: 'DELETE',
@@ -220,7 +220,7 @@ export default function SettingsPage() {
                               const name = newKeyName.trim() || 'API Key';
                               const csrfToken = document.cookie
                                 .split('; ')
-                                .find(row => row.startsWith('gitpulse_csrf='))
+                                .find(row => row.startsWith('csrf_token='))
                                 ?.split('=')[1];
                               const res = await fetch('/api/keys', {
                                 method: 'POST',
