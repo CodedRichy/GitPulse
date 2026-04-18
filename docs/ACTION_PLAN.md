@@ -33,35 +33,40 @@
 📝 **What**: Removed `@sentry/nextjs` (cost: $312/year → $0)  
 🎯 **Impact**: Pre-revenue cost optimization, console logging sufficient
 
+### 6. **Netlify Deployment Fixes** ✅
+📄 **Files**: `web/netlify.toml`, `web/app/api/billing/checkout/route.ts`, `.github/workflows/ci.yml`  
+📝 **What**: Configured environment variables, added email validation, fixed CI artifact upload  
+🎯 **Impact**: Production deployment stable, billing checkout working, secrets scan passing
+
 ---
 
 ## ⏳ PHASE 9.2 IN PROGRESS (Month 2 - Team Dashboard)
 
-### 6. **Team List Page** ✅ (UI Shell Complete)
+### 7. **Team List Page** ✅ (UI Shell Complete)
 📄 **File**: `web/app/dashboard/teams/page.tsx`  
 📝 **What**: Cards showing all teams user belongs to with role badges (admin/lead/developer)  
 🎯 **Status**: UI complete with GitPulse dark theme, inline SVG icons, SWR hooks ready  
 ⏳ **Pending**: Connect to `/api/teams` endpoint
 
-### 7. **Team Detail Page** ✅ (UI Shell Complete)
+### 8. **Team Detail Page** ✅ (UI Shell Complete)
 📄 **Files**: `web/app/dashboard/teams/[id]/layout.tsx`, `web/app/dashboard/teams/[id]/page.tsx`  
 📝 **What**: Team overview with tabs (Overview | Analytics | Members | Settings)  
 🎯 **Status**: Layout with tab navigation complete, stats grid ready  
 ⏳ **Pending**: Wire to `/api/teams/[id]` endpoint, real activity data
 
-### 8. **Team Analytics** ✅ (UI Shell Complete)
+### 9. **Team Analytics** ✅ (UI Shell Complete)
 📄 **File**: `web/app/dashboard/teams/[id]/analytics/page.tsx`  
 📝 **What**: Quality score trends, issue charts, repo rankings, date range selectors  
 🎯 **Status**: Page shell with 7/30/90 day toggle ready  
 ⏳ **Pending**: Connect charts to `/api/teams/[id]/analytics`, implement chart components
 
-### 9. **Team Members Management** ✅ (UI Shell Complete)
+### 10. **Team Members Management** ✅ (UI Shell Complete)
 📄 **File**: `web/app/dashboard/teams/[id]/members/page.tsx`  
 📝 **What**: Invite, remove, change roles (admin/lead/developer)  
 🎯 **Status**: Member list, role dropdowns, invite form ready  
 ⏳ **Pending**: Wire up invite/remove/role-change API calls
 
-### 10. **Team Settings Page** ✅ (UI Shell Complete)
+### 11. **Team Settings Page** ✅ (UI Shell Complete)
 📄 **File**: `web/app/dashboard/teams/[id]/settings/page.tsx`  
 📝 **What**: Configure team name, conventions, policies, danger zone  
 🎯 **Status**: Quality gate policy toggles, team delete flow ready  

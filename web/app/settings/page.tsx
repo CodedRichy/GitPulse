@@ -111,12 +111,12 @@ export default function SettingsPage() {
                     <div className="flex flex-col gap-2">
                        <label className="text-[10px] font-bold uppercase tracking-widest text-stone-600 ml-1">Email_Address</label>
                        <input 
-                         type="text" 
-                         value={user?.email || 'N/A'} 
-                         disabled
-                         className="bg-stone-900/50 border border-stone-800 rounded-xl px-4 py-3 text-sm font-mono text-stone-500 cursor-not-allowed"
+                         type="email" 
+                         value={email} 
+                         onChange={(e) => setEmail(e.target.value)}
+                         className="bg-stone-900/50 border border-stone-800 rounded-xl px-4 py-3 text-sm font-mono text-stone-300 outline-none focus:border-emerald-500 transition-all"
                        />
-                       <span className="text-[9px] text-stone-700 uppercase tracking-widest ml-1">Managed via GitHub Identity Provider</span>
+                       <span className="text-[9px] text-stone-700 uppercase tracking-widest ml-1">Required for billing and notifications</span>
                     </div>
                     <div className="flex flex-col gap-2">
                        <label className="text-[10px] font-bold uppercase tracking-widest text-stone-600 ml-1">Git_Login</label>
