@@ -30,6 +30,51 @@ All Phase 9.2 Team Dashboard pages now fetch real data from API endpoints.
 
 ---
 
+## 2026-04-18 - CSRF Token Fixes & Landing Page Redesign
+
+### CSRF Cookie Name Correction
+Fixed CSRF token implementation across all frontend API calls - cookie name was incorrect.
+
+**Issue:**
+- Frontend was looking for `gitpulse_csrf` cookie
+- Actual cookie name is `csrf_token` (defined in csrf.ts)
+- All POST/DELETE requests to protected APIs were failing with 403 Forbidden
+
+**Fix:**
+- Updated all CSRF token reads to use correct cookie name `csrf_token`
+- Affected files: settings/page.tsx (3 places), dashboard/gates/page.tsx
+- APIs requiring CSRF: /api/settings, /api/keys (POST/DELETE), /api/config
+
+**Files Modified:**
+- `web/app/settings/page.tsx` - Fixed CSRF cookie name in settings save, API key creation, API key revocation
+- `web/app/dashboard/gates/page.tsx` - Fixed CSRF cookie name in config save
+
+---
+
+### Landing Page Redesign
+Redesigned landing page for better consumer appeal and business value focus.
+
+**Changes:**
+- Hero headline: "CODE QUALITY AT THE CLI" → "STOP SHIPPING BROKEN CODE" (business-focused)
+- Added real-world security incidents in "Oh Shit Moments" section:
+  - Claude Code source leak (512,000+ lines via npm source maps)
+  - AWS engineer credentials leak (954MB exposed in 5 hours)
+  - Travis CI token exposures (thousands of tokens leaked)
+  - Direct connection to user's team problems
+- Removed CLI badge and technical focus from hero
+- Added pricing info: "Free for individuals. Teams start at $99/month"
+- Changed CTA from "View Documentation" to "How It Works"
+
+**Rationale:**
+- Strike visitors in first 30 seconds with real, high-profile incidents
+- Focus on business value (preventing disasters) not implementation details
+- Authentic examples without fake metrics
+
+**Files Modified:**
+- `web/app/page.tsx` - Hero section, added ProblemCard component, real case examples
+
+---
+
 ## 2026-04-18 - GitHub OAuth Email Fetching
 
 ### Primary Email from GitHub
