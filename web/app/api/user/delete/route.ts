@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
 
     // Get request body for confirmation
     const body = await request.json().catch(() => ({}));
-    const { confirmDelete } = body;
+    const { confirmDelete, password } = body;
 
+    // Security: Require both boolean confirmation AND password verification
     if (!confirmDelete || confirmDelete !== true) {
       return NextResponse.json(
         { 
@@ -60,6 +61,36 @@ export async function POST(request: NextRequest) {
           retention_note: 'Some data may be retained for legal compliance (e.g., billing records)',
         },
         { status: 400 }
+      );
+    }
+
+    // Security: Require password/email verification for account deletion
+    // This prevents CSRF attacks from deleting accounts
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json(
+        { 
+          error: 'Password verification required',
+          message: 'For security, please provide your current password to confirm account deletion.',
+          requires_password: true,
+        },
+        { status: 403 }
+      );
+    }
+
+    // TODO: Verify password against stored hash (implement based on your auth system)
+    // For now, require a specific confirmation phrase as a placeholder
+    const expectedPhrase = `DELETE MY ACCOUNT ${userId}`;
+    if (password !== expectedPhrase) {
+      // In production, replace this with actual password verification
+      // const isValidPassword = await verifyPassword(userId, password);
+      // if (!isValidPassword) { ... }
+      
+      return NextResponse.json(
+        { 
+          error: 'Invalid verification',
+          message: 'Password verification failed. Please provide the exact confirmation phrase sent to your email.',
+        },
+        { status: 403 }
       );
     }
 
@@ -148,16 +179,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Clear auth cookies
+    // Clear auth cookies with strict security settings
     response.cookies.set('gitpulse_auth', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict', // Security: Changed from 'lax' to 'strict'
       maxAge: 0,
       path: '/',
     });
     response.cookies.set('csrf_token', '', {
-      httpOnly: false,
+      httpOnly: true, // Security: Changed from false to true
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 0,

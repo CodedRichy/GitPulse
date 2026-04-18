@@ -6,7 +6,6 @@ async function fetchGroqModels() {
   const url = 'https://api.groq.com/openai/v1/models';
 
   if (!GROQ_API_KEY) {
-    console.log('GROQ_API_KEY not set, skipping Groq model fetch');
     return [];
   }
 
@@ -19,14 +18,9 @@ async function fetchGroqModels() {
     });
     
     const models = response.data.data || [];
-    console.log('Available Groq models:');
-    models.forEach((model: any) => {
-      console.log(`  - ${model.id} (${model.context_length || 'N/A'} context)`);
-    });
     
     return models.map((m: any) => m.id);
   } catch (error) {
-    console.log('Failed to fetch Groq models:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
@@ -109,7 +103,6 @@ async function processFile(filePath: string): Promise<void> {
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].includes('TODO')) {
-      console.log('Found TODO at line', i + 1);
     }
   }
 }`,
@@ -179,7 +172,6 @@ async function testGitPulseCapability(provider: 'openrouter' | 'ollama' | 'googl
   } catch (error) {
     const responseTime = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`      Error: ${errorMessage}`);
     return { success: false, responseTime, quality: 'Failed', input: test.prompt, output: '', error: errorMessage };
   }
 }
@@ -256,18 +248,10 @@ async function testModelAvailability(model: string, providerType: 'openrouter' |
       result.capabilities.tools = model.includes('tools') || model.includes('gemma-4') || model.includes('nemotron');
 
       // Run GitPulse-specific tests
-      console.log(`  Testing ${model} with GitPulse use cases...`);
       result.gitPulseTests.commitMessage = await testGitPulseCapability(providerType, model, 'commitMessage');
-      console.log(`    Commit message: ${result.gitPulseTests.commitMessage.success ? '✓' : '✗'} (${result.gitPulseTests.commitMessage.responseTime}ms) - ${result.gitPulseTests.commitMessage.quality}`);
-
       result.gitPulseTests.codeDoc = await testGitPulseCapability(providerType, model, 'codeDoc');
-      console.log(`    Code documentation: ${result.gitPulseTests.codeDoc.success ? '✓' : '✗'} (${result.gitPulseTests.codeDoc.responseTime}ms) - ${result.gitPulseTests.codeDoc.quality}`);
-
       result.gitPulseTests.codeReview = await testGitPulseCapability(providerType, model, 'codeReview');
-      console.log(`    Code review: ${result.gitPulseTests.codeReview.success ? '✓' : '✗'} (${result.gitPulseTests.codeReview.responseTime}ms) - ${result.gitPulseTests.codeReview.quality}`);
-
       result.gitPulseTests.refactoring = await testGitPulseCapability(providerType, model, 'refactoring');
-      console.log(`    Refactoring: ${result.gitPulseTests.refactoring.success ? '✓' : '✗'} (${result.gitPulseTests.refactoring.responseTime}ms) - ${result.gitPulseTests.refactoring.quality}`);
     }
   } catch (error) {
     result.error = error instanceof Error ? error.message : 'Unknown error';
@@ -292,13 +276,11 @@ async function getOllamaModels(): Promise<string[]> {
     
     return [];
   } catch (error) {
-    console.log('Failed to get Ollama models:', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
 }
 
 async function testNetworkConnectivity(): Promise<{ connected: boolean; latency: number; stable: boolean; message: string }> {
-  console.log('Testing network connectivity...\n');
   
   const testUrl = 'https://openrouter.ai/api/v1/auth/key';
   const iterations = 3;
@@ -315,9 +297,7 @@ async function testNetworkConnectivity(): Promise<{ connected: boolean; latency:
       });
       const latency = Date.now() - startTime;
       latencies.push(latency);
-      console.log(`  Test ${i + 1}/${iterations}: ${latency}ms`);
     } catch (error) {
-      console.log(`  Test ${i + 1}/${iterations}: Failed`);
       return {
         connected: false,
         latency: 0,
@@ -354,8 +334,6 @@ async function testNetworkConnectivity(): Promise<{ connected: boolean; latency:
   const stable = variance < 1000;
   const message = `Network quality: ${quality} (Avg: ${avgLatency.toFixed(0)}ms, Variance: ${variance.toFixed(0)}ms)`;
 
-  console.log(`\n  ${message}`);
-  console.log(`  Stable: ${stable ? 'Yes' : 'No'}\n`);
 
   return {
     connected: true,
@@ -723,9 +701,6 @@ async function testAllModels() {
     if (result.error) {
       console.log(`Error: ${result.error}`);
     }
-    if (result.responseTime) {
-      console.log(`Base response time: ${result.responseTime}ms`);
-    }
     console.log(`Capabilities: ${JSON.stringify(result.capabilities)}`);
     console.log(`\nGitPulse Tests:`);
     console.log(`Commit Message: ${result.gitPulseTests.commitMessage.success ? '✓' : '✗'} (${result.gitPulseTests.commitMessage.responseTime}ms) - ${result.gitPulseTests.commitMessage.quality}`);
@@ -735,7 +710,6 @@ async function testAllModels() {
     
     // Add delay between tests to avoid rate limits
     if (selectedModels.indexOf(model) < selectedModels.length - 1) {
-      console.log(`\nWaiting 2 seconds before next model...`);
       await delay(2000);
     }
   }

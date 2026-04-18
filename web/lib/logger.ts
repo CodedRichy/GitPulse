@@ -1,10 +1,7 @@
 /**
  * Web API logging utilities
  * Simple structured logging for Next.js API routes
- * Integrates with Sentry for error tracking
  */
-
-import * as Sentry from '@sentry/nextjs';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -46,14 +43,6 @@ class WebLogger {
   error(message: string, error?: Error | string, context?: LogContext) {
     const errorMsg = error instanceof Error ? error.message : error;
     console.error(this.formatMessage('error', message, { error: errorMsg, ...context }));
-
-    // Report to Sentry
-    if (error instanceof Error) {
-      Sentry.captureException(error, {
-        tags: { context: this.context },
-        extra: context,
-      });
-    }
   }
 
   /**
@@ -94,14 +83,6 @@ class WebLogger {
    */
   logSecurity(message: string, context?: LogContext) {
     this.warn(`[SECURITY] ${message}`, context);
-    
-    // Report to Sentry with security tag
-    if (context?.error) {
-      Sentry.captureMessage(`Security: ${message}`, 'warning', {
-        tags: { context: this.context, severity: 'security' },
-        extra: context,
-      });
-    }
   }
 
   /**

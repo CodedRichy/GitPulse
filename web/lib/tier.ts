@@ -37,7 +37,7 @@ export const TIER_FEATURES: Record<Tier, TierFeatures> = {
     maxCommits: UNLIMITED,
     maxCustomGates: UNLIMITED,
     analytics: true,
-    contributors: UNLIMITED,
+    contributors: 10,
     configEditing: true,
     teamSync: true,
   },

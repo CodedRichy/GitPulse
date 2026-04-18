@@ -46,7 +46,6 @@ export function Login({ onLoginComplete }: LoginProps) {
         }
       } catch (error) {
         // Ollama not available, continue to check other providers
-        console.log('Ollama not available:', error);
       }
 
       if (process.env.OPENROUTER_API_KEY) {

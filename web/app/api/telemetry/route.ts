@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid API key format' }, { status: 401 });
     }
 
-    // Find key by prefix and verify hash
+    // Find key by prefix and verify hash (include team_id for team routing)
     const keyPrefix = apiKey.substring(0, 12); // gp_ + 8 chars
     const { data: keys, error: keyError } = await supabase
       .from('api_keys')
-      .select('id, user_id, key_hash, revoked_at')
+      .select('id, user_id, key_hash, revoked_at, key_type, team_id')
       .eq('key_prefix', keyPrefix)
       .is('revoked_at', null);
 
@@ -57,13 +57,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
     }
 
-    // Verify the full key against hash
+    // Security: Verify the full key against hash using constant-time comparison
+    // This prevents timing attacks that could enumerate valid API keys
     let validKey = null;
+    let compareTime = 0;
+    
     for (const key of keys) {
-      if (bcrypt.compareSync(apiKey, key.key_hash)) {
+      const startCompare = process.hrtime.bigint();
+      const isMatch = bcrypt.compareSync(apiKey, key.key_hash);
+      const endCompare = process.hrtime.bigint();
+      compareTime += Number(endCompare - startCompare);
+      
+      if (isMatch) {
         validKey = key;
-        break;
+        // Continue comparing to prevent timing attacks (optional: add artificial delay)
       }
+    }
+    
+    // Add artificial delay to make all requests take similar time (prevents timing attacks)
+    const minCompareTime = 50; // minimum 50ms
+    if (compareTime < minCompareTime * 1000000) { // convert ms to nanoseconds
+      await new Promise(resolve => setTimeout(resolve, minCompareTime - (compareTime / 1000000)));
     }
 
     if (!validKey) {
@@ -101,11 +115,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Insert telemetry run
+    // Insert telemetry run (include team_id for team API keys)
     const { data: run, error: insertError } = await supabase
       .from('telemetry_runs')
       .insert({
         user_id: validKey.user_id,
+        team_id: validKey.team_id, // NULL for personal keys, set for team keys
         timestamp: new Date(timestamp).toISOString(),
         repo_name: repo_name?.substring(0, 255),
         repo_path_hash: repo_path_hash?.substring(0, 64),

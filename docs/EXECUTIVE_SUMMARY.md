@@ -10,6 +10,8 @@
 - Auth module tests are implemented and passing (`src/core/__tests__/auth.test.ts`, 26/26).
 - Error message UX module and tests are implemented and passing (`src/utils/user-messages.ts`, `src/utils/__tests__/user-messages.test.ts`, 28/28).
 - Git module test blockers were fixed by adding `getCommitHistory()` compatibility and normalizing `getRepoRoot()` path handling in `src/core/git.ts`.
+- **Lemon Squeezy billing integrated** (Store #349267, $19/$99 tiers). Webhook-based tier management and multi-tenant logic active.
+- **Phase 8 (Revenue)** is now the active focus.
 
 ### Current Verification Snapshot
 - Full suite passing: **303/303 tests**.

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyToken } from '@/lib/jwt';
 import { rateLimit } from '@/lib/rate-limit';
 import { logApiKeyCreated, logApiKeyRevoked } from '@/lib/audit';
+import { validateCsrf, csrfErrorResponse } from '@/lib/csrf-middleware';
 import bcrypt from 'bcryptjs';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -84,6 +85,12 @@ export async function GET(request: NextRequest) {
  * Create a new API key
  */
 export async function POST(request: NextRequest) {
+  // Security: Validate CSRF token for state-changing operation
+  const csrfResult = validateCsrf(request);
+  if (!csrfResult.valid) {
+    return csrfErrorResponse(csrfResult.error!);
+  }
+
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   const rateLimitResult = limiter(ip);
 
@@ -157,6 +164,12 @@ export async function POST(request: NextRequest) {
  * Revoke an API key
  */
 export async function DELETE(request: NextRequest) {
+  // Security: Validate CSRF token for state-changing operation
+  const csrfResult = validateCsrf(request);
+  if (!csrfResult.valid) {
+    return csrfErrorResponse(csrfResult.error!);
+  }
+
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
   const rateLimitResult = limiter(ip);
 

@@ -67,8 +67,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     const duration = performance.now() - startTime;
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    
-    log.error('Health check failed', error, {
+
+    log.error('Health check failed', errorMsg, {
       ip,
       durationMs: Math.round(duration)
     });
