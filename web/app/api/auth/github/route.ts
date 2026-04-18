@@ -63,6 +63,16 @@ async function handleAuth(request: NextRequest, code: string) {
 
     const userData = await userResponse.json();
 
+    // Get user emails to find primary email
+    const emailsResponse = await fetch('https://api.github.com/user/emails', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const emailsData = await emailsResponse.json();
+    const primaryEmail = emailsData.find((e: any) => e.primary)?.email || userData.email;
+
     // Save or update user in Supabase
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
@@ -83,7 +93,7 @@ async function handleAuth(request: NextRequest, code: string) {
         .update({
           github_login: userData.login,
           name: userData.name,
-          email: userData.email,
+          email: primaryEmail,
           avatar_url: userData.avatar_url,
           updated_at: new Date().toISOString(),
         })
@@ -101,7 +111,7 @@ async function handleAuth(request: NextRequest, code: string) {
           github_id: userData.id,
           github_login: userData.login,
           name: userData.name,
-          email: userData.email,
+          email: primaryEmail,
           avatar_url: userData.avatar_url,
           tier: 'free',
           created_at: new Date().toISOString(),
