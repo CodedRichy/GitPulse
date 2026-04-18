@@ -55,9 +55,19 @@ export default function SettingsPage() {
         throw new Error('No user found');
       }
 
+      // Get CSRF token from cookie
+      const csrfToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('gitpulse_csrf='))
+        ?.split('=')[1];
+
       const response = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken || '',
+        },
+        credentials: 'include',
         body: JSON.stringify({
           userId: user.id,
           email,
