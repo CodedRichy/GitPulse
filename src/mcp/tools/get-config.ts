@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { loadProjectConfig } from '../../core/gitpulse-config.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const getConfigTool: Tool = {
   name: 'get_config',
@@ -16,7 +17,20 @@ export const getConfigTool: Tool = {
 };
 
 export async function handleGetConfig(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const config = loadProjectConfig(repoPath);
 
   return {

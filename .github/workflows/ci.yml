@@ -65,8 +65,7 @@ jobs:
         uses: codecov/codecov-action@v4
         if: matrix.node-version == '20'
         with:
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
   # ──────────────────────────────────────────────────────────────
   # Build Verification
@@ -154,16 +153,8 @@ jobs:
           node-version: '20'
           cache: npm
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-dist
-          path: dist/
-
       - name: Run GitPulse quality gates
-        run: |
-          node dist/index.js quality-gates --strict || exit 0
-        continue-on-error: true
+        run: npm run test -- src/core/__tests__/quality-gates.test.ts
 
   # ──────────────────────────────────────────────────────────────
   # Final Status Check

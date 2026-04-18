@@ -20,7 +20,7 @@ export default function Home() {
             {/* CLI Tool Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-panel text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              CLI Tool v3.2 — npm install -g gitpulse
+              CLI Tool v0.1 — npm install -g gitpulse
             </div>
             
             <h1 className="text-5xl md:text-[100px] font-bold tracking-tighter leading-[0.85] mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
@@ -74,12 +74,8 @@ export default function Home() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[600px] bg-emerald-500/10 blur-[160px] rounded-full -z-10 animate-pulse duration-[10s]" />
           
           {/* SAFETY GRID */}
-          <div 
-            className="absolute inset-x-0 bottom-0 h-64 opacity-20 -z-10"
-            style={{ 
-              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(34, 211, 238, 0.2) 1px, transparent 0)',
-              backgroundSize: '40px 40px'
-            }}
+          <div
+            className="absolute inset-x-0 bottom-0 h-64 opacity-20 -z-10 bg-[radial-gradient(circle_at_1px_1px,rgba(34,211,238,0.2)_1px,transparent_0)] [background-size:40px_40px]"
           />
         </section>
 
@@ -101,19 +97,19 @@ export default function Home() {
               <WorkflowStep 
                 number="02" 
                 title="Initialize" 
-                desc="pulse init"
+                desc="gitpulse init"
                 detail="Installs git hooks in your repo"
               />
               <WorkflowStep 
                 number="03" 
                 title="Commit" 
-                desc="git commit"
-                detail="Quality gates run automatically"
+                desc="gitpulse commit"
+                detail="AI message + quality gates"
               />
               <WorkflowStep 
                 number="04" 
                 title="Sync" 
-                desc="pulse dashboard"
+                desc="gitpulse dashboard"
                 detail="Web analytics for your team"
               />
             </div>
@@ -146,22 +142,22 @@ export default function Home() {
              
              <div className="grid md:grid-cols-3 gap-8">
                 <ObsidianCard 
+                  title="Smart Provider Health"
+                  description="Circuit breaker pattern with automatic fallback. If Groq is down, we switch to OpenRouter instantly."
+                  tag="Infrastructure"
+                  date="Apr 2026"
+                />
+                <ObsidianCard 
                   title="Quality Gates 2.0"
                   description="Block commit secrets and critical SQLi before they reach your branch. Zero-latency analysis."
                   tag="Security"
                   date="Apr 2026"
                 />
                 <ObsidianCard 
-                  title="Context Learning"
-                  description="Our engine now understands hybrid codebases and learns your team's specific naming conventions."
-                  tag="Research"
-                  date="Mar 2026"
-                />
-                <ObsidianCard 
-                  title="MCP Integration"
-                  description="Expose your repo's intelligence directly to AI agents via Model Context Protocol."
-                  tag="Integrations"
-                  date="Mar 2026"
+                  title="One-Line Installer"
+                  description="irm install for instant setup. No Node.js required. Single binary distribution."
+                  tag="Distribution"
+                  date="Apr 2026"
                 />
              </div>
           </div>
@@ -177,6 +173,7 @@ export default function Home() {
                  </p>
                  <div className="space-y-8">
                     <FeaturePoint title="Git Hooks Integration" desc="Automatically runs quality gates on every git commit." />
+                    <FeaturePoint title="Smart Provider Fallback" desc="If your AI provider fails, we automatically switch to the best available." />
                     <FeaturePoint title="AI-Powered Commits" desc="Generates professional commit messages from your code changes." />
                     <FeaturePoint title="Local Analysis" desc="Everything runs on your machine — no code leaves your repo." />
                  </div>

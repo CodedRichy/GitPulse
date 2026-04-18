@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { reviewStagedChanges, formatReviewResult } from '../../core/code-review.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const reviewChangesTool: Tool = {
   name: 'review_changes',
@@ -21,7 +22,20 @@ export const reviewChangesTool: Tool = {
 };
 
 export async function handleReviewChanges(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const target = (args?.target as string) || 'staged';
 
   if (target === 'staged') {

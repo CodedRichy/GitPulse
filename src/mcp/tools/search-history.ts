@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../../core/git.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const searchHistoryTool: Tool = {
   name: 'search_commit_history',
@@ -32,7 +33,20 @@ export const searchHistoryTool: Tool = {
 };
 
 export async function handleSearchHistory(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const query = args?.query as string | undefined;
   const file = args?.file as string | undefined;
   const author = args?.author as string | undefined;

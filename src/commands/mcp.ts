@@ -59,7 +59,7 @@ function startMCPServer(): Promise<CommandResult> {
 function showMCPConfig(): CommandResult {
   const config = {
     name: 'gitpulse',
-    version: '3.1.0',
+    version: '0.1.0',
     description: 'GitPulse MCP Server - AI-powered Git workflow assistant',
     transport: 'stdio',
     tools: [

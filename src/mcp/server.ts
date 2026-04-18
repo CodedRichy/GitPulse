@@ -9,6 +9,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../core/git.js';
 import { loadProjectConfig } from '../core/gitpulse-config.js';
+import { MCPSecurity, SecurityContext } from './security.js';
 
 // Import tool definitions and handlers
 import { analyzeRepoTool, handleAnalyzeRepo } from './tools/analyze-repo.js';
@@ -59,10 +60,21 @@ export class GitPulseMCPServer {
   private server: Server;
   private gitOps: GitOperations;
   private toolMap: Map<string, ToolEntry>;
+  private security: MCPSecurity;
 
   constructor() {
     this.gitOps = new GitOperations();
     this.toolMap = new Map();
+    
+    // Security: Initialize authentication and rate limiting
+    // Auth is disabled by default for local development
+    // Set MCP_REQUIRE_AUTH=true to enable token authentication
+    this.security = new MCPSecurity({
+      enabled: true,
+      requireAuth: process.env.MCP_REQUIRE_AUTH === 'true',
+      rateLimitWindowMs: 60000, // 1 minute
+      rateLimitMaxRequests: 30, // 30 requests per minute per tool
+    });
 
     // Build lookup map
     for (const entry of TOOL_REGISTRY) {
@@ -72,7 +84,7 @@ export class GitPulseMCPServer {
     this.server = new Server(
       {
         name: 'gitpulse',
-        version: '3.1.0',
+        version: '0.1.0',
       },
       {
         capabilities: {
@@ -94,6 +106,31 @@ export class GitPulseMCPServer {
     // Execute a tool
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      
+      // Security: Validate authentication and rate limits
+      const authToken = (args as Record<string, unknown>)?._authToken as string | undefined;
+      const securityContext = this.security.validateRequest(name, authToken);
+      
+      if (!securityContext.authenticated) {
+        return {
+          content: [{ 
+            type: 'text', 
+            text: `Security Error: ${securityContext.error}. Set MCP_REQUIRE_AUTH=false for local development or provide valid _authToken.` 
+          }],
+          isError: true,
+        };
+      }
+      
+      if (securityContext.rateLimitHit) {
+        return {
+          content: [{ 
+            type: 'text', 
+            text: `Rate Limit Error: ${securityContext.error}` 
+          }],
+          isError: true,
+        };
+      }
+      
       const entry = this.toolMap.get(name);
 
       if (!entry) {
@@ -104,7 +141,11 @@ export class GitPulseMCPServer {
       }
 
       try {
-        return await entry.handler((args as Record<string, unknown>) || {});
+        // Remove auth token from args before passing to handler
+        const cleanArgs = { ...(args as Record<string, unknown> || {}) };
+        delete cleanArgs._authToken;
+        
+        return await entry.handler(cleanArgs);
       } catch (error) {
         return {
           content: [{
@@ -156,6 +197,14 @@ export class GitPulseMCPServer {
     await this.server.connect(transport);
     console.error('GitPulse MCP Server running on stdio');
     console.error(`Registered tools: ${this.getRegisteredTools().join(', ')}`);
+    
+    // Security: Log security status
+    const securityStatus = this.security.getStatus();
+    console.error(`Security: ${securityStatus.enabled ? 'enabled' : 'disabled'}`);
+    console.error(`Authentication: ${securityStatus.requireAuth ? 'required' : 'optional'}`);
+    if (securityStatus.requireAuth) {
+      console.error('Auth token stored in: ~/.gitpulse/.mcp-token');
+    }
   }
 }
 

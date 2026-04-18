@@ -9,6 +9,7 @@
 
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import * as path from 'path';
 import { createHash } from 'crypto';
 import type { TelemetryRecord } from './telemetry.js';
 
@@ -57,13 +58,24 @@ function hashRepoPath(repoPath: string): string {
 }
 
 /**
+ * Validates that a path is within the expected directory (prevents path traversal)
+ */
+function isPathWithinDirectory(targetPath: string, baseDir: string): boolean {
+  const resolvedTarget = path.resolve(targetPath);
+  const resolvedBase = path.resolve(baseDir);
+  const relative = path.relative(resolvedBase, resolvedTarget);
+  return !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+/**
  * Extract repo name from remote origin URL or local path
  */
 function extractRepoName(repoRoot: string): string | undefined {
   try {
     // Try to read from git config
     const gitConfigPath = join(repoRoot, '.git', 'config');
-    if (existsSync(gitConfigPath)) {
+    // Security: Validate git config path is within repo to prevent path traversal
+    if (isPathWithinDirectory(gitConfigPath, repoRoot) && existsSync(gitConfigPath)) {
       const config = readFileSync(gitConfigPath, 'utf-8');
       const match = config.match(/url = .+\/(.+?)\.git/);
       if (match) {
@@ -86,7 +98,7 @@ function extractRepoName(repoRoot: string): string | undefined {
 export async function syncRunToCloud(
   record: TelemetryRecord,
   repoRoot: string,
-  clientVersion: string = '3.1.0'
+  clientVersion: string = '0.1.0'
 ): Promise<SyncResult> {
   const config = loadSyncConfig(repoRoot);
   

@@ -59,9 +59,10 @@ export class GitleaksBridge {
    */
   private async detectBinary(): Promise<boolean> {
     return new Promise((resolve) => {
+      // Security: shell: false prevents command injection
       const proc = spawn(this.binaryName, ['--version'], {
         stdio: 'ignore',
-        shell: os.platform() === 'win32',
+        shell: false,
       });
 
       proc.on('error', () => resolve(false));
@@ -74,9 +75,10 @@ export class GitleaksBridge {
    */
   async getVersion(): Promise<string | null> {
     return new Promise((resolve) => {
+      // Security: shell: false prevents command injection
       const proc = spawn(this.binaryName, ['--version'], {
         stdio: ['ignore', 'pipe', 'ignore'],
-        shell: os.platform() === 'win32',
+        shell: false,
       });
 
       let output = '';
@@ -126,10 +128,11 @@ export class GitleaksBridge {
     }
 
     return new Promise((resolve, reject) => {
+      // Security: shell: false prevents command injection via repoPath manipulation
       const proc = spawn(this.binaryName, args, {
         cwd: repoPath,
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: os.platform() === 'win32',
+        shell: false,
       });
 
       let stdout = '';

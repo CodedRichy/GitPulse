@@ -157,7 +157,21 @@ async function main() {
 
   // Handle dashboard command specially (opens browser)
   if (command === 'dashboard') {
-    const port = cli.flags.port ? parseInt(cli.flags.port as string, 10) : undefined;
+    let port: number | undefined;
+    if (cli.flags.port) {
+      const parsedPort = parseInt(cli.flags.port as string, 10);
+      // Security: Validate port range to prevent invalid binding
+      if (isNaN(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+        console.error('❌ Invalid port number. Port must be between 1 and 65535.');
+        process.exit(1);
+      }
+      // Security: Avoid well-known system ports (1-1023) that require elevated privileges
+      if (parsedPort < 1024) {
+        console.error('❌ Port numbers below 1024 require elevated privileges. Please use a port >= 1024.');
+        process.exit(1);
+      }
+      port = parsedPort;
+    }
     const { dashboardCommand } = await import('./commands/dashboard.js');
     await dashboardCommand({ port, open: true });
     return;

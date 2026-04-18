@@ -274,7 +274,7 @@ export const userMessages = {
     steps: [
       'See details above for specific issues',
       'Fix the issues: ${details}',
-      'Run quality gates again to verify: gitpulse quality-gates',
+      'Run quality gates again to verify: gitpulse commit --dry-run --strict',
       'Contact your team lead if you have questions'
     ]
   },
