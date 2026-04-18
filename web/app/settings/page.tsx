@@ -182,10 +182,18 @@ export default function SettingsPage() {
                                    <span className="text-[9px] text-stone-600">Last used {new Date(key.last_used_at).toLocaleDateString()}</span>
                                  )}
                                </div>
-                               <button 
+                               <button
                                  onClick={async () => {
                                    if (!confirm('Revoke this API key? This action cannot be undone.')) return;
-                                   await fetch(`/api/keys?id=${key.id}`, { method: 'DELETE', credentials: 'include' });
+                                   const csrfToken = document.cookie
+                                     .split('; ')
+                                     .find(row => row.startsWith('gitpulse_csrf='))
+                                     ?.split('=')[1];
+                                   await fetch(`/api/keys?id=${key.id}`, {
+                                     method: 'DELETE',
+                                     headers: { 'X-CSRF-Token': csrfToken || '' },
+                                     credentials: 'include',
+                                   });
                                    mutateKeys();
                                  }}
                                  className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-red-500/20 transition-colors"
@@ -207,12 +215,19 @@ export default function SettingsPage() {
                             onChange={(e) => setNewKeyName(e.target.value)}
                             className="flex-1 bg-stone-900/50 border border-stone-800 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500 transition-all"
                           />
-                          <button 
+                          <button
                             onClick={async () => {
                               const name = newKeyName.trim() || 'API Key';
+                              const csrfToken = document.cookie
+                                .split('; ')
+                                .find(row => row.startsWith('gitpulse_csrf='))
+                                ?.split('=')[1];
                               const res = await fetch('/api/keys', {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'X-CSRF-Token': csrfToken || '',
+                                },
                                 credentials: 'include',
                                 body: JSON.stringify({ name }),
                               });
