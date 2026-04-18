@@ -2,7 +2,7 @@ import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { QualityGatesEngine, formatQualityReportJson } from '../../core/quality-gates.js';
 import { loadProjectConfig, isGateEnabled } from '../../core/gitpulse-config.js';
 import { GitOperations } from '../../core/git.js';
-import * as path from 'path';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const runQualityGatesTool: Tool = {
   name: 'run_quality_gates',
@@ -28,12 +28,22 @@ export const runQualityGatesTool: Tool = {
 };
 
 export async function handleRunQualityGates(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const normalizedPath = repoValidation.resolvedPath.replace(/\\/g, '/');
+
   const strict = (args?.strict as boolean) ?? false;
   const gateFilter = args?.gates as string[] | undefined;
-
-  // Normalize path to use forward slashes and ensure it's absolute
-  const normalizedPath = path.resolve(repoPath).replace(/\\/g, '/');
   const gitOps = new GitOperations(normalizedPath);
   const engine = new QualityGatesEngine(normalizedPath, gitOps);
   const config = loadProjectConfig(normalizedPath);

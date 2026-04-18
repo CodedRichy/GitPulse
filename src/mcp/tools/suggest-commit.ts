@@ -1,6 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../../core/git.js';
 import { getAIProvider } from '../../ai/providers.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const suggestCommitTool: Tool = {
   name: 'suggest_commit',
@@ -21,7 +22,20 @@ export const suggestCommitTool: Tool = {
 };
 
 export async function handleSuggestCommit(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const gitOps = new GitOperations(repoPath);
   const status = await gitOps.getStatus();
 

@@ -45,7 +45,7 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 **Code Polishing** ✅
 - .gitpulse.yml configuration support (YAML + JSON)
 - CI/CD pipeline verification
-- Package.json version 3.1.0
+- Package.json version 0.1.0
 
 **Phase 3: Security Improvements** ✅
 - reCAPTCHA v3 on support form
@@ -125,6 +125,18 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 - ✅ **Cloud Telemetry Table** - Supabase `telemetry_runs` with RLS policies
 - ✅ **CLI Sync Module** - `src/core/cloud-sync.ts` with offline-fallback
 
+**Smart Provider Health (2026-04-17):**
+- ✅ **Circuit Breaker Pattern** - Opens after 3 failures, resets after 5 min
+- ✅ **Health Scoring** - Weighted algorithm (success 40%, latency 30%, recency 20%, stability 10%)
+- ✅ **Auto-Fallback** - Switches to best available provider without user action
+- ✅ **Visual Indicators** - ⚡🟢🐌🟡🔴 shown in CLI header and model selector
+- ✅ **Background Polling** - Health checks every 30 seconds
+
+**Distribution (2026-04-17):**
+- ✅ **PowerShell One-Liner** - `irm ... | iex` installer (no Node.js required)
+- ✅ **npm Global Install** - Standard `npm install -g gitpulse`
+- ✅ **Build from Source** - Git clone + npm workflow documented
+
 **Productivity Analytics (2026-04-16):**
 - ✅ **Activity Heatmap** - GitHub-style contribution graph showing daily commits
 - ✅ **AI Commit Tracking** - Count of AI-assisted vs manual commits
@@ -168,7 +180,7 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 
 ## Architecture Overview
 
-GitPulse v3.1.0 (TypeScript + Ink + MCP)
+GitPulse v0.1.0 (TypeScript + Ink + MCP)
 
 ```
 src/
@@ -342,7 +354,7 @@ web/                      # Next.js web dashboard
 - Compliance alone is a vitamin; preventing disasters is a painkiller
 - Developers will USE it because it saves their ass
 - Teams will MANDATE it because it provides audit trails
-- Revenue opportunity: $20/user/year for "peace of mind + professional polish"
+- Revenue opportunity: Pro tier $10/month ($120/year), Team tier $8/month per user (volume discount) - positioned below SonarQube ($32/month) but competitive with AI coding assistants
 
 ## Next Steps
 
@@ -433,6 +445,60 @@ npm start      # Run compiled version
 - ⏳ Team dashboard
 - ⏳ Supabase team sync
 - ⏳ Convention marketplace
+
+## Pricing Strategy (Updated 2026-04-17)
+
+Based on competitive analysis of code quality tools and AI coding assistants:
+
+### Competitive Landscape
+| Tool | Pricing | Notes |
+|------|---------|-------|
+| **SonarQube Cloud** | $32/month | Direct competitor for code quality |
+| **GitHub Copilot** | $10/month (individual) | AI coding assistant |
+| **GitHub Copilot Business** | $19/month per user | Enterprise tier |
+| **Cursor Pro** | $20/month | AI coding assistant |
+| **Cursor Business** | $40/month per user | Team tier |
+
+### Recommended Pricing Tiers
+
+**Free Tier** (Essential for user acquisition)
+- Individual developers only
+- Limited to 1-3 repos or 100 commits/month
+- Basic quality gates (security scan only)
+- Local-only (no cloud sync)
+
+**Pro Tier** - $10/month ($96/year with annual billing)
+- Unlimited repos
+- All quality gates (security, code smells, test coverage, documentation)
+- Convention learning and team patterns
+- Cloud sync for settings and history
+- Priority email support
+- Positioned competitively against Copilot ($10/month)
+
+**Team Tier** - $8/month per user (5+ users, annual billing)
+- Everything in Pro, plus:
+- Team dashboard for org-wide analytics
+- Shared convention rules across team
+- Admin controls and user management
+- Volume discount incentive
+
+**Enterprise** - Custom pricing
+- SSO and SAML integration
+- Audit logs and compliance reports
+- On-premise deployment option
+- Dedicated support and SLAs
+- Custom integrations
+
+### Pricing Psychology
+- **Anchoring:** $10/month feels "less than lunch" to developers
+- **Positioning:** Below SonarQube ($32/month) but valuable enough to charge
+- **Conversion:** SaaS freemium averages 2-3% conversion; free tier is critical
+- **Annual preference:** Better cash flow, reduces churn by ~15-20%
+
+### Revenue Targets
+- Previous: $20/user/year (underpriced)
+- New Pro: $120/user/year (6x increase, still competitive)
+- Team discount: $96/user/year (volume incentive)
 
 ## Research
 

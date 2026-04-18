@@ -1,6 +1,6 @@
 {
   "name": "gitpulse",
-  "version": "3.1.0",
+  "version": "0.1.0",
   "description": "AI-powered guardrails for git workflows — quality gates, convention enforcement, and intelligent commit automation",
   "type": "module",
   "main": "dist/index.js",
@@ -49,7 +49,6 @@
     "meow": "^12.0.1",
     "open": "^8.4.2",
     "react": "^18.2.0",
-    "react-google-recaptcha-v3": "^1.11.0",
     "simple-git": "^3.22.0",
     "swr": "^2.4.1",
     "winston": "^3.19.0",
@@ -61,7 +60,6 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.55",
-    "@types/react-google-recaptcha": "^2.1.9",
     "@vitest/coverage-v8": "^3.2.4",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",

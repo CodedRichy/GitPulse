@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { loadProjectConfig, validateCommitMessage } from '../../core/gitpulse-config.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const validateCommitTool: Tool = {
   name: 'validate_commit_message',
@@ -22,7 +23,19 @@ export const validateCommitTool: Tool = {
 
 export async function handleValidateCommit(args: Record<string, unknown>) {
   const message = args?.message as string;
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
 
   if (!message) {
     return {

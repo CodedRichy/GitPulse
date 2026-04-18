@@ -5,7 +5,7 @@
 
 import { CredentialStorage, TokenData } from './credential-storage.js';
 import open from 'open';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { createServer } from 'http';
 
 export interface OAuthConfig {
@@ -75,20 +75,48 @@ export class AccountService {
     // Generate state parameter for security
     const state = randomBytes(16).toString('hex');
     
-    // Build authorization URL
+    // Security: Generate PKCE parameters to prevent authorization code interception
+    const codeVerifier = this.generatePKCEVerifier();
+    const codeChallenge = this.generatePKCEChallenge(codeVerifier);
+    
+    // Build authorization URL with PKCE
     const params = new URLSearchParams({
       client_id: config.clientId,
       redirect_uri: 'http://localhost:3000/auth/callback',
       scope: config.scopes.join(' '),
       state,
       response_type: 'code',
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
     });
 
     const authUrl = `${config.authUrl}?${params.toString()}`;
     
     // Start a local server to handle the callback
+    // Security: Rate limiting to prevent brute force attacks
+    const requestTimestamps: number[] = [];
+    const RATE_LIMIT_WINDOW = 60000; // 1 minute
+    const RATE_LIMIT_MAX = 10; // max 10 requests per minute
+    
     const callbackPromise = new Promise<string>((resolve, reject) => {
       const server = createServer((req, res) => {
+        const clientIp = req.socket.remoteAddress || 'unknown';
+        const now = Date.now();
+        
+        // Clean old timestamps
+        while (requestTimestamps.length > 0 && requestTimestamps[0] < now - RATE_LIMIT_WINDOW) {
+          requestTimestamps.shift();
+        }
+        
+        // Security: Check rate limit
+        if (requestTimestamps.length >= RATE_LIMIT_MAX) {
+          res.writeHead(429, { 'Content-Type': 'text/html' });
+          res.end('<html><body><h1>Rate Limit Exceeded</h1><p>Too many requests. Please try again later.</p></body></html>');
+          return;
+        }
+        
+        requestTimestamps.push(now);
+        
         const url = new URL(req.url || '', `http://${req.headers.host}`);
         
         if (url.pathname === '/auth/callback') {
@@ -150,6 +178,7 @@ export class AccountService {
           client_secret: config.clientSecret,
           code,
           redirect_uri: 'http://localhost:3000/auth/callback',
+          code_verifier: codeVerifier, // Security: PKCE code verifier
         }),
       });
       
@@ -222,5 +251,29 @@ export class AccountService {
 
   getConfigDir(): string {
     return this.credentialStorage.getConfigDir();
+  }
+
+  /**
+   * Generate PKCE code verifier (43-128 characters of [A-Za-z0-9-._~])
+   */
+  private generatePKCEVerifier(): string {
+    const length = 128;
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let verifier = '';
+    const bytes = randomBytes(length);
+    for (let i = 0; i < length; i++) {
+      verifier += possible.charAt(bytes[i] % possible.length);
+    }
+    return verifier;
+  }
+
+  /**
+   * Generate PKCE code challenge from verifier (Base64URL-encoded SHA256 hash)
+   */
+  private generatePKCEChallenge(verifier: string): string {
+    return createHash('sha256')
+      .update(verifier)
+      .digest()
+      .toString('base64url');
   }
 }

@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
 import { createServer } from 'http';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
+import { randomBytes } from 'crypto';
 import { GitOperations } from '../core/git.js';
 import { getAnalytics, getRecentRuns, TelemetryRecord } from '../core/telemetry.js';
 import { loadProjectConfig } from '../core/gitpulse-config.js';
@@ -13,6 +14,20 @@ interface DashboardOptions {
 
 const DEFAULT_PORT = 13529; // Random port unlikely to conflict
 const DASHBOARD_URL = 'http://localhost:3000/dashboard';
+const AUTH_TOKEN_FILE = join(process.cwd(), '.gitpulse', '.dashboard-token');
+
+/**
+ * Generate or load authentication token for dashboard
+ */
+function getAuthToken(): string {
+  if (existsSync(AUTH_TOKEN_FILE)) {
+    return readFileSync(AUTH_TOKEN_FILE, 'utf-8').trim();
+  }
+  // Generate new token
+  const token = randomBytes(32).toString('hex');
+  writeFileSync(AUTH_TOKEN_FILE, token, { mode: 0o600 });
+  return token;
+}
 
 export async function dashboardCommand(options: DashboardOptions = {}): Promise<void> {
   const port = options.port || DEFAULT_PORT;
@@ -46,7 +61,10 @@ export async function dashboardCommand(options: DashboardOptions = {}): Promise<
   // Start local server for Pro/Team
   console.log(`\n🚀 Starting GitPulse dashboard server on port ${port}...\n`);
 
-  const server = createLocalServer(repoRoot);
+  // Security: Generate auth token for this session
+  const authToken = getAuthToken();
+
+  const server = createLocalServer(repoRoot, authToken);
 
   server.listen(port, () => {
     console.log(`✓ Local telemetry API: http://localhost:${port}`);
@@ -73,18 +91,35 @@ export async function dashboardCommand(options: DashboardOptions = {}): Promise<
   await new Promise(() => {});
 }
 
-function createLocalServer(repoRoot: string) {
+function createLocalServer(repoRoot: string, authToken: string) {
   return createServer((req, res) => {
-    // Enable CORS for web dashboard
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Security: Restrict CORS to dashboard origin only
+    const origin = req.headers.origin || '';
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://gitpulse.io',
+      'https://app.gitpulse.io'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(200);
       res.end();
       return;
     }
+
+    // Security: Validate authentication token for API endpoints
+    const validateAuth = (): boolean => {
+      const authHeader = req.headers.authorization || '';
+      const token = authHeader.replace('Bearer ', '').trim();
+      return token === authToken;
+    };
 
     const url = new URL(req.url || '/', `http://localhost`);
 
@@ -95,8 +130,15 @@ function createLocalServer(repoRoot: string) {
       return;
     }
 
-    // Telemetry API
+    // Telemetry API - requires authentication
     if (url.pathname === '/api/analytics') {
+      // Security: Check authentication
+      if (!validateAuth()) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized - invalid or missing token' }));
+        return;
+      }
+
       const days = parseInt(url.searchParams.get('days') || '30', 10);
       
       try {
@@ -117,8 +159,15 @@ function createLocalServer(repoRoot: string) {
       return;
     }
 
-    // Config API
+    // Config API - requires authentication
     if (url.pathname === '/api/config') {
+      // Security: Check authentication
+      if (!validateAuth()) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized - invalid or missing token' }));
+        return;
+      }
+
       try {
         const config = loadProjectConfig(repoRoot);
         

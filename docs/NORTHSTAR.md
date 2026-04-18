@@ -2,7 +2,7 @@
 
 > **The definitive strategic and architectural reference for the GitPulse project**
 >
-> *Version:* 3.1.0 | *Last Updated:* April 17, 2026 | *Status:* Phase 1-3 Complete (Code), Phase 3 Beta Recruitment Pending
+> *Version:* 0.1.0 | *Last Updated:* April 18, 2026 (12:05 PM) | *Status:* Phase 1-8 Complete, Phase 9 Enterprise Readiness In Progress
 
 ---
 
@@ -75,7 +75,7 @@ GitPulse is an AI-powered guardrail system for git workflows that sits between A
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         GitPulse v3.1.0                                  │
+│                         GitPulse v0.1.0                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐               │
@@ -191,6 +191,7 @@ GitPulse/
 | **Security** | JWT, bcrypt, zod | Auth, hashing, validation |
 | **MCP Protocol** | @modelcontextprotocol/sdk | AI agent integration |
 | **AST Parsing** | @babel/parser, traverse | Code analysis |
+| **Error Tracking** | Sentry | Session replay and error monitoring |
 
 ---
 
@@ -288,13 +289,20 @@ Exposes git intelligence via Model Context Protocol:
 |------|---------|---------|
 | `analyze_repo` | Repository health check | Health score, metrics, issues |
 | `suggest_commit` | AI commit message | Suggested message with context |
-| `review_changes` | Quality review | Gate results, issues, score |
+| `review_changes` | Quality review of staged changes | Gate results, issues, score |
+| `run_quality_gates` | Run all quality gates | Detailed report with scores |
+| `validate_commit` | Validate commit message format | Validation result, suggestions |
+| `get_conventions` | Get team conventions | Learned patterns, naming styles |
+| `search_history` | Search commit history | Matching commits, statistics |
+| `branch_info` | Get branch information | Status, ahead/behind, merge status |
+| `get_config` | Get GitPulse configuration | Config values, quality gate settings |
+| `analyze_file` | Analyze file complexity | Metrics, issues, suggestions |
 
 **Resources:**
 - `repo://status` — Current git status
 - `repo://config` — GitPulse configuration
 
-**Compatible Tools:** Windsurf, Claude Desktop, Cursor, any MCP client
+**Compatible Tools:** Windsurf, Claude Desktop, Cursor, Claude Code, any MCP client
 
 ### 4.7 Web Dashboard
 
@@ -334,6 +342,62 @@ CI/CD quality gate integration:
 - `score`: 0-100 quality score
 - `issues`: Total issue count
 - `report`: JSON quality report
+
+### 4.9 Smart Provider Health System
+
+Intelligent AI provider monitoring with automatic failover:
+
+**Circuit Breaker Pattern:**
+- Opens after 3 consecutive failures
+- Half-open state tests recovery after 5 minutes
+- Auto-resets on success, full isolation on failure
+
+**Health Scoring Algorithm:**
+- Success rate (40% weight)
+- Latency (30% weight)
+- Recency (20% weight)
+- Stability (10% weight)
+
+**Visual Indicators:**
+- ⚡ Fast provider
+- 🟢 Healthy provider
+- 🐌 Slow provider
+- 🟡 Degraded provider
+- 🔴 Unavailable provider
+
+**Auto-Fallback:**
+- Automatically switches to best available provider
+- No user intervention required
+- Background health checks every 30 seconds
+
+### 4.10 Distribution & Installation
+
+Multiple installation methods for different user preferences:
+
+**PowerShell One-Liner (Windows):**
+```powershell
+irm https://gitpulse.dev/install.ps1 | iex
+```
+- No Node.js or npm required
+- Automatic dependency installation
+- PATH configuration handled automatically
+
+**npm Global Install:**
+```bash
+npm install -g gitpulse
+```
+- Standard Node.js distribution
+- Cross-platform support
+- Automatic updates via npm
+
+**Build from Source:**
+```bash
+git clone https://github.com/CodedRichy/GitPulse.git
+cd GitPulse
+npm install
+npm run build
+npm link
+```
 
 ---
 
@@ -507,13 +571,16 @@ cloud_sync:
 │ - 10 req/15min per IP (API endpoints)                 │
 │ - 100 req/hour per IP (telemetry)                     │
 │ - reCAPTCHA v3 on forms                               │
+│ - CSRF token protection                                 │
 └──────────────────┬──────────────────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────────────┐
 │ Layer 5: Audit & Compliance                           │
 │ - Comprehensive audit logging                           │
 │ - Compliance report generation                          │
-│ - Data retention policies                               │
+│ - Data retention policies (90d telemetry, 365d tickets)│
+│ - GDPR compliance (data export, account deletion)      │
+│ - Sentry error tracking with session replay            │
 └───────────────────────────────────────────────────────┘
 ```
 
@@ -549,8 +616,9 @@ cloud_sync:
 | **Phase 4** | Advanced Features (code review, issues) | ✅ Complete |
 | **Phase 5** | MCP Integration & Quality Gates | ✅ Complete |
 | **Phase 5.5** | Security & Data Governance | ✅ Complete |
+| **Phase 5.6** | Smart Provider Health & Distribution | ✅ Complete |
 
-### Phase 6: Foundation Reset (Current)
+### Phase 6: Foundation Reset ✅ Complete
 
 **Goal:** Harden the foundation for production readiness
 
@@ -564,24 +632,51 @@ cloud_sync:
 | Compliance reports | P1 | ✅ Complete |
 | Add .gitpulse.yml support | P1 | ✅ Complete |
 | YAML configuration | P2 | ✅ Complete |
+| Smart Provider Health | P1 | ✅ Complete |
+| PowerShell Installer | P2 | ✅ Complete |
 
-### Phase 7: Distribution & MCP Expansion (Planned)
+### Phase 7: Distribution & MCP Expansion ✅ Complete
 
-| Feature | Description |
-|---------|-------------|
-| GitHub Action v2 | Enhanced CI integration with custom rules |
-| Expand MCP tools | From 3 to 10+ (semantic search, branch naming, PR templates) |
-| VSCode Extension | Inline quality gate results in IDE |
-| Convention learning v2 | ML-backed instead of heuristic |
+**Status:** All MCP tools implemented (10 total), GitHub Action v1 complete
 
-### Phase 8: Team & Revenue (Planned)
+| Feature | Description | Status |
+|---------|-------------|--------|
+| GitHub Action v1 | CI integration with quality gates | ✅ Complete |
+| Expand MCP tools | 10 tools implemented (was: 3) | ✅ Complete |
+| VSCode Extension | Inline quality gate results in IDE | ⏳ Planned |
+| Convention learning v2 | ML-backed instead of heuristic | ⏳ Planned |
 
-| Feature | Description |
-|---------|-------------|
-| Team dashboard | Org-wide convention adherence and quality trends |
-| Supabase team sync | Sharing conventions across team members |
-| Convention marketplace | Import/export rule packs |
-| Subscription tiers | Free, Pro ($20/user/year), Team ($50/user/year) |
+### Phase 8: Documentation & Audit Response ✅ Complete
+
+**Status:** Claude Code Audit completed, Implementation Plan Phase 9 created
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Claude Audit Response | Comprehensive product audit | ✅ April 18, 2026 |
+| Implementation Plan v9 | 6-month enterprise roadmap | ✅ April 18, 2026 |
+| Pricing Strategy Update | Revised to $25/dev/month Pro tier | ✅ April 18, 2026 |
+
+### Phase 9: Enterprise Readiness & Revenue (Current)
+
+**Goal:** Transform from "premium indie tool" to "venture-scale enterprise product"
+**Timeline:** 6 months (April - October 2026)
+**Based on:** Claude Code Audit findings
+
+| Phase | Focus | Duration | Key Deliverables |
+|-------|-------|----------|------------------|
+| **9.1** | Enterprise Foundation | Month 1 | Team schema, RBAC API, CLI team support |
+| **9.2** | Team Dashboard | Month 2 | Team analytics, compliance exports, enterprise features |
+| **9.3** | Security Hardening | Month 2-3 | Field-level encryption, distributed locks, audit immutability |
+| **9.4** | New Pricing Model | Month 3 | $25/dev/month Pro, $2k-5k Enterprise, sales flow |
+| **9.5** | Distribution | Month 4-5 | GitHub Marketplace, AI tool partnerships, content marketing |
+| **9.6** | Scale Prep | Month 6 | Performance optimization, monitoring, 99.9% uptime |
+
+**Kill Criteria (Month 6):**
+- ❌ 500+ free sign-ups → Rethink messaging
+- ❌ 5+ Pro customers → Product-market fit is fake
+- ❌ 1+ Enterprise conversation → Pivot to SMB
+
+**Target:** $50k MRR path by Month 6, venture-fundable metrics
 
 ---
 
@@ -704,6 +799,13 @@ cloud_sync:
 | `analyze_repo` | `path?: string` | `{ healthScore, metrics, issues }` |
 | `suggest_commit` | `path?: string, style?: string` | `{ message, explanation }` |
 | `review_changes` | `path?: string, target?: 'staged' \| 'unstaged'` | `{ passed, score, issues }` |
+| `run_quality_gates` | `path?: string, strict?: boolean, gates?: string[]` | `{ passed, score, gates, issues }` |
+| `validate_commit` | `path?: string, message: string` | `{ valid, errors, suggestions }` |
+| `get_conventions` | `path?: string` | `{ patterns, naming, relationships }` |
+| `search_history` | `path?: string, query: string, limit?: number` | `{ commits, statistics }` |
+| `branch_info` | `path?: string` | `{ current, status, ahead, behind }` |
+| `get_config` | `path?: string` | `{ config, gates, conventions }` |
+| `analyze_file` | `path?: string, file: string` | `{ complexity, issues, metrics }` |
 
 ### Web API Endpoints
 
@@ -776,6 +878,11 @@ npm run dev              # Start Next.js dev server
 | **Quality Gate** | Automated check (security, smells, coverage, docs) |
 | **Quality Score** | 0-100 score from gate results |
 | **Strict Mode** | Blocks commits on any quality failure |
+| **Smart Provider Health** | AI provider monitoring with automatic failover |
+| **Circuit Breaker** | Pattern that stops requests to failing providers |
+| **Health Score** | Weighted algorithm for provider reliability |
+| **Auto-Fallback** | Automatic switching to best available provider |
+| **GDPR Compliance** | Data export and account deletion features |
 
 ---
 
@@ -795,6 +902,8 @@ npm run dev              # Start Next.js dev server
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-04-17 | 1.0.0 | Initial comprehensive North Star document |
+| 2026-04-18 (AM) | 1.1.0 | Added Smart Provider Health, Distribution methods, updated MCP tools (10 total), revised pricing strategy, enhanced security architecture |
+| 2026-04-18 (PM) | 1.2.0 | Marked Phase 6-8 complete, added Phase 9 Enterprise Readiness roadmap based on Claude Code Audit, updated status to reflect current focus |
 
 ---
 

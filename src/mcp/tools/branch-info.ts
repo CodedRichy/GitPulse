@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../../core/git.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const branchInfoTool: Tool = {
   name: 'get_branch_info',
@@ -20,7 +21,20 @@ export const branchInfoTool: Tool = {
 };
 
 export async function handleBranchInfo(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const commitCount = (args?.commitCount as number) || 5;
 
   const gitOps = new GitOperations(repoPath);

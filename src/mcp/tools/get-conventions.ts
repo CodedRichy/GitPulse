@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { ConventionLearner } from '../../core/convention-learner.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const getConventionsTool: Tool = {
   name: 'get_conventions',
@@ -25,7 +26,20 @@ export const getConventionsTool: Tool = {
 };
 
 export async function handleGetConventions(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const files = args?.files as string[] | undefined;
   const refresh = (args?.refresh as boolean) ?? false;
 

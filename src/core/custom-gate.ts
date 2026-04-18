@@ -2,6 +2,59 @@ import { QualityGate, FileChange, GateResult, QualityIssue } from './quality-gat
 import { CustomGateConfig } from './gitpulse-config.js';
 import * as path from 'path';
 
+// Maximum regex execution time to prevent ReDoS attacks (milliseconds)
+const REGEX_TIMEOUT_MS = 1000;
+
+// Suspicious ReDoS patterns that can cause catastrophic backtracking
+const REDOS_PATTERNS = [
+  /\(\?\![^)]*\*\+|\+\)/, // Negative lookahead with quantifiers
+  /\([^)]*\([^)]*\*[^)]*\)\*\)/, // Nested quantifiers
+  /\([^)]*\+[^)]*\)\+/, // Quantified groups with +
+  /\([^)]*\*[^)]*\)\*/, // Quantified groups with *
+  /\([^)]*\+\+[^)]*\)/, // Double + inside groups
+  /\([^)]*\*\*[^)]*\)/, // Double * inside groups
+  /\([^)]*\*\+[^)]*\)/, // Mixed *+ inside groups
+  /\([^)]*\+\*[^)]*\)/, // Mixed +* inside groups
+];
+
+/**
+ * Checks if a regex pattern is potentially vulnerable to ReDoS.
+ */
+function isReDoSVulnerable(pattern: string): boolean {
+  return REDOS_PATTERNS.some(redosPattern => redosPattern.test(pattern));
+}
+
+/**
+ * Executes regex with timeout protection to prevent ReDoS.
+ * This is a stateful wrapper around RegExp.exec() that adds timeout checks.
+ */
+function execWithTimeout(
+  pattern: RegExp,
+  content: string,
+  timeoutMs: number = REGEX_TIMEOUT_MS,
+  state: { startTime: number; iterations: number }
+): RegExpExecArray | null {
+  // Check timeout on every call
+  if (Date.now() - state.startTime > timeoutMs) {
+    throw new Error('Regex execution timeout - pattern may be vulnerable to ReDoS');
+  }
+  
+  // Check iteration limit
+  state.iterations++;
+  if (state.iterations > 10000) {
+    throw new Error('Regex iteration limit exceeded - pattern may be vulnerable to ReDoS');
+  }
+  
+  const match = pattern.exec(content);
+  
+  // Prevent infinite loop on zero-length matches
+  if (match && match.index === pattern.lastIndex) {
+    pattern.lastIndex++;
+  }
+  
+  return match;
+}
+
 /**
  * Custom quality gate that runs regex patterns defined in config.
  * Supports include/exclude globs and must_coexist rules.
@@ -21,7 +74,46 @@ export class CustomGate implements QualityGate {
     const startTime = Date.now();
     const issues: QualityIssue[] = [];
 
+    // Security: Check for ReDoS vulnerability in patterns
+    if (isReDoSVulnerable(this.config.pattern)) {
+      return {
+        gateName: this.name,
+        passed: false,
+        score: 0,
+        severity: 'critical',
+        issues: [{
+          severity: 'critical',
+          category: 'security',
+          file: 'config',
+          message: `Custom gate "${this.config.name}" has a regex pattern that may be vulnerable to ReDoS attacks`,
+          fix: 'Simplify the regex pattern to avoid nested quantifiers',
+        }],
+        suggestions: ['Review the regex pattern in .gitpulse/config.yml'],
+        duration: 0,
+      };
+    }
+
     const pattern = new RegExp(this.config.pattern, 'gi');
+
+    // Security: Also check must_coexist pattern for ReDoS
+    if (this.config.must_coexist && isReDoSVulnerable(this.config.must_coexist)) {
+      return {
+        gateName: this.name,
+        passed: false,
+        score: 0,
+        severity: 'critical',
+        issues: [{
+          severity: 'critical',
+          category: 'security',
+          file: 'config',
+          message: `Custom gate "${this.config.name}" has a must_coexist pattern that may be vulnerable to ReDoS attacks`,
+          fix: 'Simplify the must_coexist regex pattern to avoid nested quantifiers',
+        }],
+        suggestions: ['Review the must_coexist pattern in .gitpulse/config.yml'],
+        duration: 0,
+      };
+    }
+
     const mustCoexistPattern = this.config.must_coexist
       ? new RegExp(this.config.must_coexist, 'i')
       : null;
@@ -34,30 +126,42 @@ export class CustomGate implements QualityGate {
 
       const lines = change.content.split('\n');
 
-      // Check for pattern violations
+      // Check for pattern violations (with ReDoS protection)
       pattern.lastIndex = 0;
       let match: RegExpExecArray | null;
+      const regexState = { startTime: Date.now(), iterations: 0 };
 
-      while ((match = pattern.exec(change.content)) !== null) {
-        const lineNum = this.getLineNumber(change.content, match.index);
+      try {
+        while ((match = execWithTimeout(pattern, change.content, REGEX_TIMEOUT_MS, regexState)) !== null) {
+          const lineNum = this.getLineNumber(change.content, match.index);
 
-        // If must_coexist is specified, check that pattern exists in the file
-        if (mustCoexistPattern) {
-          mustCoexistPattern.lastIndex = 0;
-          if (mustCoexistPattern.test(change.content)) {
-            // Pattern coexists, no violation
-            continue;
+          // If must_coexist is specified, check that pattern exists in the file
+          if (mustCoexistPattern) {
+            mustCoexistPattern.lastIndex = 0;
+            if (mustCoexistPattern.test(change.content)) {
+              // Pattern coexists, no violation
+              continue;
+            }
           }
-        }
 
+          issues.push({
+            severity: this.config.severity,
+            category: 'style',
+            file: change.path,
+            line: lineNum,
+            message: this.config.message || `Custom gate violation: ${this.config.description}`,
+            code: this.extractCodeSnippet(lines, lineNum),
+            fix: this.config.fix,
+          });
+        }
+      } catch (error) {
+        // Regex timeout or error
         issues.push({
-          severity: this.config.severity,
-          category: 'style',
+          severity: 'critical',
+          category: 'security',
           file: change.path,
-          line: lineNum,
-          message: this.config.message || `Custom gate violation: ${this.config.description}`,
-          code: this.extractCodeSnippet(lines, lineNum),
-          fix: this.config.fix,
+          message: `Regex execution failed in custom gate "${this.config.name}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+          fix: 'Check the regex pattern for ReDoS vulnerabilities',
         });
       }
     }

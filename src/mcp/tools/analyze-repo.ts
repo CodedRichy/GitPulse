@@ -1,5 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GitOperations } from '../../core/git.js';
+import { validateRepoPath } from '../../core/path-security.js';
 
 export const analyzeRepoTool: Tool = {
   name: 'analyze_repo',
@@ -25,7 +26,20 @@ function calculateHealthScore(status: { unstaged: string[]; untracked: string[];
 }
 
 export async function handleAnalyzeRepo(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
+
+  // Security: Validate repoPath
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
+
   const gitOps = new GitOperations(repoPath);
   const status = await gitOps.getStatus();
   const isRepo = await gitOps.isRepo();

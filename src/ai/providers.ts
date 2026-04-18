@@ -57,6 +57,68 @@ export class OpenRouterProvider implements AIProvider {
 }
 
 /**
+ * Validates Ollama host URL to prevent SSRF attacks
+ * Allows localhost (legitimate Ollama use case) but blocks other internal addresses
+ */
+function validateOllamaHost(host: string): string {
+  try {
+    const url = new URL(host);
+    
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('Invalid protocol - only HTTP/HTTPS allowed');
+    }
+    
+    // Security: Block URLs with authentication info to prevent credential leakage
+    if (url.username || url.password) {
+      throw new Error('URL must not contain credentials');
+    }
+    
+    // Security: Block common SSRF targets (metadata endpoints, internal services)
+    const hostname = url.hostname.toLowerCase();
+    const blockedHostnames = [
+      '169.254.169.254',  // AWS metadata
+      '169.254.170.2',    // AWS ECS metadata
+      'metadata.google.internal',  // GCP metadata
+      'metadata',         // Short metadata names
+      'localhost.localdomain',
+    ];
+    
+    if (blockedHostnames.includes(hostname)) {
+      throw new Error(`Blocked potentially dangerous hostname: ${hostname}`);
+    }
+    
+    // Security: Block non-localhost private IPs that could be used for SSRF
+    // Allow localhost/127.0.0.1 (legitimate Ollama use case)
+    if (!hostname.startsWith('127.') && hostname !== 'localhost') {
+      const privateIpPatterns = [
+        /^10\./,   // 10.0.0.0/8
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // 172.16.0.0/12
+        /^192\.168\./,  // 192.168.0.0/16
+        /^169\.254\./,  // Link-local
+        /^0\./,
+        /^::1$/,  // IPv6 localhost (already handled above)
+        /^fc00:/i,  // IPv6 private
+        /^fe80:/i,  // IPv6 link-local
+      ];
+      
+      for (const pattern of privateIpPatterns) {
+        if (pattern.test(hostname)) {
+          throw new Error(`Blocked internal IP address: ${hostname}`);
+        }
+      }
+    }
+    
+    return host;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Blocked')) {
+      throw error;
+    }
+    throw new Error(`Invalid Ollama host URL: ${host}`);
+  }
+}
+
+/**
  * Ollama Local AI Provider
  */
 export class OllamaProvider implements AIProvider {
@@ -65,9 +127,12 @@ export class OllamaProvider implements AIProvider {
   private model: string;
 
   constructor(host: string = 'http://localhost:11434', model: string = 'llama3.2') {
+    // Security: Validate host URL to prevent SSRF
+    const validatedHost = validateOllamaHost(host);
+    
     this.model = model;
     this.client = axios.create({
-      baseURL: host,
+      baseURL: validatedHost,
       timeout: 120000
     });
   }

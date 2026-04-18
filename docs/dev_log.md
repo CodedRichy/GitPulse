@@ -1,5 +1,52 @@
 # GitPulse Development Log
 
+## 2026-04-17 - Website Updates & Smart Provider Infrastructure
+
+### Website Refresh
+- **Landing Page (`web/app/page.tsx`)**:
+  - Fixed version badge: v3.2 → v0.1
+  - Updated workflow commands: `pulse init` → `gitpulse init`, etc.
+  - Added "Smart Provider Fallback" feature point
+  - Updated Latest Releases cards: Smart Provider Health, Quality Gates 2.0, One-Line Installer
+
+- **Documentation (`web/app/docs/page.tsx`)**:
+  - Fixed all `pulse` → `gitpulse` command references
+  - Added new "Installation" section with 3 methods (npm, irm, source)
+  - Added new "Smart Provider" section documenting circuit breaker and health indicators
+  - Updated section numbering (01-10)
+  - Added sidebar navigation for new sections
+
+### Smart Provider Health System (New)
+- **Created `src/ai/provider-health.ts`**:
+  - Circuit breaker pattern (3 failures → 5 min timeout)
+  - Health scoring algorithm (40% success, 30% latency, 20% recency, 10% stability)
+  - Rolling latency window (last 10 measurements)
+  - Background health polling every 30s
+
+- **Created `src/ai/smart-provider.ts`**:
+  - Automatic provider fallback with retry logic
+  - Exponential backoff (2 retries max)
+  - Weighted provider selection by health score
+  - Callback notifications for UI fallback display
+
+- **Updated `src/components/Welcome.tsx`**:
+  - Health indicators in header (⚡🟢🐌🟡🔴)
+  - Model selector shows latency and availability
+  - Fallback notifications in footer
+  - Auto-refresh every 30s
+
+- **Updated `src/components/CommitWizard.tsx`**:
+  - Integrated SmartProvider for all generation calls
+  - Yellow fallback notification banner
+  - Falls back silently if preferred provider fails
+
+### PowerShell Installer Scripts (New)
+- **Created `scripts/install.ps1`** (1.2KB) - readable version
+- **Created `scripts/install-tiny.ps1`** (364B) - ultra-compact
+- Both download binary from GitHub releases, add to PATH
+
+---
+
 ## 2026-04-17 - Final Stabilization & Documentation Sync
 
 ### Test and Compatibility Stabilization
@@ -294,6 +341,45 @@ node test-quality-gates.js
 
 ---
 
+## 2026-04-17 - Pricing Strategy Research & Update
+
+### Competitive Analysis
+Researched pricing for code quality tools and AI coding assistants to optimize GitPulse pricing strategy.
+
+**Key Findings:**
+- SonarQube Cloud: $32/month (direct competitor)
+- GitHub Copilot: $10/month individual, $19/month business
+- Cursor: $20/month Pro, $40/month Business
+- Average SaaS freemium conversion: 2-3%
+- 95-98% of free users never convert (free tier critical)
+
+**Previous Pricing:**
+- $20/user/year ($1.67/month) - significantly underpriced vs market
+
+**Updated Pricing Strategy:**
+
+| Tier | Price | Features |
+|------|-------|----------|
+| **Free** | $0 | 1-3 repos, basic security scan, local-only |
+| **Pro** | $10/month ($96/year) | Unlimited repos, all gates, convention learning, cloud sync |
+| **Team** | $8/month per user (5+) | Team dashboard, shared conventions, admin controls |
+| **Enterprise** | Custom | SSO, audit logs, on-premise, dedicated support |
+
+**Revenue Impact:**
+- Previous: $20/user/year
+- New Pro: $120/user/year (6x increase)
+- New Team: $96/user/year (volume discount)
+
+**Positioning:**
+- Below SonarQube ($32/month) but competitive with AI assistants
+- $10/month feels "less than lunch" to developers
+- Annual billing preferred for cash flow and reduced churn
+
+**Files Updated:**
+- `docs/project_memory.md` (updated Pricing Strategy section)
+
+---
+
 ## 2026-04-17 - Phase 3 & 4 Security & Data Governance
 
 ### Phase 3: Security Improvements (COMPLETED)
@@ -545,8 +631,8 @@ Comprehensive review identified critical issues:
 - No `.github/workflows/` directory
 - No build verification, lint, or type-check in CI
 
-**🟠 Version Mismatch**
-- `package.json` says `3.0.0` but docs claim `3.1.0`
+**✅ Version Fixed**
+- `package.json` now correctly says `0.1.0`
 
 **🟠 Type Safety Issues**
 - MCP server uses `args: any` extensively (server.ts:168, 200, 269)
@@ -564,7 +650,7 @@ Comprehensive review identified critical issues:
 **Priority Items:**
 1. Delete dead script files from src/
 2. Add test coverage for core modules (quality-gates, convention-learner, providers)
-3. Fix version consistency (package.json 3.0.0 → 3.1.0)
+3. ✅ Fixed version consistency (now 0.1.0)
 4. Set up CI/CD pipeline (.github/workflows/)
 5. Remove `any` types from MCP server
 6. Add .gitpulse.yml configuration for convention rules

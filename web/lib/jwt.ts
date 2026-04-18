@@ -1,23 +1,23 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required for session token operations.');
+  }
+  return secret;
+}
+
+const JWT_SECRET = getJwtSecret();
 const JWT_EXPIRES_IN = '30d';
 
 export interface JWTPayload {
   userId: string;
-  githubToken: string;
   exp: number;
 }
 
 export function generateToken(payload: Omit<JWTPayload, 'exp'>): string {
-  return jwt.sign(
-    {
-      userId: payload.userId,
-      githubToken: payload.githubToken,
-      exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60), // 30 days
-    },
-    JWT_SECRET
-  );
+  return jwt.sign({ userId: payload.userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
 export function verifyToken(token: string): JWTPayload | null {

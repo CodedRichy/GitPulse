@@ -7,8 +7,10 @@ import Footer from "@/components/footer";
 const SECTIONS = [
   { id: 'overview', title: 'Overview' },
   { id: 'quick-start', title: 'Quick Start' },
+  { id: 'install', title: 'Installation' },
   { id: 'dashboard', title: 'Web Dashboard' },
   { id: 'quality-gates', title: 'Quality Gates' },
+  { id: 'smart-provider', title: 'Smart Provider' },
   { id: 'custom-gates', title: 'Custom Gates' },
   { id: 'configuration', title: 'Configuration' },
   { id: 'mcp', title: 'MCP Integration' },
@@ -80,11 +82,15 @@ export default function DocsPage() {
             <h3 className="text-4xl font-bold tracking-tight mb-8">Initialise Protocol</h3>
             <div className="space-y-8">
                <Step number="01" title="Installation" cmd="npm install -g gitpulse" />
-               <Step number="02" title="Initialisation" cmd="pulse init" />
+               <p className="text-stone-500 text-sm font-light mt-4">
+                 Or use the PowerShell one-liner (no Node.js required):<br/>
+                 <code className="text-emerald-400 font-mono">irm https://raw.githubusercontent.com/codedrichy/gitpulse/main/scripts/install.ps1 | iex</code>
+               </p>
+               <Step number="02" title="Initialisation" cmd="gitpulse init" />
                <p className="text-stone-500 text-sm font-light mt-6 italic">
                  This command automatically installs the <code className="text-emerald-400">pre-commit</code> and <code className="text-emerald-400">commit-msg</code> hooks.
                </p>
-               <Step number="03" title="First Commit" cmd="pulse commit" />
+               <Step number="03" title="First Commit" cmd="gitpulse commit" />
             </div>
           </section>
 
@@ -96,7 +102,7 @@ export default function DocsPage() {
                Access the GitPulse web dashboard for visual analytics, team management, and configuration.
             </p>
             <div className="space-y-6">
-               <Step number="01" title="Launch Dashboard" cmd="pulse dashboard" />
+               <Step number="01" title="Launch Dashboard" cmd="gitpulse dashboard" />
                <p className="text-stone-500 text-sm font-light mt-4 italic">
                  This command starts a local telemetry server and opens the web dashboard in your browser. Pro and Team tiers get cloud sync and advanced analytics.
                </p>
@@ -147,9 +153,74 @@ export default function DocsPage() {
             </div>
           </section>
 
+          {/* INSTALLATION */}
+          <section id="install" className="scroll-mt-32">
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">05_Installation</h2>
+            <h3 className="text-4xl font-bold tracking-tight mb-8">Get GitPulse</h3>
+            
+            <div className="space-y-8">
+              <div className="glass-panel p-8 rounded-3xl border-stone-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Option A: npm (Recommended)</h4>
+                <code className="text-emerald-400 font-mono text-lg">npm install -g gitpulse</code>
+                <p className="text-stone-500 text-sm font-light mt-4">Requires Node.js 18+. Updates via npm.</p>
+              </div>
+
+              <div className="glass-panel p-8 rounded-3xl border-stone-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Option B: PowerShell One-Liner</h4>
+                <code className="text-emerald-400 font-mono text-sm">irm https://raw.githubusercontent.com/codedrichy/gitpulse/main/scripts/install.ps1 | iex</code>
+                <p className="text-stone-500 text-sm font-light mt-4">Zero dependencies. Downloads single binary to %LOCALAPPDATA%\gitpulse.</p>
+              </div>
+
+              <div className="glass-panel p-8 rounded-3xl border-stone-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Option C: Build from Source</h4>
+                <pre className="text-emerald-400 font-mono text-sm">git clone https://github.com/codedrichy/gitpulse.git
+cd gitpulse
+npm install
+npm run build</pre>
+              </div>
+            </div>
+          </section>
+
+          {/* SMART PROVIDER */}
+          <section id="smart-provider" className="scroll-mt-32">
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">06_AI_Infrastructure</h2>
+            <h3 className="text-4xl font-bold tracking-tight mb-8">Smart Provider Health</h3>
+            <p className="text-stone-400 font-light mb-8">
+              GitPulse monitors AI provider health in real-time. If your preferred provider fails, 
+              we automatically fall back to the best available alternative.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="glass-panel p-6 rounded-2xl border-stone-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Circuit Breaker</h4>
+                <ul className="space-y-2 text-stone-400 text-sm">
+                  <li>• 3 failures → circuit opens (5 min timeout)</li>
+                  <li>• Health checks every 30 seconds</li>
+                  <li>• Auto-recovery when provider heals</li>
+                </ul>
+              </div>
+              <div className="glass-panel p-6 rounded-2xl border-stone-800">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-stone-500 mb-4">Health Indicators</h4>
+                <ul className="space-y-2 text-stone-400 text-sm">
+                  <li><span className="text-emerald-400">⚡</span> &lt;1s response time</li>
+                  <li><span className="text-emerald-400">🟢</span> 1-5s normal</li>
+                  <li><span className="text-yellow-400">🐌</span> &gt;5s slow</li>
+                  <li><span className="text-red-400">🔴</span> Circuit open</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="glass-panel p-8 rounded-3xl font-mono text-[13px] text-stone-300 leading-relaxed overflow-x-auto border-stone-800">
+              <p className="text-stone-500 mb-4">// CLI shows fallback notification</p>
+              <pre>{`$ gitpulse commit
+⚡ Switched from groq to openrouter (groq unavailable)
+Generating commit message...`}</pre>
+            </div>
+          </section>
+
           {/* CUSTOM GATES */}
           <section id="custom-gates" className="scroll-mt-32">
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">05_Custom_Gates</h2>
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">07_Custom_Gates</h2>
             <h3 className="text-4xl font-bold tracking-tight mb-8">Custom Quality Gates</h3>
             <p className="text-stone-400 font-light mb-8">
                Create custom quality gates tailored to your project's specific requirements (Pro/Team tier).
@@ -189,7 +260,7 @@ export default function DocsPage() {
 
           {/* CONFIGURATION */}
           <section id="configuration" className="scroll-mt-32">
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">06_Calibration</h2>
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">08_Calibration</h2>
             <h3 className="text-4xl font-bold tracking-tight mb-8">Configuration</h3>
             <p className="text-stone-400 font-light mb-8">
                Tweak your guardrails in <code className="text-emerald-400 bg-stone-900 px-1.5 py-0.5 rounded">.gitpulse/config.json</code>.
@@ -211,7 +282,7 @@ export default function DocsPage() {
 
           {/* MCP */}
           <section id="mcp" className="scroll-mt-32">
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">07_Integrations</h2>
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">09_Integrations</h2>
             <h3 className="text-4xl font-bold tracking-tight mb-8 italic">MCP_Protocol</h3>
             <p className="text-stone-400 font-light mb-12">
                Bridge GitPulse intelligence directly to your AI agent. Add this to your Windsurf or Claude Desktop config:
@@ -220,7 +291,7 @@ export default function DocsPage() {
                <pre>{`"mcpServers": {
   "gitpulse": {
     "command": "npx",
-    "args": ["-y", "pulse", "mcp", "start"]
+    "args": ["-y", "gitpulse", "mcp", "start"]
   }
 }`}</pre>
             </div>
@@ -228,17 +299,17 @@ export default function DocsPage() {
 
           {/* COMMAND REFERENCE */}
           <section id="commands" className="scroll-mt-32">
-            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">08_Reference</h2>
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.4em] text-emerald-500 mb-6">10_Reference</h2>
             <h3 className="text-4xl font-bold tracking-tight mb-12 uppercase">Terminal_ISA</h3>
             <div className="space-y-4">
-               <CommandItem cmd="pulse init" desc="Initialize GitPulse in your repository" />
-               <CommandItem cmd="pulse commit" desc="AI-powered commit with quality gates" />
-               <CommandItem cmd="pulse status" desc="Repository health and status summary" />
-               <CommandItem cmd="pulse pr" desc="Generate PR documentation" />
-               <CommandItem cmd="pulse review" desc="AI-assisted code review" />
-               <CommandItem cmd="pulse dashboard" desc="Launch web dashboard (Pro/Team)" />
-               <CommandItem cmd="pulse config" desc="View or update configuration" />
-               <CommandItem cmd="pulse mcp start" desc="Start MCP server for AI integration" />
+               <CommandItem cmd="gitpulse init" desc="Initialize GitPulse in your repository" />
+               <CommandItem cmd="gitpulse commit" desc="AI-powered commit with quality gates" />
+               <CommandItem cmd="gitpulse status" desc="Repository health and status summary" />
+               <CommandItem cmd="gitpulse pr" desc="Generate PR documentation" />
+               <CommandItem cmd="gitpulse review" desc="AI-assisted code review" />
+               <CommandItem cmd="gitpulse dashboard" desc="Launch web dashboard (Pro/Team)" />
+               <CommandItem cmd="gitpulse config" desc="View or update configuration" />
+               <CommandItem cmd="gitpulse mcp start" desc="Start MCP server for AI integration" />
             </div>
           </section>
         </main>

@@ -110,7 +110,8 @@ export function loadProjectConfig(repoRoot?: string): GitPulseProjectConfig {
 
       // Parse based on file extension
       if (configPath.endsWith('.yml') || configPath.endsWith('.yaml')) {
-        parsed = yaml.load(raw);
+        // Security: Use JSON_SCHEMA to prevent code execution via !!js/function tags
+        parsed = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
       } else {
         parsed = JSON.parse(raw);
       }

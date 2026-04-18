@@ -4,7 +4,7 @@
 
 **AI-Powered Guardrails for Git Workflows** — Quality gates, convention enforcement, and intelligent commit automation for developers using Copilot, Cursor, Windsurf, or Claude Code.
 
-**v3.1.0** — Quality Gates · Convention Learning · MCP Integration · Web Dashboard
+**v0.1.0** — Quality Gates · Convention Learning · MCP Integration · Web Dashboard
 
 [![CI](https://github.com/CodedRichy/GitPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/CodedRichy/GitPulse/actions)
 

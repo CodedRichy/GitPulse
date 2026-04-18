@@ -1,6 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import { validateRepoPath, isPathWithinRepo } from '../../core/path-security.js';
 
 export const analyzeFileTool: Tool = {
   name: 'analyze_file',
@@ -22,8 +23,20 @@ export const analyzeFileTool: Tool = {
 };
 
 export async function handleAnalyzeFile(args: Record<string, unknown>) {
-  const repoPath = (args?.path as string) || '.';
+  const rawRepoPath = (args?.path as string) || '.';
   const filePath = args?.file as string;
+
+  // Security: Validate repoPath first
+  const repoValidation = validateRepoPath(rawRepoPath);
+  if (!repoValidation.valid) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: `Invalid repository path: ${repoValidation.error}` }),
+      }],
+    };
+  }
+  const repoPath = repoValidation.resolvedPath;
 
   if (!filePath) {
     return {
@@ -35,6 +48,16 @@ export async function handleAnalyzeFile(args: Record<string, unknown>) {
   }
 
   const fullPath = path.isAbsolute(filePath) ? filePath : path.resolve(repoPath, filePath);
+
+  // Security: Validate file is within repo root to prevent path traversal
+  if (!isPathWithinRepo(fullPath, repoPath)) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: JSON.stringify({ error: 'Access denied: file path outside repository' }),
+      }],
+    };
+  }
 
   if (!fs.existsSync(fullPath)) {
     return {
