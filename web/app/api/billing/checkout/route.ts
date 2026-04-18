@@ -39,6 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    if (!user.email || !user.email.includes('@')) {
+      return NextResponse.json({ error: 'Invalid email address. Please update your profile.' }, { status: 400 });
+    }
+
     // 4. Get Request Body
     const { tier } = await request.json();
     if (!tier || !['pro', 'team'].includes(tier)) {
