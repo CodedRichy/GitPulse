@@ -25,7 +25,7 @@ export default function Footer() {
           {/* Nav Columns */}
           <FooterColumn title="Product">
             <FooterLink href="/docs">Documentation</FooterLink>
-            <FooterLink href="/pricing">Pricing</FooterLink>
+            <FooterLink href="/subscription">Pricing</FooterLink>
             <FooterLink href="/changelog">Changelog</FooterLink>
             <FooterLink href="/docs#mcp">MCP Server</FooterLink>
           </FooterColumn>
