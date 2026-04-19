@@ -71,11 +71,11 @@ export function getCsrfCookieOptions(): {
   path: string;
 } {
   const token = generateCsrfToken();
-  
+
   return {
     name: CSRF_COOKIE_NAME,
     value: token,
-    httpOnly: true, // Security: Prevent XSS from reading CSRF token
+    httpOnly: false, // Must be readable by JavaScript for client-side requests
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     maxAge: 24 * 60 * 60, // 24 hours
