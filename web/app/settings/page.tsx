@@ -75,7 +75,8 @@ export default function SettingsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save settings');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save settings');
       }
 
       setSaveMessage({ text: 'Settings updated successfully', type: 'success' });
