@@ -18,18 +18,19 @@
 - [x] Team members page (`/dashboard/teams/[id]/members`)
 - [x] Team settings page (`/dashboard/teams/[id]/settings`)
 - [x] Wire up SWR hooks to API endpoints
-- [ ] Implement `/api/teams/[id]/analytics` endpoint
-- [ ] Add real charts to analytics page
+- [x] Implement `/api/teams/[id]/analytics` endpoint (placeholder stats)
+- [ ] Add real data to analytics page (requires audit_logs table population)
 - [ ] Test member invite/remove flows
 - [ ] Test settings save functionality
 
 ## Immediate Next Actions
 
-1. **Wire Up Team Dashboard** (Week 5-6):
-   - Connect team list to `/api/teams` endpoint
-   - Connect team detail to `/api/teams/[id]` endpoint
-   - Implement member invite/remove functionality
-   - Connect settings form to `/api/teams/[id]/settings`
+1. **Team Dashboard Testing** (Week 6):
+   - [x] All SWR hooks connected to API endpoints
+   - [x] `/api/teams/[id]/analytics` endpoint created
+   - [ ] Test member invite flow end-to-end
+   - [ ] Test settings save with validation
+   - [ ] Add real analytics data when audit_logs populated
 
 2. **Team Analytics** (Week 7-8):
    - Line charts for quality over time

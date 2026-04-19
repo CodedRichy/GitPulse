@@ -2,7 +2,7 @@
 
 > **The definitive strategic and architectural reference for the GitPulse project**
 >
-> *Version:* 0.1.0 | *Last Updated:* April 18, 2026 (3:00 PM) | *Status:* Phase 1-8 Complete, Phase 9.1 Complete, Phase 9.2 UI Shells Complete
+> *Version:* 0.1.0 | *Last Updated:* April 18, 2026 (3:43 PM) | *Status:* Phase 1-8 Complete, Phase 9.1 Complete, Phase 9.2 UI Shells Complete
 
 ---
 
@@ -618,6 +618,27 @@ cloud_sync:
 | **Phase 5.5** | Security & Data Governance | ✅ Complete |
 | **Phase 5.6** | Smart Provider Health & Distribution | ✅ Complete |
 
+**Codebase Cleanup (2026-04-18)** ✅
+- Removed web/scratch/ directory (temporary test scripts: verify_signature.js, verify_checkout_connectivity.js)
+- Removed web/proxy.ts (unused middleware not imported anywhere)
+- Removed src/utils/validation-extended.ts (unused validation functions, only used in tests)
+- Removed src/utils/errors.ts (error classes only used in deleted test files)
+- Removed src/utils/user-messages.ts (only used in deleted test files)
+- Removed src/utils/__tests__/user-messages.test.ts (test file for deleted code)
+- Cleaned up debug console.log statements from:
+  - src/core/issue-tracker.ts
+  - src/components/Login.tsx
+  - src/ai/model-tester.ts (multiple debug statements removed)
+- Note: Intentional console.log statements in CLI output (dashboard.ts, init.ts) and testing utilities (model-tester.ts contest output) were preserved
+
+**Code Quality Improvements (2026-04-18)** ✅
+- Removed unused dependencies from package.json: chalk, dotenv, ink-spinner, @babel/traverse, @types/bcryptjs, swr
+- Fixed 2 moderate security vulnerabilities (follow-redirects, hono) via npm audit fix
+- Verified TypeScript strict mode is enabled in tsconfig.json
+- Reviewed test coverage: identified 0% coverage in conflict-detection.ts, conflict-prediction.ts, issue-tracker.ts, models.ts, mcp/auth.ts, mcp/index.ts
+- Reviewed environment variable usage: documented all env vars across CLI and web codebase (no hardcoded secrets found)
+- Note: swr moved from root to web/package.json where it's actually used
+
 ### Phase 6: Foundation Reset ✅ Complete
 
 **Goal:** Harden the foundation for production readiness
@@ -654,7 +675,7 @@ cloud_sync:
 |---------|-------------|--------|
 | Claude Audit Response | Comprehensive product audit | April 18, 2026 |
 | Implementation Plan v9 | 6-month enterprise roadmap | April 18, 2026 |
-| Pricing Strategy Update | Revised to $25/dev/month Pro tier | April 18, 2026 |
+| Pricing Strategy Update | Live Lemon Squeezy billing (₹1,799/$19 Pro, ₹9,199/$99 Team) | April 18, 2026 |
 | Lemon Squeezy Integration | Billing & revenue with automated tax compliance | April 18, 2026 |
 | Next.js 15+ Compatibility | TypeScript fixes and async params migration | April 18, 2026 |
 | Web App Security Audit | 20 vulnerabilities identified and documented | April 18, 2026 |
@@ -671,7 +692,7 @@ cloud_sync:
 | **9.1** | Enterprise Foundation | Month 1 | ✅ Team schema, RBAC API, CLI team support |
 | **9.2** | Team Dashboard | Month 2 | ⏳ Team analytics, compliance exports, enterprise features |
 | **9.3** | Security Hardening | Month 2-3 | ⏳ Field-level encryption, distributed locks, audit immutability |
-| **9.4** | New Pricing Model | Month 3 | ⏳ $25/dev/month Pro, $2k-5k Enterprise, sales flow |
+| **9.4** | New Pricing Model | Month 3 | ✅ Live via Lemon Squeezy (₹1,799/$19 Pro, ₹9,199/$99 Team), Enterprise sales flow |
 | **9.5** | Distribution | Month 4-5 | ⏳ GitHub Marketplace, AI tool partnerships, content marketing |
 | **9.6** | Scale Prep | Month 6 | ⏳ Performance optimization, monitoring, 99.9% uptime |
 
@@ -681,6 +702,42 @@ cloud_sync:
 - ❌ 1+ Enterprise conversation → Pivot to SMB
 
 **Target:** $50k MRR path by Month 6, venture-fundable metrics
+
+### Pricing Strategy (Live via Lemon Squeezy - April 18, 2026)
+
+**Current Live Pricing:**
+
+**Hobbyist Tier** - ₹0 / $0 per month
+- Individual developers (local-first)
+- Standard quality gates
+- Local audit logbook
+- Community support
+
+**Pro Tier** - ₹1,799 / $19 per month
+- Unlimited repositories
+- All quality gates
+- Custom quality gates (up to 5)
+- Convention learning
+- Cloud sync
+- Priority support
+- AI style learning
+- Context-aware intelligence
+
+**Team Tier** - ₹9,199 / $99 per month (Flat Fee)
+- Up to 10 contributors included
+- Team Registry Management
+- Compliance Exports
+- Organization Analytics
+- SSO Identity Isolation
+- Unlimited custom quality gates
+- Team sync capabilities
+
+**Pricing Psychology:**
+- **Pro Positioning:** ₹1,799 ($19) positions against AI coding assistants (Copilot $10-19)
+- **Team Value:** Flat fee ₹9,199 ($99) is attractive for small-to-medium teams
+- **Currency:** Indian Rupee pricing with USD equivalent for global market
+- **Revenue Target:** Focus on conversion from free to paid tiers
+- **Implementation:** Live via Lemon Squeezy with automated tax compliance
 
 ---
 
@@ -911,6 +968,7 @@ npm run dev              # Start Next.js dev server
 | 2026-04-18 (Late PM) | 1.3.0 | Added Lemon Squeezy billing integration, Next.js 15+ compatibility fixes, Web App Security Audit findings (20 vulnerabilities), updated security audit status |
 | 2026-04-18 (Late PM) | 1.4.0 | Updated Phase 9.1 as complete, Phase 9.2 in progress, corrected pricing documentation ($19 Pro, $99 Team), documented codebase cleanup and security improvements |
 | 2026-04-18 (Late PM) | 1.5.0 | Created all Phase 9.2 Team Dashboard UI shells (teams list, detail layout, analytics, members, settings), Netlify deployment fixes, updated all documentation |
+| 2026-04-18 (Late PM) | 1.6.0 | Added pricing strategy section with live Lemon Squeezy pricing details, added codebase cleanup and code quality improvements sections, synchronized all pricing references across document |
 
 ---
 
