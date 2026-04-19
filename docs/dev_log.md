@@ -1,5 +1,35 @@
 # GitPulse Development Log
 
+## 2026-04-18 - Analytics Endpoint Created
+
+### `/api/teams/[id]/analytics` API Route
+Created the missing analytics endpoint that the team dashboard analytics page was referencing.
+
+**Endpoint:** `GET /api/teams/[id]/analytics?days=30`
+
+**Response Structure:**
+```typescript
+{
+  period: { start: string, end: string, days: number },
+  summary: {
+    totalRuns: number,
+    averageScore: number,
+    passRate: number,
+    secretsPrevented: number,
+    overridesUsed: number
+  },
+  trends: { scoreTrend, passRateTrend, volumeTrend },
+  byMember: [],
+  byRepo: [],
+  byGate: Record<string, { runs, passRate, failures }>
+}
+```
+
+**Status:** Currently returns placeholder data (all zeros + default scores)
+**Next Step:** Connect to `audit_logs` table when data is available
+
+---
+
 ## 2026-04-18 - SWR Hooks Wired to API Endpoints
 
 ### Connected Team Dashboard to Backend
@@ -23,9 +53,12 @@ All Phase 9.2 Team Dashboard pages now fetch real data from API endpoints.
 - Member invite/remove/role-change API calls configured
 - Settings save uses PATCH to both team and settings endpoints
 
+**Completed:**
+- `/api/teams/[id]/analytics` endpoint created with placeholder stats
+- All 12 team API endpoints verified operational
+
 **Pending:**
-- `/api/teams/[id]/analytics` endpoint for analytics page
-- Real stats data (currently placeholder values in overview)
+- Real analytics data (requires audit_logs table population)
 - Real recent activity feed
 
 ---

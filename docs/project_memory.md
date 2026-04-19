@@ -9,7 +9,7 @@
 ## Current Status
 
 **Phase:** Phase 9 - Enterprise Readiness & Revenue (Current)
-**Status:** 2026-04-18 - Phase 9.1 complete (Enterprise Foundation), **Phase 9.2 in progress** (Team Dashboard UI). Created page shells for: team list (`/dashboard/teams`), team detail layout with tabs, overview page, analytics page, members page, and settings page. All using existing Tailwind-only UI patterns (glass-panel, inline SVG icons, matching GitPulse dark theme). Team API endpoints implemented (/api/teams/[id]/settings, /api/teams/[id]/members), Lemon Squeezy billing live with Netlify deployment fixes (environment variables configured, secrets scanning resolved, email validation added). Target: $50k MRR path by Month 6.
+**Status:** 2026-04-18 - Phase 9.1 complete (Enterprise Foundation), **Phase 9.2 in progress** (Team Dashboard). UI shells created with Tailwind-only patterns (glass-panel, inline SVG icons). **SWR hooks wired to all API endpoints** - team list, detail, members, settings, analytics. All 12 team API routes operational (/api/teams, /api/teams/[id], /api/teams/[id]/members, /api/teams/[id]/settings, /api/teams/[id]/analytics). Lemon Squeezy billing live with Netlify deployment fixes. Target: $50k MRR path by Month 6.
 
 **The Must-Have Vision:**
 Every developer who uses AI to code should feel like GitPulse is as essential as their IDE. Not because compliance requires it, but because **it prevents embarrassing, career-damaging mistakes before they become permanent.**
@@ -185,7 +185,12 @@ Every developer who uses AI to code should feel like GitPulse is as essential as
 - **Dynamic Pricing** - $19 Pro and $99 Business-grade flat-fee Team tiers
 - **Tier Logic** - Enforcement of 10-contributor limit for Team tier
 - **Webhook Security** - HMAC SHA256 signature verification for payment events
-- **Team API Endpoints** - /api/teams/[id]/settings and /api/teams/[id]/members routes
+- **Team API Endpoints** - All 12 routes complete:
+  - `/api/teams` (GET list, POST create)
+  - `/api/teams/[id]` (GET, PATCH, DELETE)
+  - `/api/teams/[id]/members` (GET, POST, PATCH, DELETE)
+  - `/api/teams/[id]/settings` (GET, PATCH)
+  - `/api/teams/[id]/analytics` (GET - placeholder data)
 - **RBAC Implementation** - Role-based access control for team operations
 - **Organization Onboarding** - Automated team creation upon purchase
 - **Convention Marketplace** - Share/import rule packs (Planned)
