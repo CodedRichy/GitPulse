@@ -1,9 +1,10 @@
 import { useGitPulseApp } from './useGitPulseApp.js';
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
+import { Box as InkBox, Text } from 'ink';
 import { GitOperations } from '../core/git.js';
 import { RepoStatus, FileChange } from '../core/models.js';
-import { ChatMessage, StatusBar, Spinner, SuccessCheck, SectionDivider } from './ui.js';
+import { ChatMessage, StatusBar as OldStatusBar, SectionDivider, Spinner } from './ui.js';
+import { Box, StatusBar, createGitStatusBar } from './ui/index.js';
 
 export function StatusPanel() {
   const [status, setStatus] = useState<RepoStatus | null>(null);
@@ -85,86 +86,94 @@ export function StatusPanel() {
   );
 
   return (
-    <Box flexDirection="column">
-      <ChatMessage role="assistant">
-        <Box flexDirection="column">
-          <Text>Repository status for branch </Text>
-          <Text bold color="#10B981">{status.branch}</Text>
+    <InkBox flexDirection="column">
+      <Box title={`🌿 Branch: ${status.branch}`} variant="primary" width={70}>
+        <InkBox flexDirection="column">
           {status.ahead > 0 && (
-            <Text color="green">  {status.ahead} commit(s) ahead of remote</Text>
+            <Text color="green">⬆️ {status.ahead} commit(s) ahead of remote</Text>
           )}
           {status.behind > 0 && (
-            <Text color="yellow">  {status.behind} commit(s) behind remote</Text>
+            <Text color="yellow">⬇️ {status.behind} commit(s) behind remote</Text>
           )}
-        </Box>
-      </ChatMessage>
+          {status.ahead === 0 && status.behind === 0 && (
+            <Text color="green">✓ In sync with remote</Text>
+          )}
+        </InkBox>
+      </Box>
 
       {/* Staged changes */}
       {stagedFiles.length > 0 && (
-        <ChatMessage role="system">
-          <Box flexDirection="column">
-            <Text bold color="#50FA7B">Staged for commit ({stagedFiles.length} files)</Text>
-            <SectionDivider />
+        <Box 
+          title={`✅ Staged for commit (${stagedFiles.length} files)`} 
+          variant="success" 
+          width={70}
+          marginTop={1}
+        >
+          <InkBox flexDirection="column">
             {stagedFiles.map(file => (
-              <Box key={file.path}>
-                <Text color="#50FA7B">  {getStatusIcon(file.status)} {file.path}</Text>
+              <InkBox key={file.path} flexDirection="row" gap={1}>
+                <Text color="green">{getStatusIcon(file.status)}</Text>
+                <Text>{file.path}</Text>
                 {(file.additions > 0 || file.deletions > 0) && (
-                  <Text dimColor>
-                    {' '}(+{file.additions}/-{file.deletions})
-                  </Text>
+                  <Text dimColor>(+{file.additions}/-{file.deletions})</Text>
                 )}
-              </Box>
+              </InkBox>
             ))}
-          </Box>
-        </ChatMessage>
+          </InkBox>
+        </Box>
       )}
 
       {/* Unstaged changes */}
       {unstagedFiles.length > 0 && (
-        <ChatMessage role="system">
-          <Box flexDirection="column">
-            <Text bold color="#F1FA8C">Not staged ({unstagedFiles.length} files)</Text>
-            <SectionDivider />
+        <Box 
+          title={`⚠️ Not staged (${unstagedFiles.length} files)`} 
+          variant="warning" 
+          width={70}
+          marginTop={1}
+        >
+          <InkBox flexDirection="column">
             {unstagedFiles.map(file => (
-              <Box key={file.path}>
+              <InkBox key={file.path} flexDirection="row" gap={1}>
                 <Text color={getStatusColor(file.status)}>
-                  {'  '}{getStatusIcon(file.status)} {file.path}
+                  {getStatusIcon(file.status)}
                 </Text>
+                <Text>{file.path}</Text>
                 {(file.additions > 0 || file.deletions > 0) && (
-                  <Text dimColor>
-                    {' '}(+{file.additions}/-{file.deletions})
-                  </Text>
+                  <Text dimColor>(+{file.additions}/-{file.deletions})</Text>
                 )}
-              </Box>
+              </InkBox>
             ))}
-          </Box>
-        </ChatMessage>
+          </InkBox>
+        </Box>
       )}
 
       {/* Clean state */}
       {status.isClean && (
-        <ChatMessage role="assistant">
-          <SuccessCheck text="Working tree clean - nothing to commit" />
-        </ChatMessage>
+        <Box 
+          title="✨ Working Tree Clean" 
+          variant="success" 
+          width={70}
+          marginTop={1}
+        >
+          <Text color="green">Nothing to commit, working tree clean</Text>
+        </Box>
       )}
 
       {/* Summary */}
       {!status.isClean && (
-        <ChatMessage role="system">
-          <Text dimColor>
-            {status.staged.length} staged, {status.unstaged.length} modified, {status.untracked.length} untracked
+        <Box title="📊 Summary" variant="info" width={70} marginTop={1}>
+          <Text>
+            <Text color="green">{status.staged.length} staged</Text> | {''}
+            <Text color="yellow">{status.unstaged.length} modified</Text> | {''}
+            <Text color="gray">{status.untracked.length} untracked</Text>
           </Text>
-        </ChatMessage>
+        </Box>
       )}
 
       <StatusBar 
-        branch={status.branch} 
-        ahead={status.ahead} 
-        behind={status.behind}
-        dirty={!status.isClean}
-        mode="status"
+        items={createGitStatusBar(status.branch, status.ahead, status.behind, 100, 'Auto', 'status')}
       />
-    </Box>
+    </InkBox>
   );
 }
 

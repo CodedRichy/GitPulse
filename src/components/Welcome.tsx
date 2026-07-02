@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {   Box, Text, useInput, useApp   } from "ink";
 import TextInput from 'ink-text-input';
 import { ChatMessage, StatusBar, SectionDivider } from './ui.js';
+import { Box as HermesBox, Grid, Header, FeatureCard } from './ui/index.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import { GitOperations } from '../core/git.js';
@@ -278,25 +279,31 @@ export function Welcome({ onCommandSelect }: WelcomeProps) {
 
   return (
     <Box flexDirection="column">
-      {/* Header Info (Claude Code style) */}
-      <Box marginBottom={0} flexDirection="row">
-        <Box flexDirection="column" marginRight={2}>
-            <Text color="#10B981" bold>▛▀▀▜</Text>
-            <Text color="#10B981" bold>▌GP▐</Text>
-            <Text color="#10B981" bold>▙▄▄▟</Text>
-        </Box>
-        <Box flexDirection="column">
-            <Text bold>GitPulse <Text color="gray">v3.0</Text></Text>
-            <Text dimColor>
-              {(() => {
-                const status = getProviderStatus(currentModel);
-                const indicator = getHealthIndicator(status);
-                return `${indicator} ${currentModel.split('/').pop() || currentModel}`;
-              })()} 
-              • {repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'No Repo'}
-            </Text>
-            <Text dimColor>{process.cwd()}</Text>
-        </Box>
+      {/* Hermes-inspired Header with ASCII Art */}
+      <Header mini subtitle="AI-Powered Git Guardrails" />
+      
+      {/* Status Line - Clean inline display */}
+      <Box flexDirection="row" gap={4} marginY={1}>
+        <Text>
+          <Text dimColor>Model:</Text>{' '}
+          <Text color="cyan">
+            {(() => {
+              const status = getProviderStatus(currentModel);
+              return getHealthIndicator(status);
+            })()}
+          </Text>{' '}
+          <Text>{currentModel.split('/').pop() || currentModel}</Text>
+        </Text>
+        
+        <Text>
+          <Text dimColor>Repo:</Text>{' '}
+          <Text color="green">{repoInfo ? `${repoInfo.name} (${repoInfo.branch})` : 'None'}</Text>
+        </Text>
+        
+        <Text>
+          <Text dimColor>Dir:</Text>{' '}
+          <Text dimColor>{process.cwd().split(/[\\/]/).pop() || process.cwd()}</Text>
+        </Text>
       </Box>
 
       {/* Main REPL Area */}
