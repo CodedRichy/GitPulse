@@ -2,9 +2,9 @@
 
 ![GitPulse Banner](assets/GitPulseBanner.png)
 
-**AI-Powered Guardrails for Git Workflows** — Quality gates, convention enforcement, and intelligent commit automation for developers using Copilot, Cursor, Windsurf, or Claude Code.
+**AI-Powered Guardrails for Git Workflows.** Quality gates, convention enforcement, and intelligent commit automation, for developers using Copilot, Cursor, Windsurf, or Claude Code.
 
-**v0.1.0** — Quality Gates · Convention Learning · MCP Integration · Web Dashboard
+**v0.1.0** · Quality Gates · Convention Learning · MCP Integration · Web Dashboard
 
 [![CI](https://github.com/CodedRichy/GitPulse/actions/workflows/ci.yml/badge.svg)](https://github.com/CodedRichy/GitPulse/actions)
 
@@ -12,11 +12,11 @@
 
 ## Overview
 
-GitPulse sits between your AI coding tools and your git history, ensuring every commit meets your team's standards. It acts as a guardrail that catches issues before they enter your codebase.
+GitPulse sits between your AI coding tools and your git history. It checks every commit against your team's standards, and catches the issues before they reach your codebase.
 
 **Problem it solves:**
-- AI tools generate code fast — but also generate inconsistent commits, skip tests, leak secrets, and ignore team conventions
-- Manual code review catches issues too late (after commit/push)
+- AI tools generate code fast. They also generate inconsistent commits, skip tests, leak secrets, and ignore team conventions
+- Manual code review catches issues after the commit or push, which is too late
 - Teams lack automated enforcement of quality standards
 
 **Target users:**
@@ -29,16 +29,16 @@ GitPulse sits between your AI coding tools and your git history, ensuring every 
 ## Features
 
 ### Quality Gates
-- **Security Scan** — Detects hardcoded secrets, SQL injection, XSS, path traversal
-- **Code Smells** — Flags long functions, TODO/FIXME markers, console.log, debugger statements
-- **Test Coverage** — Identifies missing test files for changed code
-- **Documentation** — Validates JSDoc on exported functions
+- **Security Scan.** Detects hardcoded secrets, SQL injection, XSS, path traversal
+- **Code Smells.** Flags long functions, TODO/FIXME markers, console.log, debugger statements
+- **Test Coverage.** Identifies missing test files for changed code
+- **Documentation.** Validates JSDoc on exported functions
 
 ### AI-Powered Automation
-- **Smart Commits** — AI-generated commit messages following team conventions
-- **PR Descriptions** — Auto-generated comprehensive PR descriptions with testing checklists
-- **Code Documentation** — AI-generated documentation for undocumented functions
-- **Conflict Resolution** — AI-assisted merge conflict resolution
+- **Smart Commits.** AI-generated commit messages following team conventions
+- **PR Descriptions.** Auto-generated comprehensive PR descriptions with testing checklists
+- **Code Documentation.** AI-generated documentation for undocumented functions
+- **Conflict Resolution.** AI-assisted merge conflict resolution
 
 ### Convention Learning
 - Analyzes commit history to detect team patterns
@@ -432,15 +432,15 @@ npm run test:ci
 
 ### Test Structure
 
-Tests are located alongside source files:
-- `src/core/__tests__/` — Core functionality tests
-- `src/mcp/__tests__/` — MCP server tests
-- `action/__tests__/` — GitHub Action tests
+Tests sit alongside the source files:
+- `src/core/__tests__/` holds core functionality tests
+- `src/mcp/__tests__/` holds MCP server tests
+- `action/__tests__/` holds GitHub Action tests
 
 ### Test Framework
 
-- **Vitest** — Unit testing framework
-- **@vitest/coverage-v8** — Code coverage
+- **Vitest** is the unit testing framework
+- **@vitest/coverage-v8** reports code coverage
 
 ---
 
@@ -470,7 +470,7 @@ netlify deploy --prod
 
 ### GitHub Action
 
-The GitHub Action is automatically available via the repository:
+The GitHub Action is available from this repository:
 
 ```yaml
 # .github/workflows/quality-gates.yml
@@ -510,7 +510,7 @@ Based on codebase analysis and documentation:
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
+Contributions are welcome. Follow these guidelines:
 
 1. **Fork** the repository
 2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
