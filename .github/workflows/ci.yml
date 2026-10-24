@@ -153,6 +153,9 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run GitPulse quality gates
         run: npm run test -- src/core/__tests__/quality-gates.test.ts
 
